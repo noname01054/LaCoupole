@@ -3,6 +3,10 @@
   min-height: 100vh;
   padding: 0 16px 16px;
   box-sizing: border-box;
+  position: relative;
+  overflow-x: hidden;
+  transition: transform 0.3s ease-out;
+  touch-action: pan-y; /* Prevent vertical scrolling during horizontal swipe */
 }
 
 .product-details-header {
@@ -425,6 +429,7 @@
 @media (min-width: 768px) {
   .product-details-container {
     padding: 0 24px 24px;
+    transform: none !important; /* Disable swipe animations on desktop */
   }
   .product-details-header {
     padding: 24px;
