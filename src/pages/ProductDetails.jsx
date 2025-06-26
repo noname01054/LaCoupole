@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -24,6 +24,7 @@ function ProductDetails({ addToCart }) {
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [supplements, setSupplements] = useState([]);
+  const [categoryProducts, setCategoryProducts] = useState([]);
   const [selectedSupplement, setSelectedSupplement] = useState('0');
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -31,6 +32,10 @@ function ProductDetails({ addToCart }) {
   const [isFavorite, setIsFavorite] = useState(false);
   const [rating, setRating] = useState(0);
   const [isRatingSubmitted, setIsRating] = useState(false);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchCurrentX, setTouchCurrentX] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -42,15 +47,22 @@ function ProductDetails({ addToCart }) {
         if (isNaN(itemId) || itemId <= 0) {
           throw new Error('Invalid product ID');
         }
-        const [productResponse, relatedResponse, supplementsResponse, ratingResponse] = await Promise.all([
-          api.get(`/menu-items/${itemId}`),
+
+        // Fetch product details first
+        const productResponse = await api.get(`/menu-items/${itemId}`);
+
+        // Fetch other data in parallel
+        const [relatedResponse, supplementsResponse, ratingResponse, categoryResponse] = await Promise.all([
           api.get(`/menu-items/${itemId}/related`),
           api.getSupplementsByMenuItem(itemId),
           api.getRatingsByItem(itemId),
+          api.get(`/menu-items?category_id=${productResponse.data.category_id}`),
         ]);
+
         setProduct(productResponse.data);
         setRelatedProducts(relatedResponse.data || []);
         setSupplements(supplementsResponse.data || []);
+        setCategoryProducts(categoryResponse.data || []);
         if (ratingResponse.data?.length > 0) {
           setIsRating(true);
           setRating(parseInt(ratingResponse.data[0].rating) || 0);
@@ -162,11 +174,75 @@ function ProductDetails({ addToCart }) {
     return ((basePrice + supplementPrice) * quantity).toFixed(2);
   }, [product, selectedSupplement, supplements, quantity]);
 
+  // Swipe handling
+  const handleTouchStart = useCallback((e) => {
+    if (window.innerWidth > 768) return; // Disable swipe on desktop
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+    setIsSwiping(true);
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!isSwiping || window.innerWidth > 768) return;
+      setTouchCurrentX(e.touches[0].clientX);
+      const deltaX = touchCurrentX - touchStartX;
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translateX(${deltaX}px)`;
+        containerRef.current.style.transition = 'none';
+      }
+    },
+    [isSwiping, touchStartX, touchCurrentX]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isSwiping || window.innerWidth > 768) return;
+    setIsSwiping(false);
+    const deltaX = touchCurrentX - touchStartX;
+    const swipeThreshold = 100; // Minimum swipe distance in pixels
+    const currentIndex = categoryProducts.findIndex((p) => p.id === parseInt(id));
+
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.3s ease-out';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+
+    if (Math.abs(deltaX) > swipeThreshold) {
+      if (deltaX < 0 && currentIndex < categoryProducts.length - 1) {
+        // Swipe left (next product)
+        const nextProduct = categoryProducts[currentIndex + 1];
+        navigate(`/product/${nextProduct.id}`);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swipe right (previous product)
+        const prevProduct = categoryProducts[currentIndex - 1];
+        navigate(`/product/${prevProduct.id}`);
+      }
+    }
+
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [isSwiping, touchStartX, touchCurrentX, categoryProducts, id, navigate]);
+
+  useEffect(() => {
+    // Reset swipe state when product changes
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'none';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [id]);
+
   if (error) {
     return (
-      
-
-      <div className="product-details-container">
+      <div
+        className="product-details-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="product-details-error-container">
           <div className="product-details-error-icon">🍽️</div>
           <p className="product-details-error-text">{error}</p>
@@ -180,8 +256,13 @@ function ProductDetails({ addToCart }) {
 
   if (isLoading) {
     return (
-      
-      <div className="product-details-container">
+      <div
+        className="product-details-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="product-details-loading-container">
           <div className="product-details-loading-spinner"></div>
           <p className="product-details-loading-text">Loading...</p>
@@ -192,8 +273,13 @@ function ProductDetails({ addToCart }) {
 
   if (!product) {
     return (
-      
-      <div className="product-details-container">
+      <div
+        className="product-details-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="product-details-error-container">
           <div className="product-details-error-icon">🔍</div>
           <p className="product-details-error-text">Product not found</p>
@@ -215,7 +301,13 @@ function ProductDetails({ addToCart }) {
   const reviewCount = parseInt(product.review_count) || 0;
 
   return (
-    <div className="product-details-container">
+    <div
+      className="product-details-container"
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="product-details-header">
         <button className="product-details-header-button" onClick={() => navigate(-1)}>
           <ArrowBackIosOutlined style={{ fontSize: '18px' }} />
@@ -282,7 +374,7 @@ function ProductDetails({ addToCart }) {
                 <span className="product-details-save-badge">SAVE ${(regularPrice - salePrice).toFixed(2)}</span>
               </>
             ) : (
-              <span className="product-details-regular-pricerect-price">${regularPrice.toFixed(2)}</span>
+              <span className="product-details-regular-price-only">${regularPrice.toFixed(2)}</span>
             )}
           </div>
           <div className="product-details-total-price">
@@ -414,7 +506,7 @@ function ProductDetails({ addToCart }) {
         </button>
       </div>
 
-      {relatedProducts.length > .0 && (
+      {relatedProducts.length > 0 && (
         <div className="product-details-related-section">
           <h3 className="product-details-section-title">You might also like</h3>
           <div className="product-details-related-grid">
