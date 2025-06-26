@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:5000/api',
+  baseURL: `${import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -72,7 +72,7 @@ api.interceptors.response.use(
         }
         console.log('Attempting token refresh with:', token.substring(0, 10) + '...');
         const res = await axios.post(
-          `${import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL : 'http://localhost:5000'}/api/refresh-token`,
+          `${import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000'}/api/refresh-token`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -129,17 +129,18 @@ api.updateCategory = (id, data) => api.put(`/categories/${id}`, data);
 api.deleteCategory = (id, data) => api.delete(`/categories/${id}`, { data });
 api.getTopCategories = () => api.get('/categories/top');
 
-// Supplement API methods
-api.getSupplementsByMenuItem = (menuItemId) => api.get(`/menu-items/${menuItemId}/supplements`);
-api.addSupplementToMenuItem = (menuItemId, data) => api.post(`/menu-items/${menuItemId}/supplements`, data);
-api.updateSupplementForMenuItem = (menuItemId, supplementId, data) => api.put(`/menu-items/${menuItemId}/supplements/${supplementId}`, data);
-api.deleteSupplementFromMenuItem = (menuItemId, supplementId, data) => api.delete(`/menu-items/${menuItemId}/supplements/${supplementId}`, { data });
-
 // Menu item API methods
 api.addMenuItem = (data) => api.post('/menu-items', data);
 api.updateMenuItem = (id, data) => api.put(`/menu-items/${id}`, data);
 api.deleteMenuItem = (id, data) => api.delete(`/menu-items/${id}`, { data });
 api.searchMenuItems = (query) => api.get('/menu-items/search', { params: { query } });
+api.getBestSellers = () => api.get('/menu-items/best-sellers');
+
+// Supplement API methods
+api.getSupplementsByMenuItem = (menuItemId) => api.get(`/menu-items/${menuItemId}/supplements`);
+api.addSupplementToMenuItem = (menuItemId, data) => api.post(`/menu-items/${menuItemId}/supplements`, data);
+api.updateSupplementForMenuItem = (menuItemId, supplementId, data) => api.put(`/menu-items/${menuItemId}/supplements/${supplementId}`, data);
+api.deleteSupplementFromMenuItem = (menuItemId, supplementId, data) => api.delete(`/menu-items/${menuItemId}/supplements/${supplementId}`, { data });
 
 // Order API methods
 api.submitOrder = (data) => api.post('/orders', data);
