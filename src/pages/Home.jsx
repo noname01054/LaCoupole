@@ -6,6 +6,7 @@ import { Search, ChevronDown, Coffee } from 'lucide-react';
 import MenuItemCard from '../components/MenuItemCard';
 import Banner from '../components/Banner';
 import TopCategories from '../components/TopCategories';
+import BestSellers from '../components/BestSellers';
 import debounce from 'lodash/debounce';
 import './css/Home.css';
 
@@ -250,6 +251,8 @@ function Home({ addToCart }) {
             />
           ))}
         </div>
+
+        <BestSellers addToCart={addToCart} />
       </div>
     </div>
   );
