@@ -11,7 +11,7 @@ import StaffDashboard from './pages/StaffDashboard';
 import AddMenuItem from './pages/AddMenuItem';
 import Categories from './pages/Categories';
 import CategoryMenu from './pages/CategoryMenu';
-import CategoryList from './pages/CategoryList towing';
+import CategoryList from './pages/CategoryList';
 import ManageMenuItems from './pages/ManageMenuItems';
 import ManageSupplements from './pages/ManageSupplements';
 import ProductDetails from './pages/ProductDetails';
