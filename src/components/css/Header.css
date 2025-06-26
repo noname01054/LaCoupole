@@ -1,0 +1,220 @@
+/* ./css/Header.css */
+
+.header {
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  color: #fff;
+  min-height: 56px;
+}
+
+@media (max-width: 767px) {
+  .header {
+    min-height: 64px;
+  }
+}
+
+.toolbar {
+  min-height: 56px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@media (max-width: 767px) {
+  .toolbar {
+    min-height: 64px;
+  }
+}
+
+.logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+@media (max-width: 767px) {
+  .logo {
+    font-size: 16px;
+  }
+}
+
+.iconButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background-color: transparent;
+}
+
+.iconButton:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 767px) {
+  .iconButton {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.drawer .MuiDrawer-paper {
+  width: 280px;
+  background-color: #f8f9fa;
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+  box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 767px) {
+  .drawer .MuiDrawer-paper {
+    width: 260px;
+  }
+}
+
+.drawer .MuiBackdrop-root {
+  background-color: rgba(0, 0, 0, 0.3);
+}
+
+.drawerHeader {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  background-color: #fff;
+}
+
+@media (max-width: 767px) {
+  .drawerHeader {
+    padding: 16px 20px;
+  }
+}
+
+.drawerContent {
+  padding: 12px 0;
+  height: calc(100vh - 72px);
+  overflow-y: auto;
+}
+
+@media (max-width: 767px) {
+  .drawerContent {
+    height: calc(100vh - 80px);
+  }
+}
+
+.searchBox {
+  margin: 12px 20px;
+}
+
+.searchBox .MuiTextField-root .MuiOutlinedInput-root {
+  border-radius: 8px;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.searchBox .MuiTextField-root .MuiOutlinedInput-root:hover {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.searchBox .MuiTextField-root .MuiOutlinedInput-root.Mui-focused {
+  border-color: #ff9800;
+}
+
+@media (max-width: 767px) {
+  .searchBox {
+    margin: 12px 20px;
+  }
+}
+
+.listItem {
+  margin: 2px 12px;
+  border-radius: 8px;
+}
+
+.listItem:hover {
+  background-color: rgba(255, 152, 0, 0.06);
+}
+
+@media (max-width: 767px) {
+  .listItem {
+    margin: 2px 12px;
+  }
+}
+
+.primaryListItem {
+  margin: 2px 12px;
+  border-radius: 8px;
+  background-color: #ff9800;
+  color: #fff;
+}
+
+.primaryListItem:hover {
+  background-color: #f57c00;
+}
+
+@media (max-width: 767px) {
+  .primaryListItem {
+    margin: 2px 12px;
+  }
+}
+
+.userSection {
+  padding: 16px 20px;
+  background-color: #fff;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-top: auto;
+}
+
+@media (max-width: 767px) {
+  .userSection {
+    padding: 16px 20px;
+  }
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 767px) {
+  .userInfo {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+}
+
+.desktopNav {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .desktopNav {
+    display: flex;
+    gap: 10px;
+    position: absolute;
+    right: 12px;
+  }
+}
+
+.desktopButton {
+  border-radius: 16px;
+  text-transform: none;
+  font-weight: 500;
+  padding: 4px 12px;
+}
+
+@media (max-width: 767px) {
+  .desktopButton {
+    padding: 4px 12px;
+  }
+}
