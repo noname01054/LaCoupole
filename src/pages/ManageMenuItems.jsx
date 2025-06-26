@@ -17,7 +17,8 @@ import {
   AttachMoney,
   Category,
   Visibility,
-  VisibilityOff
+  VisibilityOff,
+  Star
 } from '@mui/icons-material';
 import { createFormData } from '../utils/formDataHelper';
 import './css/ManageMenuItems.css';
@@ -111,6 +112,7 @@ function ManageMenuItems() {
         sale_price: isNaN(salePriceValue) ? '' : salePriceValue,
         category_id: parseInt(item.category_id) || '',
         availability: !!item.availability,
+        is_best_seller: !!item.is_best_seller,
         dietary_tags: safeParseDietaryTags(item.dietary_tags).join(', ') || '',
         image: null,
         image_url: item.image_url,
@@ -195,7 +197,9 @@ function ManageMenuItems() {
     if (!window.confirm('Remove this supplement from the menu item?')) return;
     try {
       setIsSubmitting(true);
-      await api.deleteSupplementFromMenuItem(editingItem.id, supplementId, { user_id: user.id });
+      await api.delete(`/menu-items/${editingItem.id}/supplements/${supplementId}`, {
+        data: { user_id: user.id }
+      });
       setEditingItem(prev => {
         if (!prev) return null;
         return {
@@ -241,6 +245,7 @@ function ManageMenuItems() {
       const dietaryTags = editingItem.dietary_tags?.trim();
       const description = editingItem.description?.trim();
       const availability = editingItem.availability;
+      const isBestSeller = editingItem.is_best_seller;
 
       if (!itemId || isNaN(itemId) || itemId <= 0) {
         throw new Error('Invalid menu item ID');
@@ -279,6 +284,7 @@ function ManageMenuItems() {
         sale_price: salePrice,
         category_id: categoryId,
         availability,
+        is_best_seller: isBestSeller,
         description: description || '',
         dietary_tags: dietaryTags ? dietaryTags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
         image: editingItem.image,
@@ -293,9 +299,9 @@ function ManageMenuItems() {
         console.log(`  ${key}: ${value instanceof File ? value.name : value}`);
       }
 
-      await api.updateMenuItem(itemId, formData);
+      await api.put(`/menu-items/${itemId}`, formData);
 
-      const existingSups = (await api.getSupplementsByMenuItem(itemId)).data;
+      const existingSups = (await api.get(`/menu-items/${itemId}/supplements`)).data;
       for (const sup of editingItem.assignedSupplements) {
         const additionalPrice = parseFloat(sup.additional_price);
         if (isNaN(additionalPrice) || additionalPrice < 0) {
@@ -311,26 +317,149 @@ function ManageMenuItems() {
           supplement_id: parseInt(sup.supplement_id),
         };
         const isAssigned = existingSups.some(s => s.supplement_id === sup.supplement_id);
-        if (!isAssigned) {
-          await api.addSupplementToMenuItem(itemId, supPayload);
+        if (isAssigned) {
+          await api.put(`/menu-items/${itemId}/supplements/${sup.supplement_id}`, supPayload);
         } else {
-          await api.updateSupplementForMenuItem(itemId, sup.supplement_id, supPayload);
+          await api.post(`/menu-items/${itemId}/supplements`, supPayload);
         }
       }
 
-      toast.success('Menu item updated successfully');
+      const updatedItems = await api.get('/menu-items');
+      setMenuItems(updatedItems.data || []);
+      setFilteredItems(updatedItems.data || []);
       setEditingItem(null);
-      setNewSupplementId('');
-      const res = await api.get('/menu-items');
-      setMenuItems(res.data || []);
+      toast.success('Menu item updated');
     } catch (error) {
       console.error('Update error:', error);
-      const serverErrors = error.response?.data?.errors;
-      if (serverErrors?.length) {
-        serverErrors.forEach(err => toast.error(`Validation error: ${err.msg} (${err.path})`));
-      } else {
-        toast.error(error.message || 'Failed to update menu item');
+      toast.error(error.message || 'Failed to update menu item');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleAdd = () => {
+    setEditingItem({
+      id: 0,
+      name: '',
+      description: '',
+      regular_price: '',
+      sale_price: '',
+      category_id: '',
+      availability: true,
+      is_best_seller: false,
+      dietary_tags: '',
+      image: null,
+      image_url: null,
+      assignedSupplements: [],
+    });
+    setNewSupplementId('');
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) {
+      toast.error('Submission in progress, please wait');
+      return;
+    }
+    if (!user || !user.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+    if (!editingItem) {
+      toast.error('No item selected for creation');
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const userId = parseInt(user.id);
+      const name = editingItem.name?.trim();
+      const regularPrice = parseFloat(editingItem.regular_price);
+      const salePrice = editingItem.sale_price !== '' ? parseFloat(editingItem.sale_price) : null;
+      const categoryId = parseInt(editingItem.category_id);
+      const dietaryTags = editingItem.dietary_tags?.trim();
+      const description = editingItem.description?.trim();
+      const availability = editingItem.availability;
+      const isBestSeller = editingItem.is_best_seller;
+
+      if (!userId || isNaN(userId) || userId <= 0) {
+        throw new Error('Invalid user ID');
       }
+      if (!name) {
+        throw new Error('Name is required');
+      }
+      if (isNaN(regularPrice) || regularPrice <= 0) {
+        throw new Error('Regular price must be a positive number');
+      }
+      if (salePrice !== null && (isNaN(salePrice) || salePrice < 0)) {
+        throw new Error('Sale price must be a non-negative number');
+      }
+      if (!categoryId || isNaN(categoryId) || categoryId <= 0) {
+        throw new Error('Category is required');
+      }
+      if (dietaryTags && !/^[a-zA-Z0-9\s,-]*$/.test(dietaryTags)) {
+        throw new Error('Dietary tags must be a comma-separated list');
+      }
+      if (editingItem.image) {
+        if (!['image/jpeg', 'image/png'].includes(editingItem.image.type)) {
+          throw new Error('Image must be JPEG or PNG');
+        }
+        if (editingItem.image.size > 5 * 1024 * 1024) {
+          throw new Error('Image size must be less than 5MB');
+        }
+      }
+
+      const payload = {
+        user_id: userId,
+        name,
+        regular_price: regularPrice,
+        sale_price: salePrice,
+        category_id: categoryId,
+        availability,
+        is_best_seller: isBestSeller,
+        description: description || '',
+        dietary_tags: dietaryTags ? dietaryTags.split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+        image: editingItem.image,
+      };
+
+      console.log('Create payload:', payload);
+
+      const formData = createFormData(payload);
+
+      console.log('FormData entries before sending:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value instanceof File ? value.name : value}`);
+      }
+
+      const response = await api.post('/menu-items', formData);
+      const newItemId = response.data.id;
+
+      for (const sup of editingItem.assignedSupplements) {
+        const additionalPrice = parseFloat(sup.additional_price);
+        if (isNaN(additionalPrice) || additionalPrice < 0) {
+          throw new Error(`Invalid additional price for supplement ${sup.name}`);
+        }
+        if (!sup.supplement_id || !sup.name) {
+          throw new Error(`Invalid supplement data for ${sup.name || 'unknown'}`);
+        }
+        const supPayload = {
+          user_id: userId,
+          name: sup.name.trim(),
+          additional_price: additionalPrice,
+          supplement_id: parseInt(sup.supplement_id),
+        };
+        await api.post(`/menu-items/${newItemId}/supplements`, supPayload);
+      }
+
+      const updatedItems = await api.get('/menu-items');
+      setMenuItems(updatedItems.data || []);
+      setFilteredItems(updatedItems.data || []);
+      setEditingItem(null);
+      toast.success('Menu item created');
+    } catch (error) {
+      console.error('Create error:', error);
+      toast.error(error.message || 'Failed to create menu item');
     } finally {
       setIsSubmitting(false);
     }
@@ -338,16 +467,18 @@ function ManageMenuItems() {
 
   const handleDelete = async (id) => {
     if (!user) {
-      toast.error('You must be logged in to delete menu items');
+      toast.error('You must be logged in to delete items');
       return;
     }
     if (!window.confirm('Are you sure you want to delete this menu item?')) return;
+
     try {
       setIsSubmitting(true);
-      await api.deleteMenuItem(id, { user_id: user.id });
+      await api.delete(`/menu-items/${id}`, { data: { user_id: user.id } });
+      const updatedItems = await api.get('/menu-items');
+      setMenuItems(updatedItems.data || []);
+      setFilteredItems(updatedItems.data || []);
       toast.success('Menu item deleted');
-      const res = await api.get('/menu-items');
-      setMenuItems(res.data || []);
     } catch (error) {
       console.error('Delete error:', error);
       toast.error(error.response?.data?.error || 'Failed to delete menu item');
@@ -356,370 +487,344 @@ function ManageMenuItems() {
     }
   };
 
-  const handleCancelEdit = () => {
+  const handleToggleAvailability = async (id, currentAvailability) => {
+    if (!user) {
+      toast.error('You must be logged in to update availability');
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await api.put(`/menu-items/${id}/availability`, {
+        user_id: user.id,
+        availability: !currentAvailability,
+      });
+      const updatedItems = await api.get('/menu-items');
+      setMenuItems(updatedItems.data || []);
+      setFilteredItems(updatedItems.data || []);
+      toast.success('Availability updated');
+    } catch (error) {
+      console.error('Toggle availability error:', error);
+      toast.error(error.response?.data?.error || 'Failed to update availability');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSearch = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleCategoryFilter = (e) => {
+    setSelectedCategory(e.target.value);
+  };
+
+  const handleCancel = () => {
     setEditingItem(null);
     setNewSupplementId('');
   };
 
   if (isLoading) {
     return (
-      <div className="manage-menu-items-container">
-        <div className="manage-menu-items-loading">
-          <Restaurant className="manage-menu-items-loading-icon" />
-          Loading menu items...
-        </div>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <p>Loading menu items...</p>
       </div>
     );
   }
 
   return (
-    <div className="manage-menu-items-container">
-      <div className="manage-menu-items-header">
-        <h1 className="manage-menu-items-header-title">
-          <Restaurant />
-          Manage Menu Items
-        </h1>
-        <p className="manage-menu-items-header-subtitle">
-          Edit, update, and manage your restaurant's menu items
-        </p>
-        <button 
-          className="manage-menu-items-back-button"
+    <div className="manage-menu-items">
+      <div className="header">
+        <button
+          className="back-button"
           onClick={() => navigate('/admin')}
+          disabled={isSubmitting}
+          title="Back to Admin Dashboard"
         >
           <ArrowBack />
-          Back to Dashboard
+        </button>
+        <h1>Manage Menu Items</h1>
+        <button
+          className="add-button"
+          onClick={handleAdd}
+          disabled={isSubmitting}
+          title="Add New Menu Item"
+        >
+          <AddCircleOutline /> Add Item
         </button>
       </div>
 
-      <div className="manage-menu-items-controls-section">
-        <div className="manage-menu-items-controls-grid">
-          <div className="manage-menu-items-search-container">
-            <Search className="manage-menu-items-search-icon" />
-            <input
-              type="text"
-              placeholder="Search menu items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="manage-menu-items-search-input"
-            />
-          </div>
-          <div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="manage-menu-items-filter-select"
-            >
-              <option value="">All Categories</option>
-              {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-          </div>
+      <div className="filters">
+        <div className="search-bar">
+          <Search className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search menu items..."
+            value={searchTerm}
+            onChange={handleSearch}
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className="category-filter">
+          <FilterList className="filter-icon" />
+          <select
+            value={selectedCategory}
+            onChange={handleCategoryFilter}
+            disabled={isSubmitting}
+          >
+            <option value="">All Categories</option>
+            {categories.map(category => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {filteredItems.length === 0 ? (
-        <div className="manage-menu-items-empty-state">
-          <Restaurant className="manage-menu-items-empty-state-icon" />
-          <h3>No menu items found</h3>
-          <p>Try adjusting your search criteria or add new menu items.</p>
-        </div>
-      ) : (
-        <div className="manage-menu-items-grid">
-          {filteredItems.map(item => (
-            <div 
-              key={item.id} 
-              className={`manage-menu-items-card ${editingItem && editingItem.id === item.id ? 'manage-menu-items-card--editing' : ''}`}
-            >
-              {editingItem && editingItem.id === item.id ? (
-                <form onSubmit={handleUpdate}>
-                  <div className="manage-menu-items-form-section">
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Item Name *</label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={editingItem.name || ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter item name"
-                        required
-                        className="manage-menu-items-form-input"
-                      />
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Description</label>
-                      <textarea
-                        name="description"
-                        value={editingItem.description || ''}
-                        onChange={handleInputChange}
-                        placeholder="Enter item description"
-                        className="manage-menu-items-form-textarea"
-                      />
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Regular Price *</label>
-                      <input
-                        type="number"
-                        name="regular_price"
-                        step="0.01"
-                        min="0.01"
-                        value={editingItem.regular_price || ''}
-                        onChange={handleInputChange}
-                        placeholder="0.00"
-                        required
-                        className="manage-menu-items-form-input"
-                      />
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Sale Price (Optional)</label>
-                      <input
-                        type="number"
-                        name="sale_price"
-                        step="0.01"
-                        min="0"
-                        value={editingItem.sale_price || ''}
-                        onChange={handleInputChange}
-                        placeholder="0.00"
-                        className="manage-menu-items-form-input"
-                      />
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Category *</label>
-                      <select
-                        name="category_id"
-                        value={editingItem.category_id || ''}
-                        onChange={handleInputChange}
-                        required
-                        className="manage-menu-items-form-select"
-                      >
-                        <option value="">Select Category</option>
-                        {categories.map(cat => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Image Upload</label>
-                      <input
-                        type="file"
-                        name="image"
-                        accept="image/jpeg,image/png"
-                        onChange={handleInputChange}
-                        className="manage-menu-items-form-input"
-                      />
-                      {editingItem.image_url && (
-                        <img
-                          src={`${API_BASE_URL}${editingItem.image_url}`}
-                          alt={editingItem.name}
-                          className="manage-menu-items-item-image"
-                        />
-                      )}
-                      <div className={`manage-menu-items-no-image ${editingItem.image_url ? 'manage-menu-items-no-image--hidden' : ''}`}>
-                        No Image Available
-                      </div>
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <div className="manage-menu-items-checkbox-container">
-                        <input
-                          type="checkbox"
-                          name="availability"
-                          checked={editingItem.availability}
-                          onChange={handleInputChange}
-                          className="manage-menu-items-checkbox"
-                        />
-                        <label className="manage-menu-items-form-label">Available</label>
-                      </div>
-                    </div>
-
-                    <div className="manage-menu-items-form-group">
-                      <label className="manage-menu-items-form-label">Dietary Tags</label>
-                      <input
-                        type="text"
-                        name="dietary_tags"
-                        value={editingItem.dietary_tags || ''}
-                        onChange={handleInputChange}
-                        placeholder="e.g., vegan, gluten-free"
-                        className="manage-menu-items-form-input"
-                      />
-                    </div>
-
-                    <div className="manage-menu-items-supplement-section">
-                      <label className="manage-menu-items-form-label">Supplements</label>
-                      <div className="manage-menu-items-supplement-grid">
-                        <select
-                          value={newSupplementId}
-                          onChange={(e) => setNewSupplementId(e.target.value)}
-                          className="manage-menu-items-form-select"
-                        >
-                          <option value="">Select Supplement</option>
-                          {supplements
-                            .filter(
-                              s =>
-                                !editingItem.assignedSupplements.some(
-                                  as => as.supplement_id === s.id
-                                )
-                            )
-                            .map(s => (
-                              <option key={s.id} value={s.id}>
-                                {s.name}
-                              </option>
-                            ))}
-                        </select>
-                        <button
-                          type="button"
-                          onClick={handleAddSupplement}
-                          className="manage-menu-items-primary-button"
-                          disabled={isSubmitting}
-                        >
-                          <AddCircleOutline fontSize="small" />
-                          Add Supplement
-                        </button>
-                      </div>
-                      {editingItem.assignedSupplements.map(sup => (
-                        <div key={sup.supplement_id} className="manage-menu-items-supplement-item">
-                          <select
-                            value={sup.supplement_id}
-                            onChange={(e) =>
-                              handleSupplementChange(
-                                sup.supplement_id,
-                                'supplement_id',
-                                parseInt(e.target.value)
-                              )
-                            }
-                            className="manage-menu-items-form-select"
-                          >
-                            {supplements
-                              .filter(
-                                s =>
-                                  !editingItem.assignedSupplements.some(
-                                    as =>
-                                      as.supplement_id === s.id &&
-                                      as.supplement_id !== sup.supplement_id
-                                  )
-                              )
-                              .map(s => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name}
-                                </option>
-                              ))}
-                          </select>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={sup.additional_price || ''}
-                            onChange={(e) =>
-                              handleSupplementChange(
-                                sup.supplement_id,
-                                'additional_price',
-                                e.target.value
-                              )
-                            }
-                            placeholder="Additional Price"
-                            className="manage-menu-items-form-input"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSupplement(sup.supplement_id)}
-                            className="manage-menu-items-danger-button"
-                            disabled={isSubmitting}
-                          >
-                            <Close fontSize="small" />
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="manage-menu-items-button-group">
-                    <button
-                      type="submit"
-                      className="manage-menu-items-primary-button"
-                      disabled={isSubmitting}
-                    >
-                      <Save fontSize="small" />
-                      {isSubmitting ? 'Saving...' : 'Save'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelEdit}
-                      className="manage-menu-items-secondary-button"
-                      disabled={isSubmitting}
-                    >
-                      <Cancel fontSize="small" />
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div>
-                  {item.image_url ? (
-                    <img
-                      src={`${API_BASE_URL}${item.image_url}`}
-                      alt={item.name}
-                      className="manage-menu-items-item-image"
-                    />
-                  ) : null}
-                  <div className={`manage-menu-items-no-image ${item.image_url ? 'manage-menu-items-no-image--hidden' : ''}`}>
-                    No Image Available
-                  </div>
-                  <h3 className="manage-menu-items-item-title">{item.name}</h3>
-                  <div className="manage-menu-items-price-container">
-                    {item.sale_price !== null && (
-                      <span className="manage-menu-items-regular-price">
-                        ${isNaN(parseFloat(item.regular_price)) ? 'N/A' : parseFloat(item.regular_price).toFixed(2)}
-                      </span>
-                    )}
-                    <span className="manage-menu-items-sale-price">
-                      ${isNaN(parseFloat(item.sale_price ?? item.regular_price)) ? 'N/A' : parseFloat(item.sale_price ?? item.regular_price).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="manage-menu-items-item-meta">
-                    <span className="manage-menu-items-badge manage-menu-items-category-badge">
-                      <Category fontSize="small" className="manage-menu-items-badge-icon" />
-                      {item.category_name || 'N/A'}
-                    </span>
-                    <span className={`manage-menu-items-badge ${item.availability ? 'manage-menu-items-available-badge' : 'manage-menu-items-unavailable-badge'}`}>
-                      {item.availability ? <Visibility fontSize="small" className="manage-menu-items-badge-icon" /> : <VisibilityOff fontSize="small" className="manage-menu-items-badge-icon" />}
-                      {item.availability ? 'Available' : 'Unavailable'}
-                    </span>
-                    {safeParseDietaryTags(item.dietary_tags).map((tag, index) => (
-                      <span key={index} className="manage-menu-items-badge manage-menu-items-dietary-tag">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="manage-menu-items-item-description">{item.description || 'No description available'}</p>
-                  <div className="manage-menu-items-button-group">
-                    <button
-                      className="manage-menu-items-primary-button"
-                      onClick={() => handleEdit(item)}
-                    >
-                      <Edit fontSize="small" />
-                      Edit
-                    </button>
-                    <button
-                      className="manage-menu-items-danger-button"
-                      onClick={() => handleDelete(item.id)}
-                      disabled={isSubmitting}
-                    >
-                      <DeleteOutline fontSize="small" />
-                      Delete
-                    </button>
-                  </div>
-                </div>
+      {editingItem && (
+        <div className="edit-form-container">
+          <h2>{editingItem.id === 0 ? 'Add New Menu Item' : 'Edit Menu Item'}</h2>
+          <form
+            onSubmit={editingItem.id === 0 ? handleCreate : handleUpdate}
+            className="edit-form"
+            encType="multipart/form-data"
+          >
+            <div className="form-group">
+              <label>
+                <Restaurant className="form-icon" /> Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={editingItem.name}
+                onChange={handleInputChange}
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <textarea
+                name="description"
+                value={editingItem.description}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>
+                <AttachMoney className="form-icon" /> Regular Price
+              </label>
+              <input
+                type="number"
+                name="regular_price"
+                value={editingItem.regular_price}
+                onChange={handleInputChange}
+                step="0.01"
+                min="0"
+                required
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>
+                <AttachMoney className="form-icon" /> Sale Price (optional)
+              </label>
+              <input
+                type="number"
+                name="sale_price"
+                value={editingItem.sale_price}
+                onChange={handleInputChange}
+                step="0.01"
+                min="0"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>
+                <Category className="form-icon" /> Category
+              </label>
+              <select
+                name="category_id"
+                value={editingItem.category_id}
+                onChange={handleInputChange}
+                required
+                disabled={isSubmitting}
+              >
+                <option value="">Select Category</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>
+                <Visibility className="form-icon" /> Availability
+              </label>
+              <input
+                type="checkbox"
+                name="availability"
+                checked={editingItem.availability}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>
+                <Star className="form-icon" /> Best Seller
+              </label>
+              <input
+                type="checkbox"
+                name="is_best_seller"
+                checked={editingItem.is_best_seller}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>Dietary Tags (comma-separated)</label>
+              <input
+                type="text"
+                name="dietary_tags"
+                value={editingItem.dietary_tags}
+                onChange={handleInputChange}
+                placeholder="e.g., Vegan, Gluten-Free"
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="form-group">
+              <label>Image</label>
+              <input
+                type="file"
+                name="image"
+                accept="image/jpeg,image/png"
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+              />
+              {editingItem.image_url && (
+                <img
+                  src={`${API_BASE_URL}${editingItem.image_url}`}
+                  alt="Current"
+                  className="preview-image"
+                />
               )}
             </div>
-          ))}
+            <div className="form-group">
+              <label>Assign Supplements</label>
+              <div className="supplement-assignment">
+                <select
+                  value={newSupplementId}
+                  onChange={(e) => setNewSupplementId(e.target.value)}
+                  disabled={isSubmitting}
+                >
+                  <option value="">Select Supplement</option>
+                  {supplements.map(sup => (
+                    <option key={sup.id} value={sup.id}>
+                      {sup.name} (${sup.price})
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddSupplement}
+                  disabled={isSubmitting}
+                  className="add-supplement-button"
+                >
+                  <Add /> Add
+                </button>
+              </div>
+              {editingItem.assignedSupplements.map(sup => (
+                <div key={sup.supplement_id} className="supplement-item">
+                  <input
+                    type="text"
+                    value={sup.name}
+                    onChange={(e) => handleSupplementChange(sup.supplement_id, 'name', e.target.value)}
+                    disabled={isSubmitting}
+                  />
+                  <input
+                    type="number"
+                    value={sup.additional_price}
+                    onChange={(e) => handleSupplementChange(sup.supplement_id, 'additional_price', e.target.value)}
+                    step="0.01"
+                    min="0"
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveSupplement(sup.supplement_id)}
+                    disabled={isSubmitting}
+                    className="remove-supplement-button"
+                  >
+                    <Close />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <div className="form-actions">
+              <button type="submit" disabled={isSubmitting}>
+                <Save /> {editingItem.id === 0 ? 'Create' : 'Update'}
+              </button>
+              <button type="button" onClick={handleCancel} disabled={isSubmitting}>
+                <Cancel /> Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
+
+      <div className="menu-items-grid">
+        {filteredItems.map(item => (
+          <div key={item.id} className="menu-item-card">
+            <div className="card-header">
+              <h3>{item.name}</h3>
+              <div className="card-actions">
+                <button
+                  onClick={() => handleEdit(item)}
+                  disabled={isSubmitting}
+                  title="Edit Item"
+                >
+                  <Edit />
+                </button>
+                <button
+                  onClick={() => handleDelete(item.id)}
+                  disabled={isSubmitting}
+                  title="Delete Item"
+                >
+                  <DeleteOutline />
+                </button>
+                <button
+                  onClick={() => handleToggleAvailability(item.id, item.availability)}
+                  disabled={isSubmitting}
+                  title={item.availability ? 'Make Unavailable' : 'Make Available'}
+                >
+                  {item.availability ? <Visibility /> : <VisibilityOff />}
+                </button>
+              </div>
+            </div>
+            <div className="card-content">
+              {item.image_url && (
+                <img
+                  src={`${API_BASE_URL}${item.image_url}`}
+                  alt={item.name}
+                  className="menu-item-image"
+                />
+              )}
+              <p><strong>Category:</strong> {item.category_name || 'N/A'}</p>
+              <p><strong>Regular Price:</strong> ${parseFloat(item.regular_price).toFixed(2)}</p>
+              {item.sale_price !== null && (
+                <p><strong>Sale Price:</strong> ${parseFloat(item.sale_price).toFixed(2)}</p>
+              )}
+              <p><strong>Availability:</strong> {item.availability ? 'Available' : 'Unavailable'}</p>
+              <p><strong>Best Seller:</strong> {item.is_best_seller ? 'Yes' : 'No'}</p>
+              <p><strong>Dietary Tags:</strong> {safeParseDietaryTags(item.dietary_tags).join(', ') || 'None'}</p>
+              <p><strong>Description:</strong> {item.description || 'No description'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
