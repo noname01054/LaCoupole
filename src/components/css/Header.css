@@ -1,8 +1,4 @@
 .header-appbar {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  color: var(--text-color);
   min-height: 56px;
 }
 @media (max-width: 767px) {
@@ -70,7 +66,6 @@
 
 .header-drawer .MuiDrawer-paper {
   width: 280px;
-  background-color: var(--background-color);
   border-top-right-radius: 16px;
   border-bottom-right-radius: 16px;
   box-shadow: 0px 8px 30px rgba(0, 0, 0, 0.1);
@@ -79,10 +74,6 @@
   .header-drawer .MuiDrawer-paper {
     width: 260px;
   }
-}
-
-.header-drawer .MuiBackdrop-root {
-  background-color: rgba(0, 0, 0, 0.3);
 }
 
 .header-drawer-header {
@@ -134,22 +125,6 @@
 .header-search-box {
   margin: 12px 20px;
 }
-.header-search-box .MuiTextField-root .MuiOutlinedInput-root {
-  border-radius: 8px;
-  background-color: #fff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-.header-search-box .MuiTextField-root .MuiOutlinedInput-root:hover {
-  border-color: rgba(0, 0, 0, 0.1);
-}
-.header-search-box .MuiTextField-root .MuiOutlinedInput-root.Mui-focused {
-  border-color: var(--primary-color);
-}
-@media (max-width: 767px) {
-  .header-search-box {
-    margin: 12px 20px;
-  }
-}
 
 .header-search-icon {
   color: #8E8E93;
@@ -171,8 +146,6 @@
 .header-primary-list-item {
   margin: 2px 12px;
   border-radius: 8px;
-  background-color: var(--primary-color);
-  color: var(--text-color);
 }
 .header-primary-list-item:hover {
   background-color: var(--secondary-color);
@@ -194,11 +167,9 @@
 .header-list-item-text .MuiListItemText-primary {
   font-size: 15px;
   font-weight: 500;
-  color: #000;
 }
 .header-primary-list-item .header-list-item-text .MuiListItemText-primary {
   font-weight: 600;
-  color: var(--text-color);
 }
 @media (max-width: 767px) {
   .header-list-item-text .MuiListItemText-primary {
@@ -213,7 +184,6 @@
 
 .header-user-section {
   padding: 16px 20px;
-  background-color: #fff;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   margin-top: auto;
 }
@@ -239,7 +209,6 @@
 .header-avatar {
   width: 36px;
   height: 36px;
-  background-color: var(--primary-color);
   font-size: 16px;
 }
 
@@ -254,8 +223,6 @@
 }
 
 .header-user-chip {
-  background-color: var(--secondary-color);
-  color: var(--primary-color);
   font-size: 11px;
   font-weight: 500;
 }
@@ -269,30 +236,6 @@
     gap: 10px;
     position: absolute;
     right: 12px;
-  }
-}
-
-.header-desktop-button {
-  border-radius: 16px;
-  text-transform: none;
-  font-weight: 500;
-  padding: 4px 12px;
-  background-color: transparent;
-  color: var(--text-color);
-  border-color: var(--text-color);
-}
-.header-desktop-button.MuiButton-contained {
-  background-color: var(--primary-color);
-}
-.header-desktop-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-}
-.header-desktop-button.MuiButton-contained:hover {
-  background-color: var(--secondary-color);
-}
-@media (max-width: 767px) {
-  .header-desktop-button {
-    padding: 4px 12px;
   }
 }
 
@@ -326,8 +269,6 @@
 
 .header-signout-button {
   border-radius: 8px;
-  border-color: var(--primary-color);
-  color: var(--primary-color);
   text-transform: none;
   font-weight: 500;
 }
@@ -337,45 +278,14 @@
 
 .header-login-button {
   border-radius: 8px;
-  background-color: var(--primary-color);
   text-transform: none;
   font-weight: 500;
-}
-.header-login-button:hover {
-  background-color: var(--secondary-color);
 }
 
 .header-actions {
   display: flex;
   gap: 6px;
   margin-left: auto;
-}
-
-.header-badge .MuiBadge-badge {
-  background-color: var(--primary-color);
-  color: var(--text-color);
-  font-size: 12px;
-  font-weight: 600;
-  min-width: 18px;
-  height: 18px;
-  border-radius: 9px;
-  border: 1.5px solid var(--text-color);
-}
-@media (max-width: 767px) {
-  .header-badge .MuiBadge-badge {
-    font-size: 11px;
-    min-width: 16px;
-    height: 16px;
-  }
-}
-
-.header-cart-icon {
-  color: var(--text-color);
-}
-@media (max-width: 767px) {
-  .header-cart-icon {
-    font-size: 20px;
-  }
 }
 
 .header-spacer {
