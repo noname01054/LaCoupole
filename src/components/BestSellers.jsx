@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
-import { Coffee } from 'lucide-react';
+import { Coffee, Star } from 'lucide-react';
 
 function BestSellers({ addToCart }) {
   const [bestSellers, setBestSellers] = useState([]);
@@ -195,8 +195,23 @@ function BestSellers({ addToCart }) {
       <style>{cssStyles}</style>
       <div style={styles.bestSellersSection}>
         <div style={styles.bestSellersHeader}>
-          <h2 style={styles.bestSellersTitle}>Best Sellers</h2>
+          <div style={styles.titleContainer}>
+            <Star size={20} style={styles.starIcon} />
+            <h2 style={styles.bestSellersTitle}>Best Sellers</h2>
+          </div>
+          <div style={styles.indicatorContainer}>
+            {bestSellers.map((_, index) => (
+              <div
+                key={index}
+                style={{
+                  ...styles.indicator,
+                  ...(centerIndex === index ? styles.activeIndicator : {}),
+                }}
+              />
+            ))}
+          </div>
         </div>
+        
         <div 
           style={styles.bestSellersScrollContainer}
           ref={scrollContainerRef} 
@@ -209,7 +224,7 @@ function BestSellers({ addToCart }) {
                 ref={(el) => (itemRefs.current[index] = el)}
                 style={{
                   ...styles.bestSellerItem,
-                  transform: centerIndex === index ? 'scale(1.15)' : 'scale(1)',
+                  transform: centerIndex === index ? 'scale(1.08)' : 'scale(1)',
                   zIndex: centerIndex === index ? 10 : 1,
                 }}
                 className="best-seller-item"
@@ -217,50 +232,61 @@ function BestSellers({ addToCart }) {
               >
                 <div 
                   style={{
-                    ...styles.bestSellerImageContainer,
-                    ...(centerIndex === index ? styles.centerItemImageContainer : {}),
+                    ...styles.bestSellerCard,
+                    ...(centerIndex === index ? styles.centerItemCard : {}),
                   }}
                 >
-                  {item.image_url ? (
-                    <img
-                      src={`${getBaseUrl()}${item.image_url}`}
-                      srcSet={`
-                        ${getBaseUrl()}${item.image_url}?w=120 1x,
-                        ${getBaseUrl()}${item.image_url}?w=240 2x
-                      `}
-                      alt={item.name}
-                      style={styles.bestSellerImage}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  ) : (
-                    <div style={styles.bestSellerPlaceholder}>
-                      <Coffee size={centerIndex === index ? 32 : 24} color="#8e8e93" />
+                  <div 
+                    style={{
+                      ...styles.bestSellerImageContainer,
+                      ...(centerIndex === index ? styles.centerItemImageContainer : {}),
+                    }}
+                  >
+                    {item.image_url ? (
+                      <img
+                        src={`${getBaseUrl()}${item.image_url}`}
+                        srcSet={`
+                          ${getBaseUrl()}${item.image_url}?w=120 1x,
+                          ${getBaseUrl()}${item.image_url}?w=240 2x
+                        `}
+                        alt={item.name}
+                        style={styles.bestSellerImage}
+                        loading="lazy"
+                        decoding="async"
+                      />
+                    ) : (
+                      <div style={styles.bestSellerPlaceholder}>
+                        <Coffee size={centerIndex === index ? 36 : 32} color="#F97316" />
+                      </div>
+                    )}
+                    {centerIndex === index && (
+                      <div style={styles.highlightBadge}>
+                        <Star size={12} fill="#FBBF24" color="#FBBF24" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div style={styles.itemInfo}>
+                    <h3 
+                      style={{
+                        ...styles.bestSellerName,
+                        ...(centerIndex === index ? styles.centerItemName : {}),
+                      }}
+                    >
+                      {item.name}
+                    </h3>
+                    <div
+                      style={{
+                        ...styles.priceContainer,
+                        ...(centerIndex === index ? styles.centerItemPriceContainer : {}),
+                      }}
+                    >
+                      <span style={styles.currency}>$</span>
+                      <span style={styles.price}>
+                        {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
+                      </span>
                     </div>
-                  )}
-                </div>
-                <div 
-                  style={{
-                    ...styles.itemLabel,
-                    ...(centerIndex === index ? styles.centerItemLabel : {}),
-                  }}
-                >
-                  <p 
-                    style={{
-                      ...styles.bestSellerName,
-                      ...(centerIndex === index ? styles.centerItemName : {}),
-                    }}
-                  >
-                    {item.name}
-                  </p>
-                  <p
-                    style={{
-                      ...styles.bestSellerPrice,
-                      ...(centerIndex === index ? styles.centerItemPrice : {}),
-                    }}
-                  >
-                    ${parseFloat(item.sale_price || item.regular_price).toFixed(2)}
-                  </p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -273,82 +299,129 @@ function BestSellers({ addToCart }) {
 
 const styles = {
   bestSellersSection: {
-    marginBottom: '24px',
+    marginBottom: '40px',
     width: '100%',
     boxSizing: 'border-box',
+    paddingTop: '12px',
   },
   bestSellersHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
-    paddingLeft: '16px',
-    paddingRight: '16px',
+    marginBottom: '24px',
+    paddingLeft: '24px',
+    paddingRight: '24px',
+  },
+  titleContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+  },
+  starIcon: {
+    color: '#F97316',
+    filter: 'drop-shadow(0 1px 3px rgba(249, 115, 22, 0.4))',
   },
   bestSellersTitle: {
-    fontSize: '20px',
+    fontSize: '26px',
     fontWeight: '700',
-    background: 'linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    color: '#1F2937',
     margin: 0,
     letterSpacing: '-0.5px',
+    lineHeight: '1.2',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  },
+  indicatorContainer: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  indicator: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    backgroundColor: '#D1D5DB',
+    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+  },
+  activeIndicator: {
+    backgroundColor: '#F97316',
+    transform: 'scale(1.3)',
+    boxShadow: '0 0 10px rgba(249, 115, 22, 0.5)',
   },
   bestSellersScrollContainer: {
     overflowX: 'auto',
     overflowY: 'hidden',
     scrollSnapType: 'x mandatory',
-    paddingTop: '20px',
-    paddingBottom: '30px',
-    paddingLeft: '16px',
-    paddingRight: '16px',
+    paddingTop: '12px',
+    paddingBottom: '28px',
+    paddingLeft: '24px',
+    paddingRight: '24px',
     width: '100%',
     boxSizing: 'border-box',
   },
   bestSellersGrid: {
     display: 'flex',
-    gap: '16px',
+    gap: '20px',
     minWidth: 'fit-content',
     alignItems: 'flex-start',
-    paddingBottom: '8px',
+    paddingBottom: '12px',
   },
   bestSellerItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     cursor: 'pointer',
-    minWidth: '90px',
-    maxWidth: '110px',
+    minWidth: '130px',
+    maxWidth: '150px',
     flex: '0 0 auto',
-    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     scrollSnapAlign: 'center',
     willChange: 'transform',
   },
+  bestSellerCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '20px',
+    padding: '18px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+    border: '1px solid rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  centerItemCard: {
+    backgroundColor: '#FFFFFF',
+    boxShadow: '0 10px 36px rgba(249, 115, 22, 0.2), 0 6px 18px rgba(0, 0, 0, 0.1)',
+    border: '1px solid rgba(249, 115, 22, 0.15)',
+    transform: 'translateY(-6px)',
+  },
   bestSellerImageContainer: {
-    width: '80px',
-    height: '80px',
-    borderRadius: '50%',
-    backgroundColor: '#fff',
+    width: '76px',
+    height: '76px',
+    borderRadius: '18px',
+    backgroundColor: '#FFF7ED',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '10px',
+    marginBottom: '14px',
     overflow: 'hidden',
-    border: '3px solid #f0f0f0',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     flexShrink: 0,
+    position: 'relative',
   },
   centerItemImageContainer: {
-    width: '90px',
-    height: '90px',
-    border: '4px solid #ff8c42',
-    boxShadow: '0 8px 24px rgba(255, 140, 66, 0.3)',
+    width: '84px',
+    height: '84px',
+    borderRadius: '20px',
+    backgroundColor: '#FFF7ED',
+    boxShadow: '0 6px 20px rgba(249, 115, 22, 0.25)',
   },
   bestSellerImage: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
+    borderRadius: '18px',
   },
   bestSellerPlaceholder: {
     width: '100%',
@@ -356,79 +429,103 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#FFF7ED',
+    borderRadius: '18px',
   },
-  itemLabel: {
-    backgroundColor: '#ff8c42',
-    padding: '6px 10px',
-    borderRadius: '14px',
-    minWidth: '50px',
-    maxWidth: '100px',
+  highlightBadge: {
+    position: 'absolute',
+    top: '-6px',
+    right: '-6px',
+    width: '24px',
+    height: '24px',
+    backgroundColor: '#FFFFFF',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+    border: '1px solid rgba(251, 191, 36, 0.3)',
+  },
+  itemInfo: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    flexShrink: 0,
-  },
-  centerItemLabel: {
-    backgroundColor: '#ff6b35',
-    padding: '8px 12px',
-    borderRadius: '16px',
-    transform: 'translateY(-2px)',
-    maxWidth: '110px',
+    gap: '6px',
+    width: '100%',
   },
   bestSellerName: {
-    fontSize: '11px',
+    fontSize: '15px',
     fontWeight: '600',
-    color: '#fff',
+    color: '#1F2937',
     textAlign: 'center',
     margin: 0,
-    lineHeight: '1.2',
+    lineHeight: '1.4',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    transition: 'font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
     width: '100%',
+    maxWidth: '110px',
   },
   centerItemName: {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#F97316',
+    maxWidth: '120px',
+  },
+  priceContainer: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'center',
+    backgroundColor: '#FFF7ED',
+    borderRadius: '10px',
+    padding: '6px 10px',
+    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    minWidth: '60px',
+  },
+  centerItemPriceContainer: {
+    backgroundColor: '#F97316',
+    transform: 'scale(1.08)',
+    boxShadow: '0 3px 10px rgba(249, 115, 22, 0.4)',
+  },
+  currency: {
     fontSize: '12px',
-    fontWeight: '700',
-  },
-  bestSellerPrice: {
-    fontSize: '10px',
     fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-    margin: '2px 0 0 0',
-    lineHeight: '1.2',
-    transition: 'font-size 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    width: '100%',
+    color: '#6B7280',
+    transition: 'color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   },
-  centerItemPrice: {
-    fontSize: '11px',
+  price: {
+    fontSize: '15px',
     fontWeight: '700',
+    color: '#1F2937',
+    transition: 'color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   loadingContainer: {
-    padding: '40px 16px',
+    padding: '56px 24px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: '20px',
+    margin: '0 24px',
+    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
   },
   loadingSpinner: {
     width: '32px',
     height: '32px',
-    border: '3px solid rgba(255, 140, 66, 0.2)',
-    borderTop: '3px solid #ff8c42',
+    border: '3px solid rgba(249, 115, 22, 0.2)',
+    borderTop: '3px solid #F97316',
     borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-    marginBottom: '16px',
+    animation: 'spin 0.7s linear infinite',
+    marginBottom: '20px',
   },
   loadingText: {
-    fontSize: '14px',
-    color: '#8e8e93',
+    fontSize: '16px',
+    color: '#6B7280',
+    fontWeight: '500',
     margin: 0,
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
 };
 
@@ -450,48 +547,54 @@ const cssStyles = `
 
   .best-seller-item:active {
     transform: scale(0.95) !important;
+    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .best-seller-item .center-item-price-container .currency,
+  .best-seller-item .center-item-price-container .price {
+    color: #FFFFFF !important;
   }
 
   @media (max-width: 480px) {
+    .best-sellers-scroll {
+      padding-left: 20px !important;
+      padding-right: 20px !important;
+    }
+    
+    .best-seller-item {
+      min-width: 120px !important;
+      max-width: 140px !important;
+    }
+  }
+
+  @media (max-width: 375px) {
+    .best-sellers-scroll {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+    
+    .best-seller-item {
+      min-width: 110px !important;
+      max-width: 130px !important;
+    }
+  }
+
+  @media (max-width: 320px) {
     .best-sellers-scroll {
       padding-left: 12px !important;
       padding-right: 12px !important;
     }
     
     .best-seller-item {
-      min-width: 85px !important;
-      max-width: 95px !important;
-    }
-  }
-
-  @media (max-width: 375px) {
-    .best-sellers-scroll {
-      padding-left: 10px !important;
-      padding-right: 10px !important;
-    }
-    
-    .best-seller-item {
-      min-width: 80px !important;
-      max-width: 90px !important;
-    }
-  }
-
-  @media (max-width: 320px) {
-    .best-sellers-scroll {
-      padding-left: 8px !important;
-      padding-right: 8px !important;
-    }
-    
-    .best-seller-item {
-      min-width: 75px !important;
-      max-width: 85px !important;
+      min-width: 100px !important;
+      max-width: 120px !important;
     }
   }
 
   @media (min-width: 768px) {
     .best-seller-item {
-      min-width: 100px !important;
-      max-width: 120px !important;
+      min-width: 150px !important;
+      max-width: 170px !important;
     }
   }
 
@@ -503,6 +606,10 @@ const cssStyles = `
     .best-sellers-scroll {
       scroll-behavior: auto;
     }
+    
+    .indicator {
+      transition: none;
+    }
   }
 
   @keyframes spin {
@@ -512,6 +619,16 @@ const cssStyles = `
   .best-seller-item {
     transform-style: preserve-3d;
     backface-visibility: hidden;
+  }
+
+  @media (hover: hover) {
+    .best-seller-item:hover {
+      transform: scale(1.03) translateY(-3px);
+    }
+    
+    .best-seller-item:hover .best-seller-card {
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
+    }
   }
 `;
 
