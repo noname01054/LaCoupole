@@ -26,6 +26,7 @@ import OrderWaiting from './pages/OrderWaiting';
 import BannerManagement from './pages/BannerManagement';
 import AdminBreakfasts from './pages/AdminBreakfasts';
 import BreakfastMenu from './pages/BreakfastMenu';
+import ThemeManagement from './pages/ThemeManagement';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartModal from './components/CartModal';
@@ -44,6 +45,14 @@ function App() {
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
   const [socket, setSocket] = useState(null);
+  const [theme, setTheme] = useState(null);
+
+  const defaultTheme = {
+    primary_color: '#ff6b35',
+    secondary_color: '#ff8c42',
+    background_color: '#faf8f5',
+    text_color: '#1f2937',
+  };
 
   const handleNewNotification = (notification) => {
     if (!notification.id) {
@@ -51,6 +60,14 @@ function App() {
       return;
     }
     toast.info(notification.message, { autoClose: 5000 });
+  };
+
+  // Apply theme to CSS custom properties
+  const applyTheme = (themeData) => {
+    document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
+    document.documentElement.style.setProperty('--secondary-color', themeData.secondary_color);
+    document.documentElement.style.setProperty('--background-color', themeData.background_color);
+    document.documentElement.style.setProperty('--text-color', themeData.text_color);
   };
 
   useEffect(() => {
@@ -118,7 +135,20 @@ function App() {
         }
       };
 
-      await Promise.all([checkAuth(), fetchPromotions()]);
+      const fetchTheme = async () => {
+        try {
+          const response = await api.getTheme();
+          setTheme(response.data);
+          applyTheme(response.data);
+        } catch (error) {
+          console.error('Error fetching theme:', error.response?.data || error.message);
+          toast.error(error.response?.data?.error || 'Failed to load theme, applying default theme');
+          setTheme(defaultTheme);
+          applyTheme(defaultTheme); // Apply default theme on failure
+        }
+      };
+
+      await Promise.all([checkAuth(), fetchPromotions(), fetchTheme()]);
 
       return () => {
         socketCleanup();
@@ -365,10 +395,6 @@ function App() {
     return <div style={{ textAlign: 'center', padding: '20px', color: 'red' }}>{error}</div>;
   }
 
-  if (!sessionId) {
-    return <div style={{ textAlign: 'center', padding: '20px' }}>Initializing session...</div>;
-  }
-
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', minHeight: '100vh' }}>
       <Header
@@ -395,6 +421,7 @@ function App() {
         <Route path="/admin/banners" element={<BannerManagement />} />
         <Route path="/admin/breakfasts" element={<AdminBreakfasts />} />
         <Route path="/admin/table-reservations" element={<AdminTableReservations />} />
+        <Route path="/admin/theme" element={<ThemeManagement />} />
         <Route path="/staff/table-reservations" element={<StaffTableReservations />} />
         <Route path="/category/:id" element={<CategoryMenu addToCart={addToCart} />} />
         <Route path="/product/:id" element={<ProductDetails addToCart={addToCart} latestOrderId={latestOrderId} />} />
