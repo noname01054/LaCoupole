@@ -93,15 +93,15 @@ function BestSellers({ addToCart }) {
 
         const nextIndex = (centerIndex + 1) % bestSellers.length;
         const targetElement = itemRefs.current[nextIndex];
-        
+
         if (targetElement) {
           const containerRect = container.getBoundingClientRect();
           const elementRect = targetElement.getBoundingClientRect();
-          const scrollLeft = container.scrollLeft + elementRect.left - containerRect.left - (containerRect.width - elementRect.width) / 2;
-          
+          const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft - (containerRect.width - elementRect.width) / 2;
+
           container.scrollTo({
             left: scrollLeft,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }
       }
@@ -119,7 +119,7 @@ function BestSellers({ addToCart }) {
     userInteractionRef.current = true;
     lastUserInteractionRef.current = Date.now();
     stopAutoScroll();
-    
+
     setTimeout(() => {
       if (Date.now() - lastUserInteractionRef.current >= 3000) {
         userInteractionRef.current = false;
@@ -135,7 +135,7 @@ function BestSellers({ addToCart }) {
     container.addEventListener('scroll', handleScroll, { passive: true });
     container.addEventListener('touchstart', handleUserInteraction, { passive: true });
     container.addEventListener('mousedown', handleUserInteraction, { passive: true });
-    
+
     setTimeout(updateCenterItem, 100);
 
     return () => {
@@ -153,7 +153,7 @@ function BestSellers({ addToCart }) {
       const timer = setTimeout(() => {
         startAutoScroll();
       }, 2000);
-      
+
       return () => {
         clearTimeout(timer);
         stopAutoScroll();
@@ -353,8 +353,8 @@ const styles = {
     scrollSnapType: 'x mandatory',
     paddingTop: '12px',
     paddingBottom: '28px',
-    paddingLeft: '24px',
-    paddingRight: '24px',
+    paddingLeft: '0',
+    paddingRight: '0',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -364,6 +364,8 @@ const styles = {
     minWidth: 'fit-content',
     alignItems: 'flex-start',
     paddingBottom: '12px',
+    paddingLeft: 'calc(50% - 75px)', // Center first item
+    paddingRight: 'calc(50% - 75px)', // Center last item
   },
   bestSellerItem: {
     display: 'flex',
@@ -557,8 +559,8 @@ const cssStyles = `
 
   @media (max-width: 480px) {
     .best-sellers-scroll {
-      padding-left: 20px !important;
-      padding-right: 20px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
     .best-seller-item {
@@ -569,8 +571,8 @@ const cssStyles = `
 
   @media (max-width: 375px) {
     .best-sellers-scroll {
-      padding-left: 16px !important;
-      padding-right: 16px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
     .best-seller-item {
@@ -581,8 +583,8 @@ const cssStyles = `
 
   @media (max-width: 320px) {
     .best-sellers-scroll {
-      padding-left: 12px !important;
-      padding-right: 12px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
     .best-seller-item {
