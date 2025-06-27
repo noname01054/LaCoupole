@@ -48,159 +48,13 @@ import {
   ShoppingCart as ShoppingCartIcon,
   AddCircleOutline as AddCircleOutlineIcon,
   Image as ImageIcon,
+  Palette as PaletteIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { lazy, Suspense } from 'react';
+import './css/Header.css';
 
 const NotificationBell = lazy(() => import('./NotificationBell'));
-
-const iosStyles = {
-  header: {
-    background: 'linear-gradient(135deg, #ff9800 0%, #f57c00 100%)',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
-    color: '#fff',
-    minHeight: '56px',
-    '@media (max-width: 767px)': { minHeight: '64px' },
-  },
-  toolbar: {
-    minHeight: '56px',
-    padding: '0 12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    '@media (max-width: 767px)': { minHeight: '64px' },
-  },
-  logo: {
-    position: 'absolute',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    textDecoration: 'none',
-    color: '#fff',
-    fontWeight: 600,
-    fontSize: '18px',
-    '@media (max-width: 767px)': { fontSize: '16px' },
-  },
-  iconButton: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '8px',
-    backgroundColor: 'transparent',
-    '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' },
-    '@media (max-width: 767px)': { width: '44px', height: '44px' },
-  },
-  drawer: {
-    '& .MuiDrawer-paper': {
-      width: '280px',
-      backgroundColor: '#f8f9fa',
-      borderTopRightRadius: '16px',
-      borderBottomRightRadius: '16px',
-      boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
-      '@media (max-width: 767px)': { width: '260px' },
-    },
-    '& .MuiBackdrop-root': {
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    },
-  },
-  drawerHeader: {
-    padding: '16px 20px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-    backgroundColor: '#fff',
-    '@media (max-width: 767px)': { padding: '16px 20px' },
-  },
-  drawerContent: {
-    padding: '12px 0',
-    height: 'calc(100vh - 72px)',
-    overflowY: 'auto',
-    '@media (max-width: 767px)': { height: 'calc(100vh - 80px)' },
-  },
-  searchBox: {
-    margin: '12px 20px',
-    '& .MuiTextField-root': {
-      '& .MuiOutlinedInput-root': {
-        borderRadius: '8px',
-        backgroundColor: '#fff',
-        border: '1px solid rgba(0, 0, 0, 0.06)',
-        '&:hover': { borderColor: 'rgba(0, 0, 0, 0.1)' },
-        '&.Mui-focused': { borderColor: '#ff9800' },
-      },
-    },
-    '@media (max-width: 767px)': { margin: '12px 20px' },
-  },
-  listItem: {
-    margin: '2px 12px',
-    borderRadius: '8px',
-    '&:hover': { backgroundColor: 'rgba(255, 152, 0, 0.06)' },
-    '@media (max-width: 767px)': { margin: '2px 12px' },
-  },
-  primaryListItem: {
-    margin: '2px 12px',
-    borderRadius: '8px',
-    backgroundColor: '#ff9800',
-    color: '#fff',
-    '&:hover': { backgroundColor: '#f57c00' },
-    '@media (max-width: 767px)': { margin: '2px 12px' },
-  },
-  userSection: {
-    padding: '16px 20px',
-    backgroundColor: '#fff',
-    borderTop: '1px solid rgba(0, 0, 0, 0.06)',
-    marginTop: 'auto',
-    '@media (max-width: 767px)': { padding: '16px 20px' },
-  },
-  userInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    marginBottom: '12px',
-    '@media (max-width: 767px)': { gap: '10px', marginBottom: '12px' },
-  },
-  desktopNav: {
-    display: 'none',
-    '@media (min-width: 768px)': { display: 'flex', gap: '10px', position: 'absolute', right: '12px' },
-  },
-  desktopButton: {
-    borderRadius: '16px',
-    textTransform: 'none',
-    fontWeight: 500,
-    padding: '4px 12px',
-    '@media (max-width: 767px)': { padding: '4px 12px' },
-  },
-};
-
-const NavItem = memo(
-  ({ link, isPrimary, onClick }) => (
-    <ListItemButton
-      component={Link}
-      to={link.to}
-      onClick={onClick}
-      sx={isPrimary ? iosStyles.primaryListItem : iosStyles.listItem}
-    >
-      <ListItemIcon sx={{ color: isPrimary ? '#fff' : '#ff9800', minWidth: '36px' }}>
-        {link.icon}
-      </ListItemIcon>
-      <ListItemText
-        primary={link.label}
-        sx={{
-          '& .MuiListItemText-primary': {
-            fontSize: '15px',
-            fontWeight: isPrimary ? 600 : 500,
-            color: isPrimary ? '#fff' : '#000',
-            '@media (max-width: 767px)': { fontSize: '14px' },
-          },
-        }}
-      />
-      {!isPrimary && <ChevronRightIcon sx={{ color: '#C7C7CC', fontSize: '16px' }} />}
-    </ListItemButton>
-  ),
-  (prev, next) => prev.link.to === next.link.to && prev.isPrimary === next.isPrimary
-);
 
 const Header = memo(
   ({ cart, setIsCartOpen, user, handleLogout }) => {
@@ -228,6 +82,7 @@ const Header = memo(
       { to: '/admin/categories', label: 'Categories', icon: <CategoryIcon /> },
       { to: '/admin/table-reservations', label: 'Table Reservations', icon: <TableIcon /> },
       { to: '/admin/banners', label: 'Banner Management', icon: <ImageIcon /> },
+      { to: '/admin/theme', label: 'Theme Management', icon: <PaletteIcon /> },
     ];
 
     const staffLinks = [
@@ -372,13 +227,7 @@ const Header = memo(
           to={link.to}
           startIcon={link.icon}
           variant={link.primary ? 'contained' : 'outlined'}
-          sx={{
-            ...iosStyles.desktopButton,
-            backgroundColor: link.primary ? '#ff9800' : 'transparent',
-            color: link.primary ? '#fff' : '#fff',
-            borderColor: '#fff',
-            '&:hover': { backgroundColor: link.primary ? '#f57c00' : 'rgba(255, 255, 255, 0.2)' },
-          }}
+          className="header-desktop-button"
         >
           {link.label}
         </Button>
@@ -387,19 +236,8 @@ const Header = memo(
 
     const renderMenuSection = useCallback(
       (title, links, isPrimary = false) => (
-        <Box sx={{ marginBottom: '12px' }} key={title}>
-          <ListSubheader
-            sx={{
-              backgroundColor: 'transparent',
-              color: '#8E8E93',
-              fontSize: '12px',
-              fontWeight: 600,
-              textTransform: 'uppercase',
-              paddingLeft: '20px',
-              paddingBottom: '6px',
-              '@media (max-width: 767px)': { paddingLeft: '16px', fontSize: '11px' },
-            }}
-          >
+        <Box className="header-menu-section" key={title}>
+          <ListSubheader className="header-list-subheader">
             {title}
           </ListSubheader>
           {links.map((link) => (
@@ -415,9 +253,9 @@ const Header = memo(
       const isStaff = user?.role === 'server';
 
       return (
-        <Box sx={iosStyles.drawerContent}>
+        <Box className="header-drawer-content">
           {(!isAdmin && !isStaff) && (
-            <Box sx={iosStyles.searchBox}>
+            <Box className="header-search-box">
               <TextField
                 fullWidth
                 size="small"
@@ -428,7 +266,7 @@ const Header = memo(
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ color: '#8E8E93' }} />
+                      <SearchIcon className="header-search-icon" />
                     </InputAdornment>
                   ),
                 }}
@@ -436,31 +274,25 @@ const Header = memo(
             </Box>
           )}
 
-          <Box sx={{ paddingBottom: '80px' }}>
+          <Box className="header-menu-container">
             {isAdmin ? (
               <>
                 {renderMenuSection('Administrative Panel', adminLinks.filter((link) => link.primary))}
                 <ListItemButton
                   onClick={() => setExpandedSection(expandedSection === 'management' ? '' : 'management')}
-                  sx={iosStyles.listItem}
+                  className="header-list-item"
                 >
-                  <ListItemIcon sx={{ color: '#ff9800', minWidth: '36px' }}>
+                  <ListItemIcon className="header-list-item-icon">
                     <CategoryIcon />
                   </ListItemIcon>
                   <ListItemText
                     primary="Management Tools"
-                    sx={{
-                      '& .MuiListItemText-primary': {
-                        fontSize: '15px',
-                        fontWeight: 500,
-                        '@media (max-width: 767px)': { fontSize: '14px' },
-                      },
-                    }}
+                    className="header-list-item-text"
                   />
                   {expandedSection === 'management' ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 <Collapse in={expandedSection === 'management'} timeout={100}>
-                  <Box sx={{ paddingLeft: '12px' }}>
+                  <Box className="header-management-tools">
                     {renderMenuSection('Tools', adminLinks.filter((link) => !link.primary))}
                   </Box>
                 </Collapse>
@@ -472,23 +304,23 @@ const Header = memo(
             )}
           </Box>
 
-          <Box sx={iosStyles.userSection}>
+          <Box className="header-user-section">
             {user && (
-              <Box sx={iosStyles.userInfo}>
-                <Avatar sx={{ width: '36px', height: '36px', backgroundColor: '#ff9800', fontSize: '16px' }}>
+              <Box className="header-user-info">
+                <Avatar className="header-avatar">
                   {user.role === 'admin' ? '👑' : user.role === 'server' ? '👷' : '👤'}
                 </Avatar>
                 <Box>
                   <Typography
                     variant="subtitle1"
-                    sx={{ fontWeight: 600, marginBottom: '4px', '@media (max-width: 767px)': { fontSize: '13px' } }}
+                    className="header-user-name"
                   >
                     {user.name || 'User'}
                   </Typography>
                   <Chip
                     label={`${user.role.charAt(0).toUpperCase() + user.role.slice(1)} Account`}
                     size="small"
-                    sx={{ backgroundColor: '#ffe0b2', color: '#ff9800', fontSize: '11px', fontWeight: 500 }}
+                    className="header-user-chip"
                   />
                 </Box>
               </Box>
@@ -499,14 +331,7 @@ const Header = memo(
                 variant="outlined"
                 startIcon={<LogoutIcon />}
                 onClick={handleLogout}
-                sx={{
-                  borderRadius: '8px',
-                  borderColor: '#e65100',
-                  color: '#e65100',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  '&:hover': { backgroundColor: 'rgba(230, 81, 0, 0.06)' },
-                }}
+                className="header-signout-button"
               >
                 Sign Out
               </Button>
@@ -519,13 +344,7 @@ const Header = memo(
                   navigate('/login');
                   setIsMobileMenuOpen(false);
                 }}
-                sx={{
-                  borderRadius: '8px',
-                  backgroundColor: '#ff9800',
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  '&:hover': { backgroundColor: '#f57c00' },
-                }}
+                className="header-login-button"
               >
                 Staff Login
               </Button>
@@ -537,26 +356,27 @@ const Header = memo(
 
     return (
       <>
-        <AppBar position="fixed" elevation={0} sx={iosStyles.header}>
-          <Toolbar sx={iosStyles.toolbar}>
-            <IconButton edge="start" onClick={() => setIsMobileMenuOpen(true)} sx={iosStyles.iconButton}>
-              <MenuIcon sx={{ color: '#fff' }} />
+        <AppBar position="fixed" elevation={0} className="header-appbar">
+          <Toolbar className="header-toolbar">
+            <IconButton edge="start" onLstItemButton
+              onClick={() => setIsMobileMenuOpen(true)} className="header-icon-button">
+              <MenuIcon />
             </IconButton>
 
             <Typography
               component={Link}
               to={user?.role === 'admin' ? '/admin' : user?.role === 'server' ? '/staff' : '/'}
-              sx={iosStyles.logo}
+              className="header-logo"
             >
-              <CafeIcon sx={{ fontSize: '22px', color: '#fff', '@media (max-width: 767px)': { fontSize: '16px' } }} />
+              <CafeIcon className="header-logo-icon" />
               Café Local
             </Typography>
 
-            <Box sx={iosStyles.desktopNav}>{renderDesktopNavItems()}</Box>
+            <Box className="header-desktop-nav">{renderDesktopNavItems()}</Box>
 
-            <Box sx={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+            <Box className="header-actions">
               {['admin', 'server'].includes(user?.role) && (
-                <Suspense fallback={<Box sx={iosStyles.iconButton} />}>
+                <Suspense fallback={<Box className="header-icon-button" />}>
                   <NotificationBell
                     user={user}
                     navigate={navigate}
@@ -567,25 +387,13 @@ const Header = memo(
                 </Suspense>
               )}
               {(!user?.role || !['admin', 'server'].includes(user?.role)) && (
-                <IconButton onClick={() => setIsCartOpen(true)} sx={iosStyles.iconButton}>
+                <IconButton onClick={() => setIsCartOpen(true)} className="header-icon-button">
                   <Badge
                     badgeContent={(cart || []).reduce((acc, item) => acc + (item.quantity || 0), 0)}
                     max={300}
-                    sx={{
-                      '& .MuiBadge-badge': {
-                        backgroundColor: '#e65100',
-                        color: '#fff',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        minWidth: '18px',
-                        height: '18px',
-                        borderRadius: '9px',
-                        border: '1.5px solid #fff',
-                        '@media (max-width: 767px)': { fontSize: '11px', minWidth: '16px', height: '16px' },
-                      },
-                    }}
+                    className="header-badge"
                   >
-                    <ShoppingCartIcon sx={{ color: '#fff', '@media (max-width: 767px)': { fontSize: '20px' } }} />
+                    <ShoppingCartIcon className="header-cart-icon" />
                   </Badge>
                 </IconButton>
               )}
@@ -597,26 +405,20 @@ const Header = memo(
           anchor="left"
           open={isMobileMenuOpen}
           onClose={() => setIsMobileMenuOpen(false)}
-          sx={iosStyles.drawer}
+          className="header-drawer"
           ModalProps={{ keepMounted: false }}
         >
           <Slide direction="right" in={isMobileMenuOpen} timeout={100}>
             <Box>
-              <Box sx={iosStyles.drawerHeader}>
+              <Box className="header-drawer-header">
                 <Typography
                   variant="h6"
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    fontWeight: '600',
-                    '@media (max-width: 767px)': { fontSize: '16px' },
-                  }}
+                  className="header-drawer-title"
                 >
-                  <CafeIcon sx={{ color: '#ff9800', '@media (max-width: 767px)': { fontSize: '20px' } }} />
+                  <CafeIcon className="header-drawer-icon" />
                   Café Local
                 </Typography>
-                <IconButton onClick={() => setIsMobileMenuOpen(false)} sx={iosStyles.iconButton}>
+                <IconButton onClick={() => setIsMobileMenuOpen(false)} className="header-icon-button">
                   <CloseIcon />
                 </IconButton>
               </Box>
@@ -626,7 +428,7 @@ const Header = memo(
           </Slide>
         </Drawer>
 
-        <Box sx={{ height: '56px', '@media (max-width: 767px)': { height: '64px' } }} />
+        <Box className="header-spacer" />
       </>
     );
   },
@@ -636,6 +438,27 @@ const Header = memo(
     prev.user?.role === next.user?.role &&
     prev.user?.name === next.user?.name &&
     prev.handleLogout === next.handleLogout
+);
+
+const NavItem = memo(
+  ({ link, isPrimary, onClick }) => (
+    <ListItemButton
+      component={Link}
+      to={link.to}
+      onClick={onClick}
+      className={isPrimary ? 'header-primary-list-item' : 'header-list-item'}
+    >
+      <ListItemIcon className="header-list-item-icon">
+        {link.icon}
+      </ListItemIcon>
+      <ListItemText
+        primary={link.label}
+        className="header-list-item-text"
+      />
+      {!isPrimary && <ChevronRightIcon className="header-chevron-icon" />}
+    </ListItemButton>
+  ),
+  (prev, next) => prev.link.to === next.link.to && prev.isPrimary === next.isPrimary
 );
 
 export default Header;
