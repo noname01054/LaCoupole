@@ -235,7 +235,7 @@ function TopCategories() {
                     />
                   ) : (
                     <div style={styles.topCategoryPlaceholder}>
-                      <Coffee size={centerIndex === index ? 32 : 24} color="#8e8e93" />
+                      <Coffee size={centerIndex === index ? 32 : 24} color="var(--text-color)" />
                     </div>
                   )}
                 </div>
@@ -280,7 +280,7 @@ const styles = {
   topCategoriesTitle: {
     fontSize: '20px',
     fontWeight: '700',
-    background: 'linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%)',
+    background: 'linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     margin: 0,
@@ -303,8 +303,8 @@ const styles = {
     minWidth: 'fit-content',
     alignItems: 'flex-start',
     paddingBottom: '8px',
-    paddingLeft: 'calc(50% - 50px)', // Center first item
-    paddingRight: 'calc(50% - 50px)', // Center last item
+    paddingLeft: 'calc(50% - 50px)',
+    paddingRight: 'calc(50% - 50px)',
   },
   topCategoryItem: {
     display: 'flex',
@@ -322,13 +322,13 @@ const styles = {
     width: '80px',
     height: '80px',
     borderRadius: '50%',
-    backgroundColor: '#fff',
+    backgroundColor: 'var(--card-background)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: '10px',
     overflow: 'hidden',
-    border: '3px solid #f0f0f0',
+    border: '3px solid var(--border-color)',
     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     flexShrink: 0,
@@ -336,8 +336,8 @@ const styles = {
   centerCategoryImageContainer: {
     width: '90px',
     height: '90px',
-    border: '4px solid #ff8c42',
-    boxShadow: '0 8px 24px rgba(255, 140, 66, 0.3)',
+    border: '4px solid var(--primary-color)',
+    boxShadow: '0 8px 24px rgba(var(--primary-color-rgb), 0.3)',
   },
   topCategoryImage: {
     width: '100%',
@@ -350,10 +350,10 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f8f8',
+    backgroundColor: 'var(--placeholder-background)',
   },
   categoryLabel: {
-    backgroundColor: '#ff8c42',
+    backgroundColor: 'var(--primary-color)',
     padding: '6px 10px',
     borderRadius: '14px',
     minWidth: '50px',
@@ -365,7 +365,7 @@ const styles = {
     flexShrink: 0,
   },
   centerCategoryLabel: {
-    backgroundColor: '#ff6b35',
+    backgroundColor: 'var(--secondary-color)',
     padding: '8px 12px',
     borderRadius: '16px',
     transform: 'translateY(-2px)',
@@ -374,7 +374,7 @@ const styles = {
   topCategoryName: {
     fontSize: '11px',
     fontWeight: '600',
-    color: '#fff',
+    color: 'var(--text-on-primary)',
     textAlign: 'center',
     margin: 0,
     lineHeight: '1.2',
@@ -398,15 +398,15 @@ const styles = {
   loadingSpinner: {
     width: '32px',
     height: '32px',
-    border: '3px solid rgba(255, 140, 66, 0.2)',
-    borderTop: '3px solid #ff8c42',
+    border: '3px solid rgba(var(--primary-color-rgb), 0.2)',
+    borderTop: '3px solid var(--primary-color)',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
     marginBottom: '16px',
   },
   loadingText: {
     fontSize: '14px',
-    color: '#8e8e93',
+    color: 'var(--text-muted)',
     margin: 0,
   },
 };
