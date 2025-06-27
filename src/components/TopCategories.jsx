@@ -280,9 +280,8 @@ const styles = {
   topCategoriesTitle: {
     fontSize: '20px',
     fontWeight: '700',
-    background: 'linear-gradient(135deg, var(--primary-gradient-start) 0%, var(--primary-gradient-end) 100%)',
+    color: 'var(--primary-color)',
     WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
     margin: 0,
     letterSpacing: '-0.5px',
   },
@@ -374,7 +373,7 @@ const styles = {
   topCategoryName: {
     fontSize: '11px',
     fontWeight: '600',
-    color: 'var(--text-on-primary)',
+    color: '#ffff',
     textAlign: 'center',
     margin: 0,
     lineHeight: '1.2',
