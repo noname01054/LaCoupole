@@ -1,5 +1,5 @@
 .home-container {
-  background-color: #faf8f5;
+  background-color: var(--background-color);
   min-height: 100vh;
   padding-bottom: 16px;
   margin: 0;
@@ -22,7 +22,7 @@
 .home-welcome-title {
   font-size: 24px;
   font-weight: 700;
-  color: white;
+  color: var(--text-color);
   margin: 0 0 4px 0;
   letter-spacing: -0.5px;
 }
@@ -30,7 +30,7 @@
 .home-welcome-subtitle {
   font-size: 14px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-color);
   margin: 0;
   line-height: 1.4;
 }
@@ -40,7 +40,7 @@
 }
 
 .home-header {
-  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
   border-radius: 0 0 24px 24px;
   padding: 16px;
   padding-bottom: 24px;
@@ -79,7 +79,7 @@
   padding-left: 40px;
   padding-right: 12px;
   font-size: 15px;
-  color: #1c1c1e;
+  color: var(--text-color);
   outline: none;
   box-sizing: border-box;
 }
@@ -124,7 +124,7 @@
 .home-categories-title {
   font-size: 20px;
   font-weight: 700;
-  color: white;
+  color: var(--text-color);
   margin: 0;
   letter-spacing: -0.5px;
 }
@@ -133,7 +133,7 @@
   width: 180px;
   background-color: rgba(255, 255, 255, 0.2);
   border: none;
-  color: white;
+  color: var(--text-color);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -211,7 +211,7 @@
 .home-category-name {
   font-size: 13px;
   font-weight: 600;
-  color: white;
+  color: var(--text-color);
   text-align: center;
   margin: 0;
   line-height: 1.2;
@@ -261,7 +261,7 @@
 .home-menu-title {
   font-size: 20px;
   font-weight: 700;
-  background: linear-gradient(135deg, #ff8c42 0%, #ff6b35 100%);
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin: 0 0 16px 0;
@@ -290,14 +290,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background-color: #f2f2f7;
+  background-color: var(--background-color);
 }
 
 .home-loading-spinner {
   width: 32px;
   height: 32px;
   border: 3px solid rgba(255, 140, 66, 0.2);
-  border-top: 3px solid #ff8c42;
+  border-top: 3px solid var(--primary-color);
   border-radius: 50%;
   animation: home-spin 0.8s linear infinite;
   margin-bottom: 16px;
@@ -305,7 +305,7 @@
 
 .home-loading-text {
   font-size: 14px;
-  color: #8e8e93;
+  color: var(--text-color);
   margin: 0;
 }
 
@@ -314,7 +314,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f2f2f7;
+  background-color: var(--background-color);
   padding: 16px;
 }
 
@@ -325,7 +325,7 @@
 
 .home-error-text {
   font-size: 14px;
-  color: #ff6b35;
+  color: var(--primary-color);
   margin: 0;
   font-weight: 600;
 }
