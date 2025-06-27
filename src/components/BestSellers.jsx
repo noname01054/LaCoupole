@@ -8,6 +8,12 @@ function BestSellers({ addToCart }) {
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [centerIndex, setCenterIndex] = useState(0);
+  const [theme, setTheme] = useState({
+    primary_color: '#ff6b35',
+    secondary_color: '#ff8c42',
+    background_color: '#faf8f5',
+    text_color: '#1f2937',
+  });
   const navigate = useNavigate();
   const scrollContainerRef = useRef(null);
   const itemRefs = useRef([]);
@@ -18,20 +24,33 @@ function BestSellers({ addToCart }) {
   const lastUserInteractionRef = useRef(Date.now());
 
   useEffect(() => {
-    const fetchBestSellers = async () => {
+    const fetchBestSellersAndTheme = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/menu-items/best-sellers');
-        setBestSellers(response.data || []);
+        const [bestSellersResponse, themeResponse] = await Promise.all([
+          api.get('/menu-items/best-sellers'),
+          api.getTheme()
+        ]);
+        setBestSellers(bestSellersResponse.data || []);
+        const updatedTheme = themeResponse.data || theme;
+        setTheme(updatedTheme);
+        applyTheme(updatedTheme); // Apply theme immediately
       } catch (error) {
-        console.error('Error fetching best sellers:', error);
-        toast.error(error.response?.data?.error || 'Failed to load best sellers');
+        console.error('Error fetching best sellers or theme:', error);
+        toast.error(error.response?.data?.error || 'Failed to load best sellers or theme');
       } finally {
         setLoading(false);
       }
     };
-    fetchBestSellers();
+    fetchBestSellersAndTheme();
   }, []);
+
+  const applyTheme = (themeData) => {
+    document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
+    document.documentElement.style.setProperty('--secondary-color', themeData.secondary_color);
+    document.documentElement.style.setProperty('--background-color', themeData.background_color);
+    document.documentElement.style.setProperty('--text-color', themeData.text_color);
+  };
 
   const updateCenterItem = useCallback(() => {
     if (!scrollContainerRef.current || bestSellers.length === 0) return;
@@ -179,9 +198,9 @@ function BestSellers({ addToCart }) {
 
   if (loading) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.loadingSpinner}></div>
-        <p style={styles.loadingText}>Loading best sellers...</p>
+      <div style={{ ...styles.loadingContainer, backgroundColor: theme.background_color }}>
+        <div style={{ ...styles.loadingSpinner, borderTopColor: theme.primary_color }}></div>
+        <p style={{ ...styles.loadingText, color: theme.text_color }}>Loading best sellers...</p>
       </div>
     );
   }
@@ -192,12 +211,12 @@ function BestSellers({ addToCart }) {
 
   return (
     <>
-      <style>{cssStyles}</style>
-      <div style={styles.bestSellersSection}>
+      <style>{cssStyles(theme)}</style>
+      <div style={{ ...styles.bestSellersSection, backgroundColor: theme.background_color }}>
         <div style={styles.bestSellersHeader}>
           <div style={styles.titleContainer}>
-            <Star size={20} style={styles.starIcon} />
-            <h2 style={styles.bestSellersTitle}>Best Sellers</h2>
+            <Star size={20} style={{ ...styles.starIcon, color: theme.primary_color }} />
+            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color }}>Best Sellers</h2>
           </div>
           <div style={styles.indicatorContainer}>
             {bestSellers.map((_, index) => (
@@ -205,7 +224,7 @@ function BestSellers({ addToCart }) {
                 key={index}
                 style={{
                   ...styles.indicator,
-                  ...(centerIndex === index ? styles.activeIndicator : {}),
+                  ...(centerIndex === index ? { ...styles.activeIndicator, backgroundColor: theme.primary_color } : {}),
                 }}
               />
             ))}
@@ -233,13 +252,15 @@ function BestSellers({ addToCart }) {
                 <div 
                   style={{
                     ...styles.bestSellerCard,
-                    ...(centerIndex === index ? styles.centerItemCard : {}),
+                    ...(centerIndex === index ? { ...styles.centerItemCard, borderColor: theme.primary_color } : {}),
+                    backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color,
                   }}
                 >
                   <div 
                     style={{
                       ...styles.bestSellerImageContainer,
                       ...(centerIndex === index ? styles.centerItemImageContainer : {}),
+                      backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color,
                     }}
                   >
                     {item.image_url ? (
@@ -255,13 +276,13 @@ function BestSellers({ addToCart }) {
                         decoding="async"
                       />
                     ) : (
-                      <div style={styles.bestSellerPlaceholder}>
-                        <Coffee size={centerIndex === index ? 36 : 32} color="#F97316" />
+                      <div style={{ ...styles.bestSellerPlaceholder, backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color }}>
+                        <Coffee size={centerIndex === index ? 36 : 32} color={theme.primary_color} />
                       </div>
                     )}
                     {centerIndex === index && (
-                      <div style={styles.highlightBadge}>
-                        <Star size={12} fill="#FBBF24" color="#FBBF24" />
+                      <div style={{ ...styles.highlightBadge, borderColor: theme.secondary_color }}>
+                        <Star size={12} fill={theme.secondary_color} color={theme.secondary_color} />
                       </div>
                     )}
                   </div>
@@ -270,7 +291,7 @@ function BestSellers({ addToCart }) {
                     <h3 
                       style={{
                         ...styles.bestSellerName,
-                        ...(centerIndex === index ? styles.centerItemName : {}),
+                        ...(centerIndex === index ? { ...styles.centerItemName, color: theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color } : { color: theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color }),
                       }}
                     >
                       {item.name}
@@ -278,11 +299,11 @@ function BestSellers({ addToCart }) {
                     <div
                       style={{
                         ...styles.priceContainer,
-                        ...(centerIndex === index ? styles.centerItemPriceContainer : {}),
+                        ...(centerIndex === index ? { ...styles.centerItemPriceContainer, backgroundColor: theme.primary_color } : { backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color }),
                       }}
                     >
-                      <span style={styles.currency}>$</span>
-                      <span style={styles.price}>
+                      <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}>$</span>
+                      <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}>
                         {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
                       </span>
                     </div>
@@ -318,13 +339,11 @@ const styles = {
     gap: '10px',
   },
   starIcon: {
-    color: '#F97316',
-    filter: 'drop-shadow(0 1px 3px rgba(249, 115, 22, 0.4))',
+    filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4))',
   },
   bestSellersTitle: {
     fontSize: '26px',
     fontWeight: '700',
-    color: '#1F2937',
     margin: 0,
     letterSpacing: '-0.5px',
     lineHeight: '1.2',
@@ -343,16 +362,15 @@ const styles = {
     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   activeIndicator: {
-    backgroundColor: '#F97316',
     transform: 'scale(1.3)',
-    boxShadow: '0 0 10px rgba(249, 115, 22, 0.5)',
+    boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
   },
   bestSellersScrollContainer: {
     overflowX: 'auto',
     overflowY: 'hidden',
     scrollSnapType: 'x mandatory',
-    paddingTop: '12px',
-    paddingBottom: '28px',
+    paddingTop: '30px',
+    paddingBottom: '30px', // Increased height by adding more paddingBottom
     paddingLeft: '0',
     paddingRight: '0',
     width: '100%',
@@ -364,8 +382,8 @@ const styles = {
     minWidth: 'fit-content',
     alignItems: 'flex-start',
     paddingBottom: '12px',
-    paddingLeft: 'calc(50% - 75px)', // Center first item
-    paddingRight: 'calc(50% - 75px)', // Center last item
+    paddingLeft: 'calc(50% - 75px)',
+    paddingRight: 'calc(50% - 75px)',
   },
   bestSellerItem: {
     display: 'flex',
@@ -381,11 +399,9 @@ const styles = {
   },
   bestSellerCard: {
     width: '100%',
-    backgroundColor: '#FFFFFF',
     borderRadius: '20px',
     padding: '18px',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-    border: '1px solid rgba(0, 0, 0, 0.05)',
     transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
     display: 'flex',
     flexDirection: 'column',
@@ -393,16 +409,13 @@ const styles = {
     position: 'relative',
   },
   centerItemCard: {
-    backgroundColor: '#FFFFFF',
-    boxShadow: '0 10px 36px rgba(249, 115, 22, 0.2), 0 6px 18px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(249, 115, 22, 0.15)',
+    boxShadow: '0 10px 36px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(0, 0, 0, 0.1)',
     transform: 'translateY(-6px)',
   },
   bestSellerImageContainer: {
-    width: '76px',
-    height: '76px',
+    width: '50px',
+    height: '50px',
     borderRadius: '18px',
-    backgroundColor: '#FFF7ED',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -416,8 +429,7 @@ const styles = {
     width: '84px',
     height: '84px',
     borderRadius: '20px',
-    backgroundColor: '#FFF7ED',
-    boxShadow: '0 6px 20px rgba(249, 115, 22, 0.25)',
+    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)',
   },
   bestSellerImage: {
     width: '100%',
@@ -431,7 +443,6 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF7ED',
     borderRadius: '18px',
   },
   highlightBadge: {
@@ -446,7 +457,6 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'center',
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
-    border: '1px solid rgba(251, 191, 36, 0.3)',
   },
   itemInfo: {
     display: 'flex',
@@ -458,7 +468,6 @@ const styles = {
   bestSellerName: {
     fontSize: '15px',
     fontWeight: '600',
-    color: '#1F2937',
     textAlign: 'center',
     margin: 0,
     lineHeight: '1.4',
@@ -466,40 +475,35 @@ const styles = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    width: '100%',
+    width: '100',
     maxWidth: '110px',
   },
   centerItemName: {
     fontSize: '16px',
     fontWeight: '700',
-    color: '#F97316',
     maxWidth: '120px',
   },
   priceContainer: {
     display: 'flex',
     alignItems: 'baseline',
     justifyContent: 'center',
-    backgroundColor: '#FFF7ED',
     borderRadius: '10px',
     padding: '6px 10px',
     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
     minWidth: '60px',
   },
   centerItemPriceContainer: {
-    backgroundColor: '#F97316',
     transform: 'scale(1.08)',
-    boxShadow: '0 3px 10px rgba(249, 115, 22, 0.4)',
+    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.4)',
   },
   currency: {
     fontSize: '12px',
     fontWeight: '600',
-    color: '#6B7280',
     transition: 'color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   price: {
     fontSize: '15px',
     fontWeight: '700',
-    color: '#1F2937',
     transition: 'color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   loadingContainer: {
@@ -508,7 +512,6 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
     borderRadius: '20px',
     margin: '0 24px',
     boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
@@ -516,22 +519,20 @@ const styles = {
   loadingSpinner: {
     width: '32px',
     height: '32px',
-    border: '3px solid rgba(249, 115, 22, 0.2)',
-    borderTop: '3px solid #F97316',
+    border: '3px solid rgba(0, 0, 0, 0.2)',
     borderRadius: '50%',
     animation: 'spin 0.7s linear infinite',
     marginBottom: '20px',
   },
   loadingText: {
     fontSize: '16px',
-    color: '#6B7280',
     fontWeight: '500',
     margin: 0,
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
   },
 };
 
-const cssStyles = `
+const cssStyles = (theme) => `
   .best-sellers-scroll::-webkit-scrollbar {
     display: none;
   }
