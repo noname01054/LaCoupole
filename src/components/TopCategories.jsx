@@ -64,7 +64,6 @@ function TopCategories() {
       isScrollingRef.current = true;
     }
 
-    // Mark user interaction
     userInteractionRef.current = true;
     lastUserInteractionRef.current = Date.now();
 
@@ -76,14 +75,12 @@ function TopCategories() {
 
     scrollTimeoutRef.current = setTimeout(() => {
       isScrollingRef.current = false;
-      // Reset user interaction after scroll ends
       setTimeout(() => {
         userInteractionRef.current = false;
-      }, 2000); // Wait 2 seconds after scroll ends before resuming auto-scroll
+      }, 2000);
     }, 150);
   }, [updateCenterCategory]);
 
-  // Auto-scroll functionality
   const startAutoScroll = useCallback(() => {
     if (autoScrollIntervalRef.current) {
       clearInterval(autoScrollIntervalRef.current);
@@ -96,19 +93,19 @@ function TopCategories() {
 
         const nextIndex = (centerIndex + 1) % topCategories.length;
         const targetElement = categoryRefs.current[nextIndex];
-        
+
         if (targetElement) {
           const containerRect = container.getBoundingClientRect();
           const elementRect = targetElement.getBoundingClientRect();
-          const scrollLeft = container.scrollLeft + elementRect.left - containerRect.left - (containerRect.width - elementRect.width) / 2;
-          
+          const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft - (containerRect.width - elementRect.width) / 2;
+
           container.scrollTo({
             left: scrollLeft,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }
       }
-    }, 1000); // Auto-scroll every 1 second
+    }, 1000);
   }, [centerIndex, topCategories.length]);
 
   const stopAutoScroll = useCallback(() => {
@@ -122,8 +119,7 @@ function TopCategories() {
     userInteractionRef.current = true;
     lastUserInteractionRef.current = Date.now();
     stopAutoScroll();
-    
-    // Resume auto-scroll after 3 seconds of no interaction
+
     setTimeout(() => {
       if (Date.now() - lastUserInteractionRef.current >= 3000) {
         userInteractionRef.current = false;
@@ -139,7 +135,7 @@ function TopCategories() {
     container.addEventListener('scroll', handleScroll, { passive: true });
     container.addEventListener('touchstart', handleUserInteraction, { passive: true });
     container.addEventListener('mousedown', handleUserInteraction, { passive: true });
-    
+
     setTimeout(updateCenterCategory, 100);
 
     return () => {
@@ -152,14 +148,12 @@ function TopCategories() {
     };
   }, [handleScroll, updateCenterCategory, handleUserInteraction]);
 
-  // Start auto-scroll when categories are loaded
   useEffect(() => {
     if (topCategories.length > 0 && !loading) {
-      // Start auto-scroll after a brief delay
       const timer = setTimeout(() => {
         startAutoScroll();
       }, 2000);
-      
+
       return () => {
         clearTimeout(timer);
         stopAutoScroll();
@@ -167,7 +161,6 @@ function TopCategories() {
     }
   }, [topCategories.length, loading, startAutoScroll, stopAutoScroll]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopAutoScroll();
@@ -178,7 +171,7 @@ function TopCategories() {
   }, [stopAutoScroll]);
 
   const handleCategoryClick = useCallback((categoryId) => {
-    handleUserInteraction(); // Stop auto-scroll on click
+    handleUserInteraction();
     navigate(`/category/${categoryId}`);
   }, [navigate, handleUserInteraction]);
 
@@ -204,9 +197,9 @@ function TopCategories() {
         <div style={styles.topCategoriesHeader}>
           <h2 style={styles.topCategoriesTitle}>Top Categories</h2>
         </div>
-        <div 
+        <div
           style={styles.topCategoriesScrollContainer}
-          ref={scrollContainerRef} 
+          ref={scrollContainerRef}
           className="top-categories-scroll"
         >
           <div style={styles.topCategoriesGrid}>
@@ -222,7 +215,7 @@ function TopCategories() {
                 className="top-category-item"
                 onClick={() => handleCategoryClick(category.id)}
               >
-                <div 
+                <div
                   style={{
                     ...styles.topCategoryImageContainer,
                     ...(centerIndex === index ? styles.centerCategoryImageContainer : {}),
@@ -246,13 +239,13 @@ function TopCategories() {
                     </div>
                   )}
                 </div>
-                <div 
+                <div
                   style={{
                     ...styles.categoryLabel,
                     ...(centerIndex === index ? styles.centerCategoryLabel : {}),
                   }}
                 >
-                  <p 
+                  <p
                     style={{
                       ...styles.topCategoryName,
                       ...(centerIndex === index ? styles.centerCategoryName : {}),
@@ -299,8 +292,8 @@ const styles = {
     scrollSnapType: 'x mandatory',
     paddingTop: '20px',
     paddingBottom: '30px',
-    paddingLeft: '16px',
-    paddingRight: '16px',
+    paddingLeft: '0',
+    paddingRight: '0',
     width: '100%',
     boxSizing: 'border-box',
   },
@@ -310,6 +303,8 @@ const styles = {
     minWidth: 'fit-content',
     alignItems: 'flex-start',
     paddingBottom: '8px',
+    paddingLeft: 'calc(50% - 50px)', // Center first item
+    paddingRight: 'calc(50% - 50px)', // Center last item
   },
   topCategoryItem: {
     display: 'flex',
@@ -436,11 +431,10 @@ const cssStyles = `
     transform: scale(0.95) !important;
   }
 
-  /* Mobile-first responsive design */
   @media (max-width: 480px) {
     .top-categories-scroll {
-      padding-left: 12px !important;
-      padding-right: 12px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
     .top-category-item {
@@ -451,8 +445,8 @@ const cssStyles = `
 
   @media (max-width: 375px) {
     .top-categories-scroll {
-      padding-left: 10px !important;
-      padding-right: 10px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
     .top-category-item {
@@ -461,11 +455,10 @@ const cssStyles = `
     }
   }
 
-  /* Small mobile devices */
   @media (max-width: 320px) {
     .top-categories-scroll {
-      padding-left: 8px !important;
-      padding-right: 8px !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
     }
     
     .top-category-item {
@@ -474,7 +467,6 @@ const cssStyles = `
     }
   }
 
-  /* Tablet and larger screens */
   @media (min-width: 768px) {
     .top-category-item {
       min-width: 100px !important;
