@@ -467,7 +467,7 @@ function CartModal({
   if (!isOpen && !isClosing) return null;
 
   return (
-    <div className="cart-modal-overlay" style={{ '--animation': isClosing ? 'fadeOut 0.2s ease-out forwards' : 'fadeIn 0.2s ease-out' }}>
+    <div className="cart-modal-overlay" style={{ '--animation': isClosing ? 'cart-modal-fadeOut 0.2s ease-out forwards' : 'cart-modal-fadeIn 0.2s ease-out' }}>
       <div
         ref={modalRef}
         className="cart-modal"
@@ -514,7 +514,7 @@ function CartModal({
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <RestaurantIcon style={{ fontSize: '14px' }} />
+                    <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
                     Order Type
                   </label>
                   <select
@@ -531,7 +531,7 @@ function CartModal({
                   <>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <RestaurantIcon style={{ fontSize: '14px' }} />
+                        <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
                         Search Table
                       </label>
                       <div className="cart-modal-table-search-container">
@@ -547,7 +547,7 @@ function CartModal({
                     </div>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <RestaurantIcon style={{ fontSize: '14px' }} />
+                        <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
                         Select Table
                       </label>
                       <div className="cart-modal-table-list-container">
@@ -574,7 +574,7 @@ function CartModal({
                 {orderType === 'delivery' && (
                   <div className="cart-modal-form-group">
                     <label className="cart-modal-label">
-                      <LocalShippingIcon style={{ fontSize: '14px' }} />
+                      <LocalShippingIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
                       Delivery Address
                     </label>
                     <input
@@ -593,13 +593,14 @@ function CartModal({
                   style={{
                     background: isSubmitting
                       ? 'rgba(0, 0, 0, 0.3)'
-                      : 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
+                      : 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
                     opacity: isSubmitting ? 0.7 : 1,
                     pointerEvents: isSubmitting ? 'none' : 'auto',
+                    color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)'
                   }}
                 >
                   {isSubmitting ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }}>
                       <div className="cart-modal-spinner"></div>
                       Placing Order...
                     </div>
