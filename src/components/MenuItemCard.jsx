@@ -6,7 +6,7 @@ import StarIcon from '@mui/icons-material/Star';
 import StarOutlineIcon from '@mui/icons-material/StarOutline';
 import { debounce } from 'lodash';
 
-function MenuItemCard({ item, onAddToCart, onView }) {
+function MenuItemCard({ item, onAddToCart, onView, isManager }) {
   const [screenSize, setScreenSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -115,7 +115,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
             option_ids: [],
             cartItemId: `${item.id}-${Date.now()}`,
             name: item.name,
-            image_url: imageSrc, // Use computed imageSrc
+            image_url: imageSrc,
             type: 'breakfast',
             options: [],
           });
@@ -130,7 +130,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
             supplement_price: 0,
             cartItemId: `${item.id}-${Date.now()}`,
             type: 'menuItem',
-            image_url: imageSrc, // Use computed imageSrc
+            image_url: imageSrc,
           });
         }
       }
@@ -153,7 +153,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         quantity: 1,
         option_ids: selectedOptionIds,
         name: item.name,
-        image_url: imageSrc, // Use computed imageSrc
+        image_url: imageSrc,
         type: 'breakfast',
         options: supplements.options
           .filter((opt) => selectedOptionIds.includes(opt.id))
@@ -175,7 +175,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         supplement_price: supplement ? parseFloat(supplement.additional_price || 0) : 0,
         cartItemId: `${item.id}-${Date.now()}`,
         type: 'menuItem',
-        image_url: imageSrc, // Use computed imageSrc
+        image_url: imageSrc,
       });
     }
     setShowOptionPopup(false);
@@ -194,6 +194,19 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       }
     },
     [onView, item?.id, item?.type]
+  );
+
+  const handleEditProduct = useCallback(
+    (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (item?.id) {
+        window.location.href = `/edit-product/${item.id}`;
+      } else {
+        console.warn('Item ID is invalid');
+      }
+    },
+    [item?.id]
   );
 
   const regularPrice = parseFloat(item?.type === 'breakfast' ? item.price : item.regular_price) || 0;
@@ -226,7 +239,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
             key={i}
             sx={{
               fontSize: isSmallMobile ? '11px' : '12px',
-              color: '#FFD700',
+              color: '#000000',
             }}
           />
         ) : (
@@ -234,7 +247,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
             key={i}
             sx={{
               fontSize: isSmallMobile ? '11px' : '12px',
-              color: '#D1D5DB',
+              color: '#000000',
             }}
           />
         )
@@ -246,7 +259,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
   const styles = useMemo(
     () => ({
       card: {
-        background: '#FFFFFF',
+        background: 'var(--background-color)',
         borderRadius: isSmallMobile ? '12px' : '16px',
         overflow: 'hidden',
         boxShadow: isHovered ? '0 6px 16px rgba(0, 0, 0, 0.1)' : '0 2px 8px rgba(0, 0, 0, 0.06)',
@@ -287,8 +300,8 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         position: 'absolute',
         top: '6px',
         left: '6px',
-        background: 'linear-gradient(135deg, #EF4444 0%, #DC2626 100%)',
-        color: '#FFFFFF',
+        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
+        color: 'var(--background-color)',
         padding: isSmallMobile ? '2px 5px' : '3px 6px',
         borderRadius: '8px',
         fontSize: isSmallMobile ? '8px' : '9px',
@@ -304,7 +317,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         zIndex: 2,
       },
       actionButton: {
-        background: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
+        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
         border: 'none',
         borderRadius: '8px',
         width: isSmallMobile ? '30px' : '34px',
@@ -327,14 +340,15 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       },
       category: {
         fontSize: isSmallMobile ? '8px' : '9px',
-        color: '#9CA3AF',
+        color: '#000000',
         fontWeight: '500',
         textTransform: 'uppercase',
+        opacity: 0.7,
       },
       title: {
         fontSize: isSmallMobile ? '12px' : '14px',
         fontWeight: '600',
-        color: '#111827',
+        color: '#000000',
         lineHeight: '1.2',
         display: '-webkit-box',
         WebkitLineClamp: 2,
@@ -353,8 +367,9 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       },
       ratingText: {
         fontSize: isSmallMobile ? '8px' : '9px',
-        color: '#6B7280',
+        color: '#000000',
         fontWeight: '500',
+        opacity: 0.7,
       },
       priceContainer: {
         display: 'flex',
@@ -371,12 +386,13 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       currentPrice: {
         fontSize: isSmallMobile ? '13px' : '15px',
         fontWeight: '700',
-        color: salePrice ? '#059669' : '#111827',
+        color: salePrice ? 'var(--primary-color)' : '#000000',
       },
       originalPrice: {
         fontSize: isSmallMobile ? '9px' : '10px',
-        color: '#9CA3AF',
+        color: salePrice ? 'var(--primary-color)' : 'var(--text-color)',
         textDecoration: 'line-through',
+        opacity: 0.7,
       },
       mobileActionButtons: {
         display: 'flex',
@@ -384,7 +400,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         alignItems: 'center',
       },
       mobileActionButton: {
-        background: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
+        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
         border: 'none',
         borderRadius: '6px',
         width: isSmallMobile ? '26px' : '28px',
@@ -401,7 +417,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       },
       unavailableBadge: {
         background: 'rgba(107, 114, 128, 0.9)',
-        color: '#FFFFFF',
+        color: 'var(--background-color)',
         padding: isSmallMobile ? '2px 5px' : '2px 6px',
         borderRadius: '8px',
         fontSize: isSmallMobile ? '8px' : '9px',
@@ -430,7 +446,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        background: '#FFFFFF',
+        background: 'var(--background-color)',
         borderRadius: '12px',
         padding: isSmallMobile ? '12px' : '16px',
         maxWidth: isSmallMobile ? '90%' : '360px',
@@ -441,7 +457,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       popupTitle: {
         fontSize: isSmallMobile ? '14px' : '16px',
         fontWeight: '600',
-        color: '#111827',
+        color: '#000000',
         textAlign: 'center',
         marginBottom: '10px',
       },
@@ -449,13 +465,13 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         width: '100%',
         padding: '8px',
         fontSize: isSmallMobile ? '12px' : '14px',
-        color: '#111827',
+        color: '#000000',
         border: '1px solid #E5E7EB',
         borderRadius: '8px',
-        background: '#FFFFFF',
+        background: 'var(--background-color)',
         marginBottom: '10px',
         outline: 'none',
-        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
         backgroundRepeat: 'no-repeat',
         backgroundPosition: 'right 8px center',
         backgroundSize: '12px',
@@ -467,7 +483,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         marginBottom: '10px',
       },
       optionGroup: {
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--background-color)',
         borderRadius: '8px',
         padding: '8px',
         marginBottom: '8px',
@@ -476,7 +492,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       groupTitle: {
         fontSize: '12px',
         fontWeight: '600',
-        color: '#1f2937',
+        color: '#000000',
         marginBottom: '4px',
         paddingBottom: '2px',
         borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
@@ -487,7 +503,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         gap: '8px',
         padding: '4px 0',
         fontSize: '12px',
-        color: '#1f2937',
+        color: '#000000',
         cursor: 'pointer',
       },
       radioInput: {
@@ -495,21 +511,21 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         height: '16px',
         margin: '0',
         appearance: 'none',
-        border: '2px solid #6b7280',
+        border: `2px solid #000000`,
         borderRadius: '50%',
         outline: 'none',
         cursor: 'pointer',
         position: 'relative',
-        backgroundColor: '#fff',
+        backgroundColor: 'var(--background-color)',
       },
       'radioInput:checked': {
-        borderColor: '#ff6b35',
+        borderColor: 'var(--primary-color)',
       },
       'radioInput:checked::after': {
         content: '""',
         width: '8px',
         height: '8px',
-        backgroundColor: '#ff6b35',
+        backgroundColor: 'var(--primary-color)',
         borderRadius: '50%',
         position: 'absolute',
         top: '50%',
@@ -519,15 +535,16 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       optionText: {
         flexGrow: '1',
         fontSize: '12px',
-        color: '#1f2937',
+        color: '#000000',
       },
       optionPrice: {
-        color: '#6b7280',
+        color: '#000000',
         marginLeft: '4px',
+        opacity: 0.7,
       },
       optionSelected: {
         fontWeight: '600',
-        color: '#ff6b35',
+        color: 'var(--primary-color)',
       },
       optionGroupError: {
         border: '1px solid #ef4444',
@@ -550,12 +567,36 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         transition: 'background 0.2s ease',
       },
       addButton: {
-        background: 'linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)',
-        color: '#FFFFFF',
+        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
+        color: 'var(--background-color)',
       },
       cancelButton: {
         background: '#F3F4F6',
-        color: '#6B7280',
+        color: '#000000',
+      },
+      editButton: {
+        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
+        border: 'none',
+        borderRadius: '8px',
+        width: isSmallMobile ? '30px' : '34px',
+        height: isSmallMobile ? '30px' : '34px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease',
+      },
+      mobileEditButton: {
+        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
+        border: 'none',
+        borderRadius: '6px',
+        width: isSmallMobile ? '26px' : '28px',
+        height: isSmallMobile ? '26px' : '28px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'transform 0.2s ease',
       },
     }),
     [isHovered, isMobile, isSmallMobile, imageLoaded, selectedOptions, validationErrors]
@@ -580,7 +621,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
       transform: scale(1.02);
     }
     .popup-select:focus {
-      border-color: #FF6B35;
+      border-color: var(--primary-color);
     }
     @media (max-width: 768px) {
       .action-btn:active:not(:disabled) {
@@ -606,7 +647,7 @@ function MenuItemCard({ item, onAddToCart, onView }) {
         style={styles.card}
         onMouseEnter={() => !isMobile && setIsHovered(true)}
         onMouseLeave={() => !isMobile && setIsHovered(false)}
-        onClick={handleViewProduct}
+        onClick={isManager ? handleEditProduct : handleViewProduct}
       >
         <div style={styles.imageContainer}>
           {!imageLoaded && <div style={styles.loadingPlaceholder} />}
@@ -630,30 +671,55 @@ function MenuItemCard({ item, onAddToCart, onView }) {
 
           {!isMobile && (
             <div style={styles.actionButtons}>
-              <button
-                style={styles.actionButton}
-                className="action-btn"
-                onClick={handleViewProduct}
-                title="View Details"
-              >
-                <RemoveRedEyeIcon
-                  sx={{ fontSize: isSmallMobile ? 16 : 18, color: '#FFFFFF' }}
-                />
-              </button>
-              <button
-                style={{
-                  ...styles.actionButton,
-                  ...(item.availability ? {} : styles.actionButtonDisabled),
-                }}
-                className="action-btn"
-                onClick={handleAddToCart}
-                title={item.availability ? 'Add to Cart' : 'Item Unavailable'}
-                disabled={!item.availability}
-              >
-                <ShoppingCartIcon
-                  sx={{ fontSize: isSmallMobile ? 16 : 18, color: '#FFFFFF' }}
-                />
-              </button>
+              {isManager ? (
+                <button
+                  style={styles.editButton}
+                  className="action-btn"
+                  onClick={handleEditProduct}
+                  title="Edit Product"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--background-color)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ width: isSmallMobile ? '16px' : '18px', height: isSmallMobile ? '16px' : '18px' }}
+                  >
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                </button>
+              ) : (
+                <>
+                  <button
+                    style={styles.actionButton}
+                    className="action-btn"
+                    onClick={handleViewProduct}
+                    title="View Details"
+                  >
+                    <RemoveRedEyeIcon
+                      sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
+                    />
+                  </button>
+                  <button
+                    style={{
+                      ...styles.actionButton,
+                      ...(item.availability ? {} : styles.actionButtonDisabled),
+                    }}
+                    className="action-btn"
+                    onClick={handleAddToCart}
+                    title={item.availability ? 'Add to Cart' : 'Item Unavailable'}
+                    disabled={!item.availability}
+                  >
+                    <ShoppingCartIcon
+                      sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
+                    />
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -688,33 +754,58 @@ function MenuItemCard({ item, onAddToCart, onView }) {
 
             {isMobile && (
               <div style={styles.mobileActionButtons}>
-                <button
-                  style={styles.mobileActionButton}
-                  className="mobile-action-btn"
-                  onClick={handleViewProduct}
-                  title="View Details"
-                >
-                  <RemoveRedEyeIcon sx={{ fontSize: 14, color: '#FFFFFF' }} />
-                </button>
-                <button
-                  style={{
-                    ...styles.mobileActionButton,
-                    ...(item.availability ? {} : styles.mobileActionButtonDisabled),
-                  }}
-                  className="mobile-action-btn"
-                  onClick={handleAddToCart}
-                  title={item.availability ? 'Add to Cart' : 'Item Unavailable'}
-                  disabled={!item.availability}
-                >
-                  <ShoppingCartIcon sx={{ fontSize: 14, color: '#FFFFFF' }} />
-                </button>
+                {isManager ? (
+                  <button
+                    style={styles.mobileEditButton}
+                    className="mobile-action-btn"
+                    onClick={handleEditProduct}
+                    title="Edit Product"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--background-color)"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ width: '14px', height: '14px' }}
+                    >
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      style={styles.mobileActionButton}
+                      className="mobile-action-btn"
+                      onClick={handleViewProduct}
+                      title="View Details"
+                    >
+                      <RemoveRedEyeIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
+                    </button>
+                    <button
+                      style={{
+                        ...styles.mobileActionButton,
+                        ...(item.availability ? {} : styles.mobileActionButtonDisabled),
+                      }}
+                      className="mobile-action-btn"
+                      onClick={handleAddToCart}
+                      title={item.availability ? 'Add to Cart' : 'Item Unavailable'}
+                      disabled={!item.availability}
+                    >
+                      <ShoppingCartIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {showOptionPopup && (
+      {showOptionPopup && !isManager && (
         <>
           <div
             style={styles.overlay}
