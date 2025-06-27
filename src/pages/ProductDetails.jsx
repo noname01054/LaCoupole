@@ -6,13 +6,10 @@ import { debounce } from 'lodash';
 import MenuItemCard from '../components/MenuItemCard';
 import {
   ShoppingCartOutlined,
-  FavoriteOutlined,
-  ShareOutlined,
   RemoveOutlined,
   AddOutlined,
   CategoryOutlined,
   CheckCircleOutlined,
-  ArrowBackIosOutlined,
   Star,
   RestaurantMenuOutlined,
 } from '@mui/icons-material';
@@ -29,7 +26,6 @@ function ProductDetails({ addToCart }) {
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantity, setQuantity] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [rating, setRating] = useState(0);
   const [isRatingSubmitted, setIsRating] = useState(false);
   const [touchStartX, setTouchStartX] = useState(null);
@@ -48,10 +44,7 @@ function ProductDetails({ addToCart }) {
           throw new Error('Invalid product ID');
         }
 
-        // Fetch product details first
         const productResponse = await api.get(`/menu-items/${itemId}`);
-
-        // Fetch other data in parallel
         const [relatedResponse, supplementsResponse, ratingResponse, categoryResponse] = await Promise.all([
           api.get(`/menu-items/${itemId}/related`),
           api.getSupplementsByMenuItem(itemId),
@@ -138,24 +131,6 @@ function ProductDetails({ addToCart }) {
     }
   }, [product, quantity, selectedSupplement, supplements, addToCart]);
 
-  const handleShare = useCallback(async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: product?.name || 'Product',
-          text: product?.description || 'Check out this product!',
-          url: window.location.href,
-        });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success('Link copied to clipboard!');
-      }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      toast.error('Failed to share');
-    }
-  }, [product]);
-
   const handleStarClick = useCallback((star) => {
     if (!isRatingSubmitted) {
       setRating(star);
@@ -174,9 +149,8 @@ function ProductDetails({ addToCart }) {
     return ((basePrice + supplementPrice) * quantity).toFixed(2);
   }, [product, selectedSupplement, supplements, quantity]);
 
-  // Swipe handling
   const handleTouchStart = useCallback((e) => {
-    if (window.innerWidth > 768) return; // Disable swipe on desktop
+    if (window.innerWidth > 768) return;
     setTouchStartX(e.touches[0].clientX);
     setTouchCurrentX(e.touches[0].clientX);
     setIsSwiping(true);
@@ -187,8 +161,9 @@ function ProductDetails({ addToCart }) {
       if (!isSwiping || window.innerWidth > 768) return;
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
       if (containerRef.current) {
-        containerRef.current.style.transform = `translateX(${deltaX}px)`;
+        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
       }
     },
@@ -199,21 +174,19 @@ function ProductDetails({ addToCart }) {
     if (!isSwiping || window.innerWidth > 768) return;
     setIsSwiping(false);
     const deltaX = touchCurrentX - touchStartX;
-    const swipeThreshold = 100; // Minimum swipe distance in pixels
+    const swipeThreshold = 80; // Reduced for smoother response
     const currentIndex = categoryProducts.findIndex((p) => p.id === parseInt(id));
 
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.3s ease-out';
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
     }
 
     if (Math.abs(deltaX) > swipeThreshold) {
       if (deltaX < 0 && currentIndex < categoryProducts.length - 1) {
-        // Swipe left (next product)
         const nextProduct = categoryProducts[currentIndex + 1];
         navigate(`/product/${nextProduct.id}`);
       } else if (deltaX > 0 && currentIndex > 0) {
-        // Swipe right (previous product)
         const prevProduct = categoryProducts[currentIndex - 1];
         navigate(`/product/${prevProduct.id}`);
       }
@@ -224,9 +197,8 @@ function ProductDetails({ addToCart }) {
   }, [isSwiping, touchStartX, touchCurrentX, categoryProducts, id, navigate]);
 
   useEffect(() => {
-    // Reset swipe state when product changes
     if (containerRef.current) {
-      containerRef.current.style.transition = 'none';
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
     }
     setIsSwiping(false);
@@ -308,16 +280,6 @@ function ProductDetails({ addToCart }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="product-details-header">
-        <button className="product-details-header-button" onClick={() => navigate(-1)}>
-          <ArrowBackIosOutlined style={{ fontSize: '18px' }} />
-        </button>
-        <h1 className="product-details-header-title">Product Details</h1>
-        <button className="product-details-header-button" onClick={handleShare}>
-          <ShareOutlined style={{ fontSize: '18px' }} />
-        </button>
-      </div>
-
       <div className="product-details-image-section">
         <div className="product-details-image-container">
           <img
@@ -328,20 +290,6 @@ function ProductDetails({ addToCart }) {
             decoding="async"
             onError={(e) => (e.target.src = '/placeholder.jpg')}
           />
-          <button
-            className="product-details-favorite-button"
-            style={{
-              backgroundColor: isFavorite ? 'rgba(255, 107, 53, 0.1)' : 'rgba(255, 255, 255, 0.9)',
-            }}
-            onClick={() => setIsFavorite(!isFavorite)}
-          >
-            <FavoriteOutlined
-              style={{
-                fontSize: '20px',
-                color: isFavorite ? '#ff6b35' : '#8e8e93',
-              }}
-            />
-          </button>
         </div>
       </div>
 
@@ -386,18 +334,12 @@ function ProductDetails({ addToCart }) {
           <div className="product-details-option-row">
             <div className="product-details-option-left">
               <CheckCircleOutlined
-                style={{
-                  fontSize: '18px',
-                  color: product.availability ? '#34d399' : '#ef4444',
-                }}
+                className={product.availability ? 'text-green-500' : 'text-red-500'}
               />
               <span className="product-details-option-label">Availability</span>
             </div>
             <span
               className="product-details-option-value"
-              style={{
-                color: product.availability ? '#34d399' : '#ef4444',
-              }}
             >
               {product.availability ? 'In Stock' : 'Out of Stock'}
             </span>
@@ -406,7 +348,7 @@ function ProductDetails({ addToCart }) {
           {product.dietary_tags && product.dietary_tags !== '[]' && (
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <RestaurantMenuOutlined style={{ fontSize: '18px', color: '#ff6b35' }} />
+                <RestaurantMenuOutlined className="text-orange-500" />
                 <span className="product-details-option-label">Dietary Tags</span>
               </div>
               <span className="product-details-option-value">
@@ -418,7 +360,7 @@ function ProductDetails({ addToCart }) {
           {supplements.length > 0 && (
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <CategoryOutlined style={{ fontSize: '18px', color: '#ff6b35' }} />
+                <CategoryOutlined className="text-orange-500" />
                 <span className="product-details-option-label">Add Supplement</span>
               </div>
               <select
@@ -438,7 +380,7 @@ function ProductDetails({ addToCart }) {
 
           <div className="product-details-option-row">
             <div className="product-details-option-left">
-              <Star style={{ fontSize: '18px', color: '#fbbf24' }} />
+              <Star className="text-yellow-400" />
               <span className="product-details-option-label">Rate this item</span>
             </div>
             <div className="product-details-user-rating-container">
@@ -470,24 +412,18 @@ function ProductDetails({ addToCart }) {
             <div className="product-details-quantity-container">
               <button
                 className="product-details-quantity-button"
-                style={{
-                  ...(quantity <= 1 || !product.availability ? { backgroundColor: '#e5e7eb', cursor: 'not-allowed', color: '#9ca3af' } : {}),
-                }}
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity <= 1 || !product.availability}
               >
-                <RemoveOutlined style={{ fontSize: '14px' }} />
+                <RemoveOutlined />
               </button>
               <span className="product-details-quantity-display">{quantity}</span>
               <button
                 className="product-details-quantity-button"
-                style={{
-                  ...(!product.availability ? { backgroundColor: '#e5e7eb', cursor: 'not-allowed', color: '#9ca3af' } : {}),
-                }}
                 onClick={() => setQuantity(quantity + 1)}
                 disabled={!product.availability}
               >
-                <AddOutlined style={{ fontSize: '14px' }} />
+                <AddOutlined />
               </button>
             </div>
           </div>
@@ -495,13 +431,10 @@ function ProductDetails({ addToCart }) {
 
         <button
           className="product-details-add-to-cart-button"
-          style={{
-            ...(!product.availability ? { background: '#e5e7eb', cursor: 'not-allowed', color: '#9ca3af' } : {}),
-          }}
           onClick={handleAddToCart}
           disabled={!product.availability}
         >
-          <ShoppingCartOutlined style={{ fontSize: '18px' }} />
+          <ShoppingCartOutlined />
           {product.availability ? `Add to Cart • $${calculateTotalPrice()}` : 'Unavailable'}
         </button>
       </div>
