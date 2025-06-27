@@ -170,4 +170,8 @@ api.updateBreakfastOptionGroup = (breakfastId, groupId, data) => api.put(`/break
 api.deleteBreakfastOptionGroup = (breakfastId, groupId, data) => api.delete(`/breakfasts/${breakfastId}/option-groups/${groupId}`, { data });
 api.updateBreakfastOption = (breakfastId, optionId, data) => api.put(`/breakfasts/${breakfastId}/options/${optionId}`, data);
 
+// Theme API methods
+api.getTheme = () => api.get('/theme');
+api.updateTheme = (data) => api.put('/theme', data);
+
 export { api };
