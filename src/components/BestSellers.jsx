@@ -31,10 +31,10 @@ function BestSellers({ addToCart }) {
           api.get('/menu-items/best-sellers'),
           api.getTheme()
         ]);
-        setBestSellers(bestSellersResponse.data || []);
+        setBestSellers(bestSellersResponse.data?.slice(0, 8) || []);
         const updatedTheme = themeResponse.data || theme;
         setTheme(updatedTheme);
-        applyTheme(updatedTheme); // Apply theme immediately
+        applyTheme(updatedTheme);
       } catch (error) {
         console.error('Error fetching best sellers or theme:', error);
         toast.error(error.response?.data?.error || 'Failed to load best sellers or theme');
@@ -45,12 +45,13 @@ function BestSellers({ addToCart }) {
     fetchBestSellersAndTheme();
   }, []);
 
-  const applyTheme = (themeData) => {
-    document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
-    document.documentElement.style.setProperty('--secondary-color', themeData.secondary_color);
-    document.documentElement.style.setProperty('--background-color', themeData.background_color);
-    document.documentElement.style.setProperty('--text-color', themeData.text_color);
-  };
+  const applyTheme = useCallback((themeData) => {
+    const root = document.documentElement;
+    root.style.setProperty('--primary-color', themeData.primary_color);
+    root.style.setProperty('--secondary-color', themeData.secondary_color);
+    root.style.setProperty('--background-color', themeData.background_color);
+    root.style.setProperty('--text-color', themeData.text_color);
+  }, []);
 
   const updateCenterItem = useCallback(() => {
     if (!scrollContainerRef.current || bestSellers.length === 0) return;
@@ -86,11 +87,11 @@ function BestSellers({ addToCart }) {
     userInteractionRef.current = true;
     lastUserInteractionRef.current = Date.now();
 
+    updateCenterItem();
+
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
     }
-
-    updateCenterItem();
 
     scrollTimeoutRef.current = setTimeout(() => {
       isScrollingRef.current = false;
@@ -101,9 +102,7 @@ function BestSellers({ addToCart }) {
   }, [updateCenterItem]);
 
   const startAutoScroll = useCallback(() => {
-    if (autoScrollIntervalRef.current) {
-      clearInterval(autoScrollIntervalRef.current);
-    }
+    if (autoScrollIntervalRef.current || bestSellers.length <= 1) return;
 
     autoScrollIntervalRef.current = setInterval(() => {
       if (!userInteractionRef.current && !isScrollingRef.current && bestSellers.length > 0) {
@@ -169,10 +168,7 @@ function BestSellers({ addToCart }) {
 
   useEffect(() => {
     if (bestSellers.length > 0 && !loading) {
-      const timer = setTimeout(() => {
-        startAutoScroll();
-      }, 2000);
-
+      const timer = setTimeout(startAutoScroll, 2000);
       return () => {
         clearTimeout(timer);
         stopAutoScroll();
@@ -194,7 +190,7 @@ function BestSellers({ addToCart }) {
     navigate(`/product/${itemId}`);
   }, [navigate, handleUserInteraction]);
 
-  const getBaseUrl = () => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
+  const getBaseUrl = useCallback(() => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000', []);
 
   if (loading) {
     return (
@@ -243,10 +239,10 @@ function BestSellers({ addToCart }) {
                 ref={(el) => (itemRefs.current[index] = el)}
                 style={{
                   ...styles.bestSellerItem,
-                  transform: centerIndex === index ? 'scale(1.08)' : 'scale(1)',
+                  transform: centerIndex === index ? 'scale(1.15)' : 'scale(1)',
                   zIndex: centerIndex === index ? 10 : 1,
                 }}
-                className="best-seller-item"
+                className="best-sellers-item"
                 onClick={() => handleItemClick(item.id)}
               >
                 <div 
@@ -266,10 +262,6 @@ function BestSellers({ addToCart }) {
                     {item.image_url ? (
                       <img
                         src={`${getBaseUrl()}${item.image_url}`}
-                        srcSet={`
-                          ${getBaseUrl()}${item.image_url}?w=120 1x,
-                          ${getBaseUrl()}${item.image_url}?w=240 2x
-                        `}
                         alt={item.name}
                         style={styles.bestSellerImage}
                         loading="lazy"
@@ -320,57 +312,57 @@ function BestSellers({ addToCart }) {
 
 const styles = {
   bestSellersSection: {
-    marginBottom: '40px',
+    marginBottom: '24px',
     width: '100%',
     boxSizing: 'border-box',
-    paddingTop: '12px',
+    paddingTop: '8px',
   },
   bestSellersHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '24px',
-    paddingLeft: '24px',
-    paddingRight: '24px',
+    marginBottom: '12px',
+    paddingLeft: '12px',
+    paddingRight: '12px',
   },
   titleContainer: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
+    gap: '6px',
   },
   starIcon: {
-    filter: 'drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4))',
+    filter: 'none',
   },
   bestSellersTitle: {
-    fontSize: '26px',
-    fontWeight: '700',
+    fontSize: '20px',
+    fontWeight: '600',
     margin: 0,
-    letterSpacing: '-0.5px',
+    letterSpacing: '0',
     lineHeight: '1.2',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "'Inter', sans-serif",
   },
   indicatorContainer: {
     display: 'flex',
-    gap: '8px',
+    gap: '4px',
     alignItems: 'center',
   },
   indicator: {
-    width: '8px',
-    height: '8px',
+    width: '6px',
+    height: '6px',
     borderRadius: '50%',
     backgroundColor: '#D1D5DB',
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'background-color 0.2s ease',
   },
   activeIndicator: {
-    transform: 'scale(1.3)',
-    boxShadow: '0 0 10px rgba(0, 0, 0, 0.5)',
+    transform: 'scale(1.2)',
+    boxShadow: 'none',
   },
   bestSellersScrollContainer: {
     overflowX: 'auto',
     overflowY: 'hidden',
     scrollSnapType: 'x mandatory',
-    paddingTop: '30px',
-    paddingBottom: '30px', // Increased height by adding more paddingBottom
+    paddingTop: '20px',
+    paddingBottom: '30px',
     paddingLeft: '0',
     paddingRight: '0',
     width: '100%',
@@ -378,64 +370,64 @@ const styles = {
   },
   bestSellersGrid: {
     display: 'flex',
-    gap: '20px',
+    gap: '12px',
     minWidth: 'fit-content',
     alignItems: 'flex-start',
-    paddingBottom: '12px',
-    paddingLeft: 'calc(50% - 75px)',
-    paddingRight: 'calc(50% - 75px)',
+    paddingBottom: '8px',
+    paddingLeft: 'calc(50% - 60px)',
+    paddingRight: 'calc(50% - 60px)',
   },
   bestSellerItem: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     cursor: 'pointer',
-    minWidth: '130px',
-    maxWidth: '150px',
+    minWidth: '100px',
+    maxWidth: '120px',
     flex: '0 0 auto',
-    transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     scrollSnapAlign: 'center',
     willChange: 'transform',
   },
   bestSellerCard: {
     width: '100%',
-    borderRadius: '20px',
-    padding: '18px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    borderRadius: '12px',
+    padding: '8px',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
+    transition: 'all 0.2s ease',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     position: 'relative',
   },
   centerItemCard: {
-    boxShadow: '0 10px 36px rgba(0, 0, 0, 0.2), 0 6px 18px rgba(0, 0, 0, 0.1)',
-    transform: 'translateY(-6px)',
+    boxShadow: '0 3px 8px rgba(0, 0, 0, 0.08)',
+    transform: 'translateY(-2px)',
   },
   bestSellerImageContainer: {
-    width: '50px',
-    height: '50px',
-    borderRadius: '18px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '14px',
+    marginBottom: '8px',
     overflow: 'hidden',
-    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'all 0.2s ease',
     flexShrink: 0,
     position: 'relative',
   },
   centerItemImageContainer: {
-    width: '84px',
-    height: '84px',
-    borderRadius: '20px',
-    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.25)',
+    width: '60px',
+    height: '60px',
+    borderRadius: '12px',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
   },
   bestSellerImage: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: '18px',
+    borderRadius: '10px',
   },
   bestSellerPlaceholder: {
     width: '100%',
@@ -443,92 +435,92 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '18px',
+    borderRadius: '10px',
   },
   highlightBadge: {
     position: 'absolute',
-    top: '-6px',
-    right: '-6px',
-    width: '24px',
-    height: '24px',
+    top: '-3px',
+    right: '-3px',
+    width: '16px',
+    height: '16px',
     backgroundColor: '#FFFFFF',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
   },
   itemInfo: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '6px',
+    gap: '3px',
     width: '100%',
   },
   bestSellerName: {
-    fontSize: '15px',
+    fontSize: '13px',
     fontWeight: '600',
     textAlign: 'center',
     margin: 0,
-    lineHeight: '1.4',
+    lineHeight: '1.2',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    width: '100',
-    maxWidth: '110px',
+    transition: 'color 0.2s ease',
+    width: '100%',
+    maxWidth: '90px',
   },
   centerItemName: {
-    fontSize: '16px',
-    fontWeight: '700',
-    maxWidth: '120px',
+    fontSize: '14px',
+    fontWeight: '600',
+    maxWidth: '100px',
   },
   priceContainer: {
     display: 'flex',
     alignItems: 'baseline',
     justifyContent: 'center',
-    borderRadius: '10px',
-    padding: '6px 10px',
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    minWidth: '60px',
+    borderRadius: '6px',
+    padding: '3px 6px',
+    transition: 'all 0.2s ease',
+    minWidth: '40px',
   },
   centerItemPriceContainer: {
-    transform: 'scale(1.08)',
-    boxShadow: '0 3px 10px rgba(0, 0, 0, 0.4)',
+    transform: 'scale(1.05)',
+    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1)',
   },
   currency: {
-    fontSize: '12px',
+    fontSize: '10px',
     fontWeight: '600',
-    transition: 'color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'color 0.2s ease',
   },
   price: {
-    fontSize: '15px',
-    fontWeight: '700',
-    transition: 'color 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'color 0.2s ease',
   },
   loadingContainer: {
-    padding: '56px 24px',
+    padding: '24px 12px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '20px',
-    margin: '0 24px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+    borderRadius: '12px',
+    margin: '0 12px',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
   },
   loadingSpinner: {
-    width: '32px',
-    height: '32px',
-    border: '3px solid rgba(0, 0, 0, 0.2)',
+    width: '20px',
+    height: '20px',
+    border: '2px solid rgba(0, 0, 0, 0.2)',
     borderRadius: '50%',
-    animation: 'spin 0.7s linear infinite',
-    marginBottom: '20px',
+    animation: 'spin 0.9s linear infinite',
+    marginBottom: '10px',
   },
   loadingText: {
-    fontSize: '16px',
+    fontSize: '13px',
     fontWeight: '500',
     margin: 0,
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    fontFamily: "'Inter', sans-serif",
   },
 };
 
@@ -542,20 +534,17 @@ const cssStyles = (theme) => `
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
   }
 
-  .best-seller-item {
+  .best-sellers-item {
     will-change: transform;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
   }
 
-  .best-seller-item:active {
+  .best-sellers-item:active {
     transform: scale(0.95) !important;
-    transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  .best-seller-item .center-item-price-container .currency,
-  .best-seller-item .center-item-price-container .price {
-    color: #FFFFFF !important;
   }
 
   @media (max-width: 480px) {
@@ -564,9 +553,9 @@ const cssStyles = (theme) => `
       padding-right: 0 !important;
     }
     
-    .best-seller-item {
-      min-width: 120px !important;
-      max-width: 140px !important;
+    .best-sellers-item {
+      min-width: 90px !important;
+      max-width: 110px !important;
     }
   }
 
@@ -576,9 +565,9 @@ const cssStyles = (theme) => `
       padding-right: 0 !important;
     }
     
-    .best-seller-item {
-      min-width: 110px !important;
-      max-width: 130px !important;
+    .best-sellers-item {
+      min-width: 80px !important;
+      max-width: 100px !important;
     }
   }
 
@@ -588,50 +577,37 @@ const cssStyles = (theme) => `
       padding-right: 0 !important;
     }
     
-    .best-seller-item {
-      min-width: 100px !important;
-      max-width: 120px !important;
+    .best-sellers-item {
+      min-width: 70px !important;
+      max-width: 90px !important;
     }
   }
 
   @media (min-width: 768px) {
-    .best-seller-item {
-      min-width: 150px !important;
-      max-width: 170px !important;
+    .best-sellers-item {
+      min-width: 110px !important;
+      max-width: 130px !important;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .best-seller-item {
-      transition: none;
+    .best-sellers-item,
+    .best-sellers-card,
+    .best-sellers-price-container {
+      transition: none !important;
     }
     
     .best-sellers-scroll {
-      scroll-behavior: auto;
+      scroll-behavior: auto !important;
     }
     
-    .indicator {
-      transition: none;
+    .best-sellers-indicator {
+      transition: none !important;
     }
   }
 
   @keyframes spin {
     to { transform: rotate(360deg); }
-  }
-
-  .best-seller-item {
-    transform-style: preserve-3d;
-    backface-visibility: hidden;
-  }
-
-  @media (hover: hover) {
-    .best-seller-item:hover {
-      transform: scale(1.03) translateY(-3px);
-    }
-    
-    .best-seller-item:hover .best-seller-card {
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.15);
-    }
   }
 `;
 
