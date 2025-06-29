@@ -5,6 +5,17 @@
   margin: 0;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
+  overflow-x: hidden;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  touch-action: pan-y;
+  user-select: none;
+}
+
+@media (min-width: 768px) {
+  .home-container {
+    transform: none !important;
+  }
 }
 
 .home-welcome-section {
