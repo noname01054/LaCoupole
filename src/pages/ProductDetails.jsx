@@ -177,7 +177,7 @@ function ProductDetails({ addToCart }) {
     if (!isSwiping || window.innerWidth > 768) return;
     setIsSwiping(false);
     const deltaX = touchCurrentX - touchStartX;
-    const swipeThreshold = 80; // Reduced for smoother response
+    const swipeThreshold = 80;
     const currentIndex = categoryProducts.findIndex((p) => p.id === parseInt(id));
 
     if (containerRef.current) {
@@ -185,19 +185,21 @@ function ProductDetails({ addToCart }) {
       containerRef.current.style.transform = 'translateX(0)';
     }
 
-    if (Math.abs(deltaX) > swipeThreshold) {
-      if (deltaX < 0 && currentIndex < categoryProducts.length - 1) {
-        const nextProduct = categoryProducts[currentIndex + 1];
-        navigate(`/product/${nextProduct.id}`);
-      } else if (deltaX > 0 && currentIndex > 0) {
+    if (deltaX > swipeThreshold) {
+      if (currentIndex === 0) {
+        navigate('/categories');
+      } else if (currentIndex > 0) {
         const prevProduct = categoryProducts[currentIndex - 1];
         navigate(`/product/${prevProduct.id}`);
       }
+    } else if (deltaX < -swipeThreshold && currentIndex < categoryProducts.length - 1) {
+      const nextProduct = categoryProducts[currentIndex + 1];
+      navigate(`/product/${nextProduct.id}`);
     }
 
     setTouchStartX(null);
     setTouchCurrentX(null);
-  }, [isSwiping, touchStartX, touchCurrentX, categoryProducts, id, navigate]);
+  }, [isSwiping, touchCurrentX, touchStartX, categoryProducts, id, navigate]);
 
   useEffect(() => {
     if (containerRef.current) {
