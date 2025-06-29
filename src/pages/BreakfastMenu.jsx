@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -25,6 +25,12 @@ function BreakfastMenu({ addToCart }) {
   const [validationErrors, setValidationErrors] = useState({});
   const [expandedOptions, setExpandedOptions] = useState({});
   const [addingToCart, setAddingToCart] = useState({});
+  const [categoryBreakfasts, setCategoryBreakfasts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchCurrentX, setTouchCurrentX] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false);
+  const containerRef = useRef(null);
 
   const getImageUrl = (imageUrl) => {
     if (!imageUrl || imageUrl === '/Uploads/undefined' || imageUrl === 'null') {
@@ -42,10 +48,12 @@ function BreakfastMenu({ addToCart }) {
         let breakfastsData = [];
 
         if (id) {
-          const [breakfastResponse, optionsResponse, groupsResponse] = await Promise.all([
+          const [breakfastResponse, optionsResponse, groupsResponse, categoriesResponse, allBreakfastsResponse] = await Promise.all([
             api.getBreakfast(id),
             api.getBreakfastOptions(id),
             api.getBreakfastOptionGroups(id),
+            api.get('/categories'),
+            api.getBreakfasts(),
           ]);
           if (!breakfastResponse.data.availability) {
             throw new Error('Breakfast is not available');
@@ -55,8 +63,17 @@ function BreakfastMenu({ addToCart }) {
             options: optionsResponse.data || [],
             optionGroups: groupsResponse.data || [],
           }];
+          setCategories(categoriesResponse.data || []);
+          const categoryId = breakfastResponse.data.category_id;
+          const categoryBreakfastsData = allBreakfastsResponse.data
+            .filter(b => b.category_id === categoryId && b.availability)
+            .sort((a, b) => a.id - b.id);
+          setCategoryBreakfasts(categoryBreakfastsData);
         } else {
-          const breakfastResponse = await api.getBreakfasts();
+          const [breakfastResponse, categoriesResponse] = await Promise.all([
+            api.getBreakfasts(),
+            api.get('/categories'),
+          ]);
           breakfastsData = await Promise.all(
             breakfastResponse.data
               .filter((b) => b.availability)
@@ -72,6 +89,8 @@ function BreakfastMenu({ addToCart }) {
                 };
               })
           );
+          setCategories(categoriesResponse.data || []);
+          setCategoryBreakfasts([]);
         }
 
         setBreakfasts(breakfastsData);
@@ -197,6 +216,96 @@ function BreakfastMenu({ addToCart }) {
     },
     [quantities, selectedOptions]
   );
+
+  const handleTouchStart = useCallback((e) => {
+    if (window.innerWidth > 768 || !id) return;
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+    setIsSwiping(true);
+  }, [id]);
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!isSwiping || window.innerWidth > 768 || !id) return;
+      setTouchCurrentX(e.touches[0].clientX);
+      const deltaX = touchCurrentX - touchStartX;
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+        containerRef.current.style.transition = 'none';
+      }
+    },
+    [isSwiping, touchStartX, touchCurrentX, id]
+  );
+
+  const handleTouchEnd = useCallback(async () => {
+    if (!isSwiping || window.innerWidth > 768 || !id) return;
+    setIsSwiping(false);
+    const deltaX = touchCurrentX - touchStartX;
+    const swipeThreshold = 80;
+    const currentIndex = categoryBreakfasts.findIndex((b) => b.id === parseInt(id));
+
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+
+    if (deltaX > swipeThreshold) {
+      // Left-to-right swipe: go to category menu if first breakfast, otherwise previous breakfast
+      if (currentIndex === 0 && breakfasts[0]?.category_id) {
+        navigate(`/category/${breakfasts[0].category_id}`);
+      } else if (currentIndex > 0) {
+        const prevBreakfast = categoryBreakfasts[currentIndex - 1];
+        navigate(`/breakfast/${prevBreakfast.id}`);
+      }
+    } else if (deltaX < -swipeThreshold) {
+      // Right-to-left swipe: next breakfast or next non-empty category if last breakfast
+      if (currentIndex < categoryBreakfasts.length - 1) {
+        const nextBreakfast = categoryBreakfasts[currentIndex + 1];
+        navigate(`/breakfast/${nextBreakfast.id}`);
+      } else if (categories.length > 0 && breakfasts[0]?.category_id) {
+        const categoryIds = categories.map(cat => parseInt(cat.id)).sort((a, b) => a - b);
+        let currentCategoryIndex = categoryIds.indexOf(parseInt(breakfasts[0].category_id));
+        let nextCategoryId = null;
+
+        // Find the next non-empty category
+        while (currentCategoryIndex < categoryIds.length - 1) {
+          currentCategoryIndex += 1;
+          const candidateCategoryId = categoryIds[currentCategoryIndex];
+          try {
+            const [menuItemsResponse, breakfastsResponse] = await Promise.all([
+              api.get(`/menu-items?category_id=${candidateCategoryId}`),
+              api.getBreakfasts(),
+            ]);
+            const categoryBreakfasts = breakfastsResponse.data.filter(b => b.category_id === candidateCategoryId && b.availability);
+            if ((menuItemsResponse.data && menuItemsResponse.data.length > 0) || categoryBreakfasts.length > 0) {
+              nextCategoryId = candidateCategoryId;
+              break;
+            }
+          } catch (error) {
+            console.error(`Error checking category ${candidateCategoryId}:`, error);
+          }
+        }
+
+        if (nextCategoryId) {
+          navigate(`/category/${nextCategoryId}`);
+        }
+      }
+    }
+
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [isSwiping, touchCurrentX, touchStartX, categoryBreakfasts, id, navigate, breakfasts, categories]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [id]);
 
   const breakfastList = useMemo(() => {
     return breakfasts.map((breakfast, index) => {
@@ -389,7 +498,13 @@ function BreakfastMenu({ addToCart }) {
 
   if (error) {
     return (
-      <div className="breakfast-menu__container">
+      <div
+        className="breakfast-menu__container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="breakfast-menu__error-container">
           <div className="breakfast-menu__error-icon">🍽️</div>
           <p className="breakfast-menu__error-text">{error}</p>
@@ -403,7 +518,13 @@ function BreakfastMenu({ addToCart }) {
 
   if (isLoading) {
     return (
-      <div className="breakfast-menu__container">
+      <div
+        className="breakfast-menu__container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="breakfast-menu__loading-container">
           <div className="breakfast-menu__main-loading-spinner"></div>
           <p className="breakfast-menu__loading-text">Loading delicious breakfasts...</p>
@@ -414,7 +535,13 @@ function BreakfastMenu({ addToCart }) {
 
   if (breakfasts.length === 0) {
     return (
-      <div className="breakfast-menu__container">
+      <div
+        className="breakfast-menu__container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="breakfast-menu__error-container">
           <div className="breakfast-menu__error-icon">🔍</div>
           <p className="breakfast-menu__error-text">No breakfasts available</p>
@@ -427,7 +554,13 @@ function BreakfastMenu({ addToCart }) {
   }
 
   return (
-    <div className="breakfast-menu__container">
+    <div
+      className="breakfast-menu__container"
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="breakfast-menu__header">
         <button
           className="breakfast-menu__header-back-btn"
