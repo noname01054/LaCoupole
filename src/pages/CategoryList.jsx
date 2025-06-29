@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -15,9 +15,10 @@ function CategoryList() {
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchCurrentX, setTouchCurrentX] = useState(null);
   const [isSwiping, setIsSwiping] = useState(false);
+  const lastTouchTime = useRef(0);
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'auto' });
 
     const fetchCategories = async () => {
       try {
@@ -43,7 +44,7 @@ function CategoryList() {
     setShowCloseAnimation(true);
     setTimeout(() => {
       navigate(-1);
-    }, 300);
+    }, 200); // Reduced animation duration
   }, [navigate]);
 
   const handleTouchStart = useCallback((e) => {
@@ -56,12 +57,18 @@ function CategoryList() {
   const handleTouchMove = useCallback(
     (e) => {
       if (!isSwiping || window.innerWidth > 768) return;
+      const now = performance.now();
+      if (now - lastTouchTime.current < 16) return; // Throttle to ~60fps
+      lastTouchTime.current = now;
+
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
       if (containerRef.current) {
-        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
-        containerRef.current.style.transition = 'none';
+        requestAnimationFrame(() => {
+          containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+          containerRef.current.style.transition = 'none';
+        });
       }
     },
     [isSwiping, touchStartX, touchCurrentX]
@@ -74,8 +81,10 @@ function CategoryList() {
     const swipeThreshold = 80;
 
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-      containerRef.current.style.transform = 'translateX(0)';
+      requestAnimationFrame(() => {
+        containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+        containerRef.current.style.transform = 'translateX(0)';
+      });
     }
 
     if (deltaX > swipeThreshold) {
@@ -88,15 +97,42 @@ function CategoryList() {
     setTouchCurrentX(null);
   }, [isSwiping, touchCurrentX, touchStartX, navigate, categories]);
 
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-      containerRef.current.style.transform = 'translateX(0)';
-    }
-    setIsSwiping(false);
-    setTouchStartX(null);
-    setTouchCurrentX(null);
-  }, []);
+  const categoryItems = useMemo(() => {
+    return categories.map((category, index) => (
+      <div
+        key={category.id}
+        className="category-list-card"
+        style={{ animationDelay: `${index * 0.05}s` }} // Reduced delay
+        onClick={() => handleCategoryClick(category.id)}
+      >
+        <div className="category-list-image-container">
+          {category.image_url ? (
+            <img
+              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${category.image_url}`}
+              alt={category.name}
+              className="category-list-image"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <div className="category-list-placeholder-image">
+              <Coffee size={40} color="#ff8c42" />
+            </div>
+          )}
+          <div className="category-list-image-overlay"></div>
+          <div className="category-list-card-badge">
+            <ArrowRight size={16} color="#fff" />
+          </div>
+        </div>
+        <div className="category-list-card-content">
+          <h3 className="category-list-category-name">{category.name}</h3>
+          <p className="category-list-category-description">
+            {category.description || 'Explore delicious options in this category'}
+          </p>
+        </div>
+      </div>
+    ));
+  }, [categories, handleCategoryClick]);
 
   if (error) {
     return (
@@ -151,16 +187,13 @@ function CategoryList() {
           >
             <X size={20} color="#fff" />
           </button>
-          
           <div className="category-list-title-section">
             <h1 className="category-list-title">Our Categories</h1>
             <p className="category-list-subtitle">Discover what we have to offer</p>
           </div>
-          
           <div className="category-list-header-emoji">🍴</div>
         </div>
       </div>
-
       <div className="category-list-content">
         {categories.length === 0 && !loading && (
           <div className="category-list-empty-state">
@@ -169,43 +202,7 @@ function CategoryList() {
             <p className="category-list-empty-text">Check back soon for new categories!</p>
           </div>
         )}
-        
-        <div className="category-list-grid">
-          {categories.map((category, index) => (
-            <div
-              key={category.id}
-              className="category-list-card"
-              style={{ animationDelay: `${index * 0.1}s` }}
-              onClick={() => handleCategoryClick(category.id)}
-            >
-              <div className="category-list-image-container">
-                {category.image_url ? (
-                  <img
-                    src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${category.image_url}`}
-                    alt={category.name}
-                    className="category-list-image"
-                    loading="lazy"
-                  />
-                ) : (
-                  <div className="category-list-placeholder-image">
-                    <Coffee size={40} color="#ff8c42" />
-                  </div>
-                )}
-                <div className="category-list-image-overlay"></div>
-                <div className="category-list-card-badge">
-                  <ArrowRight size={16} color="#fff" />
-                </div>
-              </div>
-              
-              <div className="category-list-card-content">
-                <h3 className="category-list-category-name">{category.name}</h3>
-                <p className="category-list-category-description">
-                  {category.description || 'Explore delicious options in this category'}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="category-list-grid">{categoryItems}</div>
       </div>
     </div>
   );
