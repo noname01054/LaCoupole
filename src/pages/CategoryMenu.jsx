@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../services/api';
 import MenuItemCard from '../components/MenuItemCard';
@@ -19,6 +19,11 @@ function CategoryMenu({ addToCart }) {
   const [isVisible, setIsVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const containerRef = useRef(null);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchCurrentX, setTouchCurrentX] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   const debouncedSearch = debounce((query) => {
     if (query.trim() === '') {
@@ -39,15 +44,17 @@ function CategoryMenu({ addToCart }) {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [menuResponse, categoryResponse, breakfastResponse] = await Promise.all([
+        const [menuResponse, categoryResponse, breakfastResponse, categoriesResponse] = await Promise.all([
           api.get(`/menu-items?category_id=${id}`),
           api.get(`/categories/${id}`),
           api.getBreakfasts(),
+          api.get('/categories'),
         ]);
         
         const menuData = menuResponse.data || [];
         const categoryData = categoryResponse.data;
         const breakfastData = breakfastResponse.data || [];
+        const categoriesData = categoriesResponse.data || [];
 
         const categoryBreakfasts = breakfastData
           .filter(breakfast => breakfast.category_id === parseInt(id))
@@ -66,6 +73,7 @@ function CategoryMenu({ addToCart }) {
         setFilteredItems(combinedItems);
         setCategoryName(categoryData?.name || 'Category');
         setCategoryImage(categoryData?.image_url || null);
+        setCategories(categoriesData);
         
         setTimeout(() => setIsVisible(true), 100);
       } catch (error) {
@@ -75,6 +83,7 @@ function CategoryMenu({ addToCart }) {
         setMenuItems([]);
         setFilteredItems([]);
         setCategoryName('Category');
+        setCategories([]);
         setTimeout(() => setIsVisible(true), 100);
       } finally {
         setLoading(false);
@@ -94,26 +103,98 @@ function CategoryMenu({ addToCart }) {
     debouncedSearch(searchQuery);
   }, [searchQuery, menuItems]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setIsVisible(false);
     setTimeout(() => {
       navigate(-1);
     }, 300);
-  };
+  }, [navigate]);
 
-  const handleView = (itemId, itemType = 'menuItem') => {
+  const handleView = useCallback((itemId, itemType = 'menuItem') => {
     if (itemType === 'breakfast') {
       navigate(`/breakfast/${itemId}`);
     } else {
       navigate(`/product/${itemId}`);
     }
-  };
+  }, [navigate]);
 
-  const handleSearchFocus = () => {};
+  const handleSearchFocus = useCallback(() => {}, []);
+
+  const handleTouchStart = useCallback((e) => {
+    if (window.innerWidth > 768) return;
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+    setIsSwiping(true);
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!isSwiping || window.innerWidth > 768) return;
+      setTouchCurrentX(e.touches[0].clientX);
+      const deltaX = touchCurrentX - touchStartX;
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+        containerRef.current.style.transition = 'none';
+      }
+    },
+    [isSwiping, touchStartX, touchCurrentX]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isSwiping || window.innerWidth > 768) return;
+    setIsSwiping(false);
+    const deltaX = touchCurrentX - touchStartX;
+    const swipeThreshold = 80;
+
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+
+    if (categories.length > 0) {
+      const currentId = parseInt(id);
+      const categoryIds = categories.map(cat => parseInt(cat.id)).sort((a, b) => a - b);
+      const currentIndex = categoryIds.indexOf(currentId);
+
+      if (deltaX > swipeThreshold) {
+        // Left-to-right swipe: previous category or CategoryList if first
+        if (currentIndex === 0) {
+          navigate('/categories');
+        } else {
+          navigate(`/category/${categoryIds[currentIndex - 1]}`);
+        }
+      } else if (deltaX < -swipeThreshold) {
+        // Right-to-left swipe: next category
+        if (currentIndex < categoryIds.length - 1) {
+          navigate(`/category/${categoryIds[currentIndex + 1]}`);
+        }
+      }
+    }
+
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [isSwiping, touchCurrentX, touchStartX, navigate, categories, id]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, []);
 
   if (error) {
     return (
-      <div className="category-menu-error-container">
+      <div
+        className="category-menu-error-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="category-menu-error-content">
           <Coffee size={64} color="#ff6b35" className="category-menu-error-icon" />
           <p className="category-menu-error-text">{error}</p>
@@ -127,7 +208,13 @@ function CategoryMenu({ addToCart }) {
 
   if (loading) {
     return (
-      <div className="category-menu-loading-container">
+      <div
+        className="category-menu-loading-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="category-menu-loading-spinner"></div>
         <p className="category-menu-loading-text">Loading delicious menu...</p>
       </div>
@@ -135,7 +222,13 @@ function CategoryMenu({ addToCart }) {
   }
 
   return (
-    <div className={`category-menu-container ${isVisible ? 'category-menu-container--visible' : ''}`}>
+    <div
+      className={`category-menu-container ${isVisible ? 'category-menu-container--visible' : ''}`}
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="category-menu-header">
         <div className="category-menu-header-background">
           {categoryImage ? (
