@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -11,6 +11,10 @@ function CategoryList() {
   const [error, setError] = useState(null);
   const [showCloseAnimation, setShowCloseAnimation] = useState(false);
   const navigate = useNavigate();
+  const containerRef = useRef(null);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchCurrentX, setTouchCurrentX] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -31,20 +35,78 @@ function CategoryList() {
     fetchCategories();
   }, []);
 
-  const handleCategoryClick = (id) => {
+  const handleCategoryClick = useCallback((id) => {
     navigate(`/category/${id}`);
-  };
+  }, [navigate]);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setShowCloseAnimation(true);
     setTimeout(() => {
       navigate(-1);
     }, 300);
-  };
+  }, [navigate]);
+
+  const handleTouchStart = useCallback((e) => {
+    if (window.innerWidth > 768) return;
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+    setIsSwiping(true);
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!isSwiping || window.innerWidth > 768) return;
+      setTouchCurrentX(e.touches[0].clientX);
+      const deltaX = touchCurrentX - touchStartX;
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+        containerRef.current.style.transition = 'none';
+      }
+    },
+    [isSwiping, touchStartX, touchCurrentX]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isSwiping || window.innerWidth > 768) return;
+    setIsSwiping(false);
+    const deltaX = touchCurrentX - touchStartX;
+    const swipeThreshold = 80;
+
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+
+    if (deltaX > swipeThreshold) {
+      navigate('/');
+    } else if (deltaX < -swipeThreshold && categories.length > 0) {
+      navigate(`/category/${categories[0].id}`);
+    }
+
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [isSwiping, touchCurrentX, touchStartX, navigate, categories]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, []);
 
   if (error) {
     return (
-      <div className="category-list-error-container">
+      <div
+        className="category-list-error-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="category-list-error-content">
           <AlertTriangle size={56} color="#ff6b35" className="category-list-error-icon" />
           <h3 className="category-list-error-title">Oops! Something went wrong</h3>
@@ -60,7 +122,13 @@ function CategoryList() {
 
   if (loading) {
     return (
-      <div className="category-list-loading-container">
+      <div
+        className="category-list-loading-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="category-list-loading-spinner"></div>
         <p className="category-list-loading-text">Loading categories...</p>
       </div>
@@ -68,7 +136,13 @@ function CategoryList() {
   }
 
   return (
-    <div className={`category-list-container ${showCloseAnimation ? 'category-list-container-closing' : ''}`}>
+    <div
+      className={`category-list-container ${showCloseAnimation ? 'category-list-container-closing' : ''}`}
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="category-list-header">
         <div className="category-list-header-content">
           <button 
