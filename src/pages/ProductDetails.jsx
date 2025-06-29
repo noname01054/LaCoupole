@@ -32,6 +32,7 @@ function ProductDetails({ addToCart }) {
   const [touchCurrentX, setTouchCurrentX] = useState(null);
   const [isSwiping, setIsSwiping] = useState(false);
   const containerRef = useRef(null);
+  const [categories, setCategories] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -44,18 +45,21 @@ function ProductDetails({ addToCart }) {
           throw new Error('Invalid product ID');
         }
 
-        const productResponse = await api.get(`/menu-items/${itemId}`);
-        const [relatedResponse, supplementsResponse, ratingResponse, categoryResponse] = await Promise.all([
+        const [productResponse, relatedResponse, supplementsResponse, ratingResponse, categoriesResponse] = await Promise.all([
+          api.get(`/menu-items/${itemId}`),
           api.get(`/menu-items/${itemId}/related`),
           api.getSupplementsByMenuItem(itemId),
           api.getRatingsByItem(itemId),
-          api.get(`/menu-items?category_id=${productResponse.data.category_id}`),
+          api.get('/categories'),
         ]);
+
+        const categoryResponse = await api.get(`/menu-items?category_id=${productResponse.data.category_id}`);
 
         setProduct(productResponse.data);
         setRelatedProducts(relatedResponse.data || []);
         setSupplements(supplementsResponse.data || []);
         setCategoryProducts(categoryResponse.data || []);
+        setCategories(categoriesResponse.data || []);
         if (ratingResponse.data?.length > 0) {
           setIsRating(true);
           setRating(parseInt(ratingResponse.data[0].rating) || 0);
@@ -173,7 +177,7 @@ function ProductDetails({ addToCart }) {
     [isSwiping, touchStartX, touchCurrentX]
   );
 
-  const handleTouchEnd = useCallback(() => {
+  const handleTouchEnd = useCallback(async () => {
     if (!isSwiping || window.innerWidth > 768) return;
     setIsSwiping(false);
     const deltaX = touchCurrentX - touchStartX;
@@ -186,20 +190,47 @@ function ProductDetails({ addToCart }) {
     }
 
     if (deltaX > swipeThreshold) {
-      if (currentIndex === 0) {
-        navigate('/categories');
+      // Left-to-right swipe: go to category menu if first product, otherwise previous product
+      if (currentIndex === 0 && product?.category_id) {
+        navigate(`/category/${product.category_id}`);
       } else if (currentIndex > 0) {
         const prevProduct = categoryProducts[currentIndex - 1];
         navigate(`/product/${prevProduct.id}`);
       }
-    } else if (deltaX < -swipeThreshold && currentIndex < categoryProducts.length - 1) {
-      const nextProduct = categoryProducts[currentIndex + 1];
-      navigate(`/product/${nextProduct.id}`);
+    } else if (deltaX < -swipeThreshold) {
+      // Right-to-left swipe: next product or next non-empty category if last product
+      if (currentIndex < categoryProducts.length - 1) {
+        const nextProduct = categoryProducts[currentIndex + 1];
+        navigate(`/product/${nextProduct.id}`);
+      } else if (categories.length > 0 && product?.category_id) {
+        const categoryIds = categories.map(cat => parseInt(cat.id)).sort((a, b) => a - b);
+        let currentCategoryIndex = categoryIds.indexOf(parseInt(product.category_id));
+        let nextCategoryId = null;
+
+        // Find the next non-empty category
+        while (currentCategoryIndex < categoryIds.length - 1) {
+          currentCategoryIndex += 1;
+          const candidateCategoryId = categoryIds[currentCategoryIndex];
+          try {
+            const response = await api.get(`/menu-items?category_id=${candidateCategoryId}`);
+            if (response.data && response.data.length > 0) {
+              nextCategoryId = candidateCategoryId;
+              break;
+            }
+          } catch (error) {
+            console.error(`Error checking category ${candidateCategoryId}:`, error);
+          }
+        }
+
+        if (nextCategoryId) {
+          navigate(`/category/${nextCategoryId}`);
+        }
+      }
     }
 
     setTouchStartX(null);
     setTouchCurrentX(null);
-  }, [isSwiping, touchCurrentX, touchStartX, categoryProducts, id, navigate]);
+  }, [isSwiping, touchCurrentX, touchStartX, categoryProducts, id, navigate, product, categories]);
 
   useEffect(() => {
     if (containerRef.current) {
