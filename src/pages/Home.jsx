@@ -21,7 +21,11 @@ function Home({ addToCart }) {
   const navigate = useNavigate();
   const menuSectionRef = useRef(null);
   const bannerContainerRef = useRef(null);
+  const containerRef = useRef(null);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState(null);
+  const [touchCurrentX, setTouchCurrentX] = useState(null);
+  const [isSwiping, setIsSwiping] = useState(false);
 
   const debouncedSearch = useMemo(
     () =>
@@ -114,11 +118,67 @@ function Home({ addToCart }) {
     menuSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
+  const handleTouchStart = useCallback((e) => {
+    if (window.innerWidth > 768) return;
+    setTouchStartX(e.touches[0].clientX);
+    setTouchCurrentX(e.touches[0].clientX);
+    setIsSwiping(true);
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e) => {
+      if (!isSwiping || window.innerWidth > 768) return;
+      setTouchCurrentX(e.touches[0].clientX);
+      const deltaX = touchCurrentX - touchStartX;
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      if (containerRef.current) {
+        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+        containerRef.current.style.transition = 'none';
+      }
+    },
+    [isSwiping, touchStartX, touchCurrentX]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (!isSwiping || window.innerWidth > 768) return;
+    setIsSwiping(false);
+    const deltaX = touchCurrentX - touchStartX;
+    const swipeThreshold = 80;
+
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+
+    if (Math.abs(deltaX) > swipeThreshold) {
+      navigate('/categories');
+    }
+
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, [isSwiping, touchCurrentX, touchStartX, navigate]);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translateX(0)';
+    }
+    setIsSwiping(false);
+    setTouchStartX(null);
+    setTouchCurrentX(null);
+  }, []);
+
   const getBaseUrl = () => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
 
   if (error) {
     return (
-      <div className="home-error-container">
+      <div
+        className="home-error-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="home-error-content">
           <p className="home-error-text">Error: {error}</p>
         </div>
@@ -128,7 +188,13 @@ function Home({ addToCart }) {
 
   if (loading) {
     return (
-      <div className="home-loading-container">
+      <div
+        className="home-loading-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <div className="home-loading-spinner"></div>
         <p className="home-loading-text">Loading menu...</p>
       </div>
@@ -136,7 +202,13 @@ function Home({ addToCart }) {
   }
 
   return (
-    <div className="home-container">
+    <div
+      className="home-container"
+      ref={containerRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       <div className="home-header">
         <div className="home-welcome-section">
           <div className="home-welcome-content">
@@ -167,7 +239,7 @@ function Home({ addToCart }) {
 
         <div className="home-categories-section">
           <div className="home-categories-header">
-            <h2 className="home-categories-title kleur">Categories</h2>
+            <h2 className="home-categories-title">Categories</h2>
             <button
               className="home-see-all-button"
               onClick={() => navigate('/categories')}
