@@ -442,7 +442,7 @@
 .cart-modal-place-order-button {
   width: 100%;
   padding: 12px;
-  color: var(--text-color);
+  color: white;
   border: none;
   border-radius: 10px;
   font-size: 16px;
