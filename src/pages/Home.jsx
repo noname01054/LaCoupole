@@ -25,7 +25,11 @@ function Home({ addToCart }) {
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchCurrentX, setTouchCurrentX] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchCurrentY, setTouchCurrentY] = useState(null);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [swipeEnabled, setSwipeEnabled] = useState(true);
+  const lastTouchTime = useRef(0);
 
   const debouncedSearch = useMemo(
     () =>
@@ -87,17 +91,19 @@ function Home({ addToCart }) {
     if (banners.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentBannerIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % banners.length;
-        if (bannerContainerRef.current) {
-          bannerContainerRef.current.scrollTo({
-            left: nextIndex * bannerContainerRef.current.offsetWidth,
-            behavior: 'smooth',
-          });
-        }
-        return nextIndex;
+      requestAnimationFrame(() => {
+        setCurrentBannerIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % banners.length;
+          if (bannerContainerRef.current) {
+            bannerContainerRef.current.scrollTo({
+              left: nextIndex * bannerContainerRef.current.offsetWidth,
+              behavior: 'auto',
+            });
+          }
+          return nextIndex;
+        });
       });
-    }, 1500);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [banners.length]);
@@ -115,28 +121,51 @@ function Home({ addToCart }) {
   }, [navigate]);
 
   const handleScrollToResults = useCallback(() => {
-    menuSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+    menuSectionRef.current?.scrollIntoView({ behavior: 'auto' });
   }, []);
 
   const handleTouchStart = useCallback((e) => {
     if (window.innerWidth > 768) return;
-    setTouchStartX(e.touches[0].clientX);
-    setTouchCurrentX(e.touches[0].clientX);
-    setIsSwiping(true);
+    // Check if the touch event originates from any scrollable section
+    const isScrollable = e.target.closest(
+      '.home-categories-scroll-container, .home-banner-container, [class*="top-categories"], [class*="best-sellers"]'
+    );
+    setSwipeEnabled(!isScrollable);
+    if (!isScrollable) {
+      setTouchStartX(e.touches[0].clientX);
+      setTouchCurrentX(e.touches[0].clientX);
+      setTouchStartY(e.touches[0].clientY);
+      setTouchCurrentY(e.touches[0].clientY);
+      setIsSwiping(true);
+    }
   }, []);
 
   const handleTouchMove = useCallback(
     (e) => {
       if (!isSwiping || window.innerWidth > 768) return;
-      setTouchCurrentX(e.touches[0].clientX);
-      const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
-      if (containerRef.current) {
-        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
-        containerRef.current.style.transition = 'none';
-      }
+      const now = performance.now();
+      if (now - lastTouchTime.current < 16) return;
+      lastTouchTime.current = now;
+
+      requestAnimationFrame(() => {
+        setTouchCurrentX(e.touches[0].clientX);
+        setTouchCurrentY(e.touches[0].clientY);
+        const deltaX = touchCurrentX - touchStartX;
+        const deltaY = touchCurrentY - touchStartY;
+
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+          setSwipeEnabled(false);
+          return;
+        }
+
+        if (swipeEnabled && containerRef.current) {
+          const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
+          containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+          containerRef.current.style.transition = 'none';
+        }
+      });
     },
-    [isSwiping, touchStartX, touchCurrentX]
+    [isSwiping, touchStartX, touchCurrentX, touchStartY, touchCurrentY, swipeEnabled]
   );
 
   const handleTouchEnd = useCallback(() => {
@@ -146,29 +175,86 @@ function Home({ addToCart }) {
     const swipeThreshold = 80;
 
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
     }
 
-    if (Math.abs(deltaX) > swipeThreshold) {
+    if (swipeEnabled && Math.abs(deltaX) > swipeThreshold) {
       navigate('/categories');
     }
 
     setTouchStartX(null);
     setTouchCurrentX(null);
-  }, [isSwiping, touchCurrentX, touchStartX, navigate]);
+    setTouchStartY(null);
+    setTouchCurrentY(null);
+    setSwipeEnabled(true);
+  }, [isSwiping, touchCurrentX, touchStartX, swipeEnabled, navigate]);
 
   useEffect(() => {
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
     }
     setIsSwiping(false);
     setTouchStartX(null);
     setTouchCurrentX(null);
+    setTouchStartY(null);
+    setTouchCurrentY(null);
+    setSwipeEnabled(true);
   }, []);
 
-  const getBaseUrl = () => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
+  const getBaseUrl = useCallback(() => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000', []);
+
+  const categoryItems = useMemo(() => {
+    return categories.slice(0, 6).map((category, index) => (
+      <div
+        key={category.id}
+        className="home-category-item"
+        style={{ animationDelay: `${index * 0.08}s` }}
+        onClick={() => handleCategoryClick(category.id)}
+      >
+        <div className="home-category-image-container">
+          {category.image_url ? (
+            <img
+              src={`${getBaseUrl()}${category.image_url}`}
+              srcSet={`
+                ${getBaseUrl()}${category.image_url}?w=72 1x,
+                ${getBaseUrl()}${category.image_url}?w=144 2x
+              `}
+              alt={category.name}
+              className="home-category-image"
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <div className="home-category-placeholder">
+              <Coffee size={24} color="#8e8e93" />
+            </div>
+          )}
+        </div>
+        <p className="home-category-name">{category.name}</p>
+      </div>
+    ));
+  }, [categories, handleCategoryClick, getBaseUrl]);
+
+  const bannerItems = useMemo(() => {
+    return banners.map((banner) => (
+      <div key={banner.id} className="home-banner-item">
+        <Banner banner={banner} />
+      </div>
+    ));
+  }, [banners]);
+
+  const menuItemCards = useMemo(() => {
+    return filteredItems.map((item) => (
+      <MenuItemCard
+        key={item.id}
+        item={item}
+        onAddToCart={addToCart}
+        onView={handleViewProduct}
+      />
+    ));
+  }, [filteredItems, addToCart, handleViewProduct]);
 
   if (error) {
     return (
@@ -250,35 +336,7 @@ function Home({ addToCart }) {
 
           <div className="home-categories-scroll-container">
             <div className="home-categories-grid">
-              {categories.slice(0, 6).map((category, index) => (
-                <div
-                  key={category.id}
-                  className="home-category-item"
-                  style={{ animationDelay: `${index * 0.1}s` }}
-                  onClick={() => handleCategoryClick(category.id)}
-                >
-                  <div className="home-category-image-container">
-                    {category.image_url ? (
-                      <img
-                        src={`${getBaseUrl()}${category.image_url}`}
-                        srcSet={`
-                          ${getBaseUrl()}${category.image_url}?w=72 1x,
-                          ${getBaseUrl()}${category.image_url}?w=144 2x
-                        `}
-                        alt={category.name}
-                        className="home-category-image"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div className="home-category-placeholder">
-                        <Coffee size={24} color="#8e8e93" />
-                      </div>
-                    )}
-                  </div>
-                  <p className="home-category-name">{category.name}</p>
-                </div>
-              ))}
+              {categoryItems}
             </div>
           </div>
         </div>
@@ -288,11 +346,7 @@ function Home({ addToCart }) {
         {banners.length > 0 && (
           <div className="home-banner-container" ref={bannerContainerRef}>
             <div className="home-banner-grid">
-              {banners.map((banner) => (
-                <div key={banner.id} className="home-banner-item">
-                  <Banner banner={banner} />
-                </div>
-              ))}
+              {bannerItems}
             </div>
           </div>
         )}
@@ -314,18 +368,61 @@ function Home({ addToCart }) {
         )}
 
         <div className="home-menu-grid">
-          {filteredItems.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              item={item}
-              onAddToCart={addToCart}
-              onView={handleViewProduct}
-            />
-          ))}
+          {menuItemCards}
         </div>
 
         <BestSellers addToCart={addToCart} />
       </div>
+
+      <style>
+        {`
+          .home-categories-scroll-container {
+            scroll-behavior: auto;
+            scroll-snap-type: x mandatory;
+            will-change: scroll-position;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+          }
+
+          .home-banner-container {
+            scroll-behavior: auto;
+            scroll-snap-type: x mandatory;
+            will-change: scroll-position;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
+          }
+
+          .home-categories-scroll-container::-webkit-scrollbar,
+          .home-banner-container::-webkit-scrollbar {
+            display: none;
+          }
+
+          .home-categories-scroll-container,
+          .home-banner-container {
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+          }
+
+          .home-category-item {
+            will-change: transform, opacity;
+            opacity: 1;
+          }
+
+          .home-banner-item {
+            will-change: transform;
+            opacity: 1;
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .home-categories-scroll-container,
+            .home-banner-container,
+            .home-category-item {
+              scroll-behavior: auto !important;
+              transition: none !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }
