@@ -208,7 +208,7 @@
 .breakfast-menu__product-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text-color, #1f2937);
+  color: var(--primary-color, #ff6b35);
   margin: 0;
   line-height: 1.3;
   flex: 1;
@@ -271,7 +271,7 @@
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
-  color: var(--primary-color, #ff6b35); /* Updated to primary color */
+  color: var(--primary-color, #ff6b35);
   gap: 8px;
   transition: all 0.2s ease;
 }
@@ -332,7 +332,7 @@
 @media (max-width: 767px) {
   .breakfast-menu__group-title {
     font-size: 13px;
-    margin-bottom: 6px;
+    margin: 6px;
   }
 }
 
@@ -396,7 +396,7 @@
 .breakfast-menu__option-name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--primary-color, #ff6b35); /* Updated to primary color */
+  color: var(--primary-color, #ff6b35);
 }
 
 @media (max-width: 767px) {
@@ -461,7 +461,7 @@
 .breakfast-menu__quantity-label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--primary-color, #ff6b35); /* Updated to primary color */
+  color: var(--primary-color, #ff6b35);
 }
 
 .breakfast-menu__quantity-controls {
@@ -475,21 +475,15 @@
 .breakfast-menu__quantity-btn {
   width: 32px;
   height: 32px;
-  background-color: var(--card-background-color, white);
+  background-color: var(--primary-color, #ff6b35);
+  color: var(--badge-text-color, white);
   border: none;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.breakfast-menu__quantity-btn:hover:not(:disabled) {
-  background-color: var(--primary-color, #ff6b35);
-  color: var(--badge-text-color, white);
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
 }
 
 .breakfast-menu__quantity-btn--disabled {
@@ -507,7 +501,7 @@
 .breakfast-menu__quantity-display {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-color, #1f2937);
+  color: #000000;
   min-width: 32px;
   text-align: center;
 }
