@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../services/api';
-import MenuItemCard from '../components/MenuItemCard';
 import { toast } from 'react-toastify';
-import { ChevronLeft, Coffee, Search, Filter } from 'lucide-react';
+import { ChevronLeft, Coffee, Search } from 'lucide-react';
 import debounce from 'lodash/debounce';
+import MenuItemCard from '../components/MenuItemCard';
 import './css/CategoryMenu.css';
 
 function CategoryMenu({ addToCart }) {
@@ -314,15 +314,13 @@ function CategoryMenu({ addToCart }) {
             )}
           </div>
         ) : (
-          <div className="category-menu-grid">
+          <div className="category-menu-grid" style={{ position: 'static' }}>
             {filteredItems.map((item, index) => (
-              <EnhancedMenuItemCard
+              <MenuItemCard
                 key={`${item.type || 'menuItem'}-${item.id}`}
                 item={item}
-                index={index}
-                isVisible={isVisible}
                 onAddToCart={addToCart}
-                onView={handleView}
+                onView={() => handleView(item.id, item.type || 'menuItem')}
               />
             ))}
           </div>
@@ -331,31 +329,5 @@ function CategoryMenu({ addToCart }) {
     </div>
   );
 }
-
-const EnhancedMenuItemCard = ({ item, index, isVisible, onAddToCart, onView }) => {
-  const [cardVisible, setCardVisible] = useState(false);
-  
-  useEffect(() => {
-    if (isVisible) {
-      const timer = setTimeout(() => {
-        setCardVisible(true);
-      }, index * 80);
-      return () => clearTimeout(timer);
-    }
-  }, [isVisible, index]);
-
-  return (
-    <div
-      className={`category-menu-item-wrapper ${cardVisible ? 'category-menu-item-wrapper--visible' : ''}`}
-      style={{ transitionDelay: `${index * 0.08}s` }}
-    >
-      <MenuItemCard
-        item={item}
-        onAddToCart={onAddToCart}
-        onView={() => onView(item.id, item.type || 'menuItem')}
-      />
-    </div>
-  );
-};
 
 export default CategoryMenu;
