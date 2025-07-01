@@ -16,6 +16,7 @@ import {
 import { Notifications as NotificationsIcon, Receipt, TableBar, CheckCircle } from '@mui/icons-material';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
+import { useLocation } from 'react-router-dom';
 
 const notificationStyles = {
   notificationList: {
@@ -26,7 +27,7 @@ const notificationStyles = {
   },
   notificationItem: {
     padding: '12px 16px',
-    borderBottom: '1px solid #f3f4f6',
+    borderBottom: '1px solid #f3f4f.Transparent',
     cursor: 'pointer',
     transition: 'background-color 0.2s ease-out',
     '&:hover': {
@@ -96,6 +97,7 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
   const [isLoading, setIsLoading] = useState(false);
   const audioRef = useRef(null);
   const hasInteracted = useRef(false);
+  const location = useLocation();
 
   // Preload audio separately
   useEffect(() => {
@@ -202,13 +204,22 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
       }
       handleClose();
       if (notification.type === 'order' && notification.reference_id) {
-        navigate(`/staff?expandOrder=${notification.reference_id}&scrollTo=${notification.reference_id}`);
+        const targetPath = `/staff?expandOrder=${notification.reference_id}&scrollTo=${notification.reference_id}`;
+        // Prevent navigation if already on the target path
+        if (location.pathname + location.search !== targetPath) {
+          navigate(targetPath, { replace: true });
+        }
       } else if (notification.type === 'order') {
         console.warn('Invalid order notification: missing reference_id', notification, { timestamp: new Date().toISOString() });
         toast.error('Cannot navigate to order: invalid order ID');
-        navigate('/staff');
+        if (location.pathname !== '/staff') {
+          navigate('/staff', { replace: true });
+        }
       } else if (notification.type === 'reservation') {
-        navigate(`/reservation/${notification.reference_id}`);
+        const targetPath = `/reservation/${notification.reference_id}`;
+        if (location.pathname !== targetPath) {
+          navigate(targetPath, { replace: true });
+        }
       }
     } catch (err) {
       console.error('Error processing notification:', err, { timestamp: new Date().toISOString() });
