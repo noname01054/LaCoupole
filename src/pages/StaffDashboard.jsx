@@ -10,10 +10,12 @@ import {
   CircularProgress,
   Grid,
 } from '@mui/material';
+import { Receipt, CheckCircle, Cancel, Refresh, Assignment, ShoppingCart } from '@mui/icons-material';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
 import OrderCard from '../components/OrderCard';
+import './css/StaffDashboard.css';
 
 function StaffDashboard({ user, handleNewNotification, socket }) {
   const [orders, setOrders] = useState([]);
@@ -190,7 +192,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
           type: 'order',
           message: `New order #${normalizedOrder.id} received`,
           reference_id: normalizedOrder.id.toString(),
-          is_read: 0,
+          is_read: 1,
           created_at: new Date().toISOString(),
         });
         toast.info(`New order #${normalizedOrder.id} received!`, { autoClose: 5000 });
@@ -346,78 +348,126 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
 
   const memoizedOrders = useMemo(() => orders, [orders]);
 
+  const orderStats = useMemo(() => {
+    const totalOrders = memoizedOrders.length;
+    const approvedOrders = memoizedOrders.filter(order => order.approved === 1).length;
+    const notApprovedOrders = memoizedOrders.filter(order => order.approved === 0).length;
+    return { totalOrders, approvedOrders, notApprovedOrders };
+  }, [memoizedOrders]);
+
   return (
-    <Box sx={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <Typography variant="h4" sx={{ mb: 3, fontWeight: 'bold' }}>
-        Staff Dashboard
-      </Typography>
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel>Time Range</InputLabel>
-            <Select
-              value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value)}
-              label="Time Range"
+    <Box className="staff-dashboard-container">
+      <Box className="staff-dashboard-header">
+        <Box className="staff-dashboard-header-content">
+          <Typography variant="h4" className="staff-dashboard-title">
+            <Assignment className="staff-dashboard-title-icon" />
+            Staff Dashboard
+          </Typography>
+          <Typography className="staff-dashboard-subtitle">
+            Manage and approve orders in real-time, {user?.name || 'Staff'}
+          </Typography>
+        </Box>
+      </Box>
+      <Box className="staff-dashboard-metrics glass-card">
+        <Box className="staff-dashboard-info">
+          <Typography className="staff-dashboard-info-item">
+            <Receipt />
+            Total Orders: <span>{orderStats.totalOrders}</span>
+          </Typography>
+          <Typography className="staff-dashboard-info-item">
+            <CheckCircle />
+            Approved: <span>{orderStats.approvedOrders}</span>
+          </Typography>
+          <Typography className="staff-dashboard-info-item">
+            <Cancel />
+            Not Approved: <span>{orderStats.notApprovedOrders}</span>
+          </Typography>
+        </Box>
+      </Box>
+      <Box className="staff-dashboard-filter-section glass-card">
+        <Box className="staff-dashboard-filter-header">
+          <Typography className="staff-dashboard-filter-title">
+            <Assignment />
+            Filters
+          </Typography>
+        </Box>
+        <Grid container spacing={2} className="staff-dashboard-filters debug-border">
+          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
+            <FormControl fullWidth className="staff-dashboard-filter-select">
+              <InputLabel id="time-range-label">Time Range</InputLabel>
+              <Select
+                labelId="time-range-label"
+                value={timeRange}
+                onChange={(e) => setTimeRange(e.target.value)}
+                label="Time Range"
+              >
+                <MenuItem value="hour">Last Hour</MenuItem>
+                <MenuItem value="day">Today</MenuItem>
+                <MenuItem value="all">All Orders</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
+            <FormControl fullWidth className="staff-dashboard-filter-select">
+              <InputLabel id="approval-status-label">Approval Status</InputLabel>
+              <Select
+                labelId="approval-status-label"
+                value={approvedFilter}
+                onChange={(e) => setApprovedFilter(e.target.value)}
+                label="Approval Status"
+              >
+                <MenuItem value="">All</MenuItem>
+                <MenuItem value="1">Approved</MenuItem>
+                <MenuItem value="0">Not Approved</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
+            <Button
+              variant="contained"
+              className="staff-dashboard-refresh-button"
+              onClick={fetchOrders}
+              fullWidth
             >
-              <MenuItem value="hour">Last Hour</MenuItem>
-              <MenuItem value="day">Today</MenuItem>
-              <MenuItem value="all">All Orders</MenuItem>
-            </Select>
-          </FormControl>
+              <Refresh />
+              Refresh Orders
+            </Button>
+          </Grid>
         </Grid>
-        <Grid item xs={12} sm={4}>
-          <FormControl fullWidth>
-            <InputLabel>Approval Status</InputLabel>
-            <Select
-              value={approvedFilter}
-              onChange={(e) => setApprovedFilter(e.target.value)}
-              label="Approval Status"
-            >
-              <MenuItem value="">All</MenuItem>
-              <MenuItem value="1">Approved</MenuItem>
-              <MenuItem value="0">Not Approved</MenuItem>
-            </Select>
-          </FormControl>
-        </Grid>
-        <Grid item xs={12} sm={4}>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={fetchOrders}
-            fullWidth
-            sx={{ height: '56px' }}
-          >
-            Refresh Orders
-          </Button>
-        </Grid>
-      </Grid>
+      </Box>
       {isLoading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+        <Box className="staff-dashboard-loading">
           <CircularProgress />
+          <Typography className="staff-dashboard-loading-text">Loading Orders...</Typography>
         </Box>
       ) : error ? (
-        <Typography color="error" sx={{ textAlign: 'center', mt: 4 }}>
-          {error}
-        </Typography>
+        <Box className="staff-dashboard-error glass-card">
+          <Typography className="staff-dashboard-error-text">
+            <Cancel className="staff-dashboard-error-icon" />
+            {error}
+          </Typography>
+          <Button
+            variant="contained"
+            className="staff-dashboard-retry-button"
+            onClick={fetchOrders}
+          >
+            <Refresh />
+            Retry Loading
+          </Button>
+        </Box>
       ) : memoizedOrders.length === 0 ? (
-        <Typography sx={{ textAlign: 'center', mt: 4 }}>
-          No orders to display.
-        </Typography>
+        <Box className="staff-dashboard-empty glass-card">
+          <Typography className="staff-dashboard-empty-text">
+            <ShoppingCart className="staff-dashboard-empty-icon" />
+            No orders to display.
+          </Typography>
+        </Box>
       ) : (
         <>
-          <Typography sx={{ mb: 2 }}>
+          <Typography className="staff-dashboard-order-count">
             Showing {memoizedOrders.length} order{memoizedOrders.length !== 1 ? 's' : ''}
           </Typography>
-          <Grid
-            container
-            spacing={2}
-            sx={{
-              width: '100%',
-              boxSizing: 'border-box',
-              flexWrap: 'wrap',
-            }}
-          >
+          <Grid container spacing={1.5} className="staff-dashboard-orders-grid">
             {memoizedOrders.map((order) => (
               <Grid
                 item
@@ -425,14 +475,21 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
                 sm={6}
                 md={4}
                 key={order.id}
-                sx={{ boxSizing: 'border-box', padding: '8px' }}
+                className="staff-dashboard-order-card glass-card"
                 ref={(el) => (orderRefs.current[order.id] = el)}
               >
+                <Box className="staff-dashboard-order-header">
+                  <ShoppingCart className="staff-dashboard-order-icon" />
+                  <Typography className="staff-dashboard-order-title">
+                    Order #{order.id}
+                  </Typography>
+                </Box>
                 <OrderCard
                   order={order}
                   onApproveOrder={approveOrder}
                   timeAgo={order.timeAgo}
                   isExpanded={order.id === expandOrderId}
+                  className={`staff-dashboard-order-content ${order.approved ? 'approved' : 'not-approved'} ${order.id === expandOrderId ? 'expanded' : ''}`}
                 />
               </Grid>
             ))}
