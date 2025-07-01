@@ -1,0 +1,381 @@
+/* ==========================================================================
+   Staff Dashboard - Professional Redesign with Enhanced Mobile Support
+   ========================================================================== */
+
+/* --- CSS Variables for easy theming --- */
+:root {
+  --background-color: #f8f9fa;
+  --surface-color: #ffffff;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --primary-color: #4f46e5; /* A modern indigo */
+  --primary-hover: #4338ca;
+  --border-color: #dee2e6;
+  --shadow-color: rgba(0, 0, 0, 0.05);
+  --approved-color: #10b981; /* Emerald Green */
+  --pending-color: #f59e0b;  /* Amber */
+  --error-color: #ef4444;   /* Red */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* --- Base & Container --- */
+.staff-dashboard-container {
+  padding: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: var(--background-color);
+  min-height: 100vh;
+  font-family: var(--font-family);
+}
+
+/* --- Glass Card Effect --- */
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+/* --- Header Section --- */
+.staff-dashboard-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.staff-dashboard-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.staff-dashboard-title-icon {
+  font-size: 1.75rem !important; /* Ensure icon size matches text */
+  color: var(--primary-color);
+}
+
+.staff-dashboard-subtitle {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+/* --- Metrics/Stats Section --- */
+.staff-dashboard-metrics {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.staff-dashboard-info {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.staff-dashboard-info-item {
+  flex: 1;
+  min-width: 100px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  text-align: center;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  touch-action: manipulation; /* Improves touch responsiveness */
+}
+
+.staff-dashboard-info-item svg {
+  font-size: 1.5rem !important;
+  margin-bottom: 0.25rem;
+}
+
+.staff-dashboard-info-item:nth-child(1) svg { color: var(--primary-color); }
+.staff-dashboard-info-item:nth-child(2) svg { color: var(--approved-color); }
+.staff-dashboard-info-item:nth-child(3) svg { color: var(--pending-color); }
+
+.staff-dashboard-info-item span {
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+/* --- Filter Section --- */
+.staff-dashboard-filter-section {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--surface-color);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.staff-dashboard-filter-header {
+  margin-bottom: 1rem;
+}
+
+.staff-dashboard-filter-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.staff-dashboard-filter-title .MuiSvgIcon-root {
+  color: var(--primary-color);
+}
+
+.staff-dashboard-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem; /* Consistent spacing */
+  align-items: center;
+}
+
+.staff-dashboard-filter-item {
+  width: 100%; /* Ensure full width within grid */
+}
+
+.staff-dashboard-filter-select .MuiOutlinedInput-root {
+  border-radius: 8px;
+  background-color: var(--background-color);
+  transition: box-shadow 0.2s ease;
+  min-height: 48px; /* Consistent touch target size */
+  width: 100%; /* Ensure full width */
+}
+
+.staff-dashboard-filter-select .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+    border-color: var(--primary-color);
+}
+
+.staff-dashboard-filter-select .MuiInputLabel-root {
+  color: var(--text-primary); /* Ensure label color matches */
+  font-size: 1rem; /* Consistent font size */
+  transform: translate(14px, 12px) scale(1); /* Adjust label position */
+  overflow: visible; /* Prevent label truncation */
+  white-space: normal; /* Allow label to wrap if needed */
+}
+
+.staff-dashboard-filter-select .MuiInputLabel-shrink {
+  transform: translate(14px, -9px) scale(0.75); /* Adjust shrunk label position */
+  overflow: visible; /* Prevent truncation when shrunk */
+}
+
+.staff-dashboard-refresh-button {
+  background-color: var(--primary-color) !important;
+  color: #FFFFFF !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+  height: 48px; /* Consistent touch target size */
+  border-radius: 8px !important;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+  min-width: 120px; /* Minimum touch target width */
+  width: 100%; /* Ensure button fits grid */
+}
+
+.staff-dashboard-refresh-button:hover {
+  background-color: var(--primary-hover) !important;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+}
+
+/* --- Loading, Error, Empty States --- */
+.staff-dashboard-loading,
+.staff-dashboard-error,
+.staff-dashboard-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  text-align: center;
+  min-height: 150px;
+}
+
+.staff-dashboard-loading-text,
+.staff-dashboard-error-text,
+.staff-dashboard-empty-text {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+}
+
+.staff-dashboard-error {
+  border: 1px solid var(--error-color);
+}
+
+.staff-dashboard-error-text {
+  color: var(--error-color);
+  font-weight: 500;
+}
+
+.staff-dashboard-error-icon,
+.staff-dashboard-empty-icon {
+  font-size: 2rem !important;
+  color: var(--text-secondary);
+}
+.staff-dashboard-error .staff-dashboard-error-icon {
+    color: var(--error-color);
+}
+
+.staff-dashboard-retry-button {
+  background-color: var(--primary-color) !important;
+  color: #FFFFFF !important;
+  text-transform: none !important;
+  font-weight: 500 !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 8px !important;
+  gap: 0.5rem;
+  margin-top: 1rem !important;
+  transition: background-color 0.2s ease !important;
+  min-width: 120px; /* Minimum touch target width */
+}
+
+.staff-dashboard-retry-button:hover {
+  background-color: var(--primary-hover) !important;
+}
+
+/* --- Orders Grid --- */
+.staff-dashboard-order-count {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.staff-dashboard-orders-grid {
+  /* Grid setup is handled by MUI Grid component */
+}
+
+.staff-dashboard-order-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-color);
+  border-radius: 12px;
+  padding: 0 !important;
+  overflow: hidden;
+  position: relative;
+  border-left: 5px solid transparent;
+  margin-bottom: 1rem; /* Space between cards on mobile */
+}
+
+.staff-dashboard-order-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px var(--shadow-color);
+}
+
+.staff-dashboard-order-card.not-approved {
+  border-left-color: var(--pending-color);
+}
+
+.staff-dashboard-order-card.approved {
+  border-left-color: var(--approved-color);
+}
+
+.staff-dashboard-order-card.expanded {
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.2);
+}
+
+.staff-dashboard-order-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.staff-dashboard-order-icon {
+  color: var(--primary-color);
+}
+
+.staff-dashboard-order-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Let the OrderCard component control its own content style */
+.staff-dashboard-order-content {
+  padding: 1rem;
+}
+
+/* --- Responsive Design --- */
+@media (max-width: 600px) {
+  .staff-dashboard-container {
+    padding: 0.5rem;
+  }
+
+  .staff-dashboard-title {
+    font-size: 1.5rem;
+  }
+  .staff-dashboard-title-icon {
+    font-size: 1.5rem !important;
+  }
+  .staff-dashboard-subtitle {
+    font-size: 0.9rem;
+  }
+
+  .staff-dashboard-info {
+    gap: 0.5rem;
+  }
+  
+  .staff-dashboard-info-item {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    min-width: 90px;
+  }
+
+  .staff-dashboard-info-item span {
+    font-size: 1rem;
+  }
+  
+  .staff-dashboard-info-item svg {
+    font-size: 1.25rem !important;
+  }
+
+  .staff-dashboard-filters {
+    grid-template-columns: 1fr; /* Stack items vertically on mobile */
+  }
+
+  .staff-dashboard-order-header {
+    padding: 0.5rem 0.75rem;
+  }
+  .staff-dashboard-order-content {
+    padding: 0.75rem;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .staff-dashboard-container {
+    padding: 0.75rem;
+  }
+
+  .staff-dashboard-info {
+    gap: 1rem;
+  }
+
+  .staff-dashboard-order-card {
+    margin-bottom: 0.75rem;
+  }
+}
