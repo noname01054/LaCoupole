@@ -101,7 +101,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         setIsProcessingApproval(true);
         setIsApproved(true);
         if (!hasPlayedSound.current) {
-          const audio = new Audio('/assets/notification.mp3');
+          const audio = new Audio('/assets/notification1.wav');
           audio.play().catch((err) => console.error('Audio playback failed:', err));
           hasPlayedSound.current = true;
         }
