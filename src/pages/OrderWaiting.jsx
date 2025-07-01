@@ -17,6 +17,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const [errorMessage, setErrorMessage] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [itemsVisible, setItemsVisible] = useState(false);
+  const hasPlayedSound = useRef(false);
 
   // Prioritize sessionId from navigation state
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
@@ -99,6 +100,11 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         console.log('Processing order approval for orderId:', data.orderId, 'timestamp:', new Date().toISOString());
         setIsProcessingApproval(true);
         setIsApproved(true);
+        if (!hasPlayedSound.current) {
+          const audio = new Audio('/assets/notification.mp3');
+          audio.play().catch((err) => console.error('Audio playback failed:', err));
+          hasPlayedSound.current = true;
+        }
         // Use orderDetails from event if available, otherwise fetch
         if (data.orderDetails && Object.keys(data.orderDetails).length > 0) {
           debouncedSetOrderDetails((prev) => {
@@ -402,7 +408,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const baseImageUrl = api.defaults.baseURL.replace('/api', '');
   return (
     <div className="order-waiting-container">
-      <div className={`order-waiting-header ${isVisible ? 'visible' : ''}`}>
+      <div className={`order-waiting-header ${isVisible ? 'visible' : ''} ${isApproved ? 'approved' : ''}`}>
         <h1 className="order-waiting-header-title">
           {isApproved ? 'Order Confirmed!' : 'Waiting for Confirmation'}
         </h1>
@@ -436,6 +442,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <div className="order-waiting-items">
             {groupedItems.map((item, index) => {
               const totalOptionsPrice = (item.options || []).reduce((sum, opt) => sum + opt.price, 0);
+              const itemTotalPrice = (item.unitPrice + (item.supplementPrice || 0) + totalOptionsPrice) * item.quantity;
               return (
                 <div
                   key={`${item.type}-${item.id}-${index}`}
@@ -460,6 +467,9 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                         + {opt.name} {opt.price > 0 && `(+$${opt.price.toFixed(2)})`}
                       </span>
                     ))}
+                    <span className="order-waiting-item-total">
+                      Total: ${itemTotalPrice.toFixed(2)}
+                    </span>
                   </div>
                   <span className="order-waiting-quantity-badge">{item.quantity}</span>
                 </div>
