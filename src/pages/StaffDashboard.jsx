@@ -13,7 +13,6 @@ import {
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { debounce } from 'lodash';
 import OrderCard from '../components/OrderCard';
 
 function StaffDashboard({ user, handleNewNotification, socket }) {
@@ -119,8 +118,6 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
       setIsLoading(false);
     }
   }, [user, timeRange, approvedFilter, processOrder]);
-
-  const debouncedFetchOrders = useMemo(() => debounce(fetchOrders, 300), [fetchOrders]);
 
   const handleScrollAndExpand = useCallback(() => {
     const queryParams = new URLSearchParams(location.search);
@@ -242,7 +239,6 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
       return updatedOrders;
     });
     toast.info(`Order #${orderId} approved`);
-    // Emit to all connected clients including OrderWaiting
     if (socket && socket.connected) {
       socket.emit('orderApproved', {
         orderId,
@@ -290,17 +286,11 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     socket.on('orderUpdate', handleOrderUpdate);
     socket.on('orderApproved', handleOrderApproved);
 
-    const pollInterval = setInterval(() => {
-      console.log('Polling for new orders');
-      fetchOrders();
-    }, 30000);
-
     return () => {
       socket.off('newOrder', handleNewOrder);
       socket.off('orderUpdate', handleOrderUpdate);
       socket.off('orderApproved', handleOrderApproved);
-      clearInterval(pollInterval);
-      console.log('StaffDashboard socket listeners and polling cleaned up');
+      console.log('StaffDashboard socket listeners cleaned up');
     };
   }, [user, handleNewNotification, socket, fetchOrders, handleNewOrder, handleOrderUpdate, handleOrderApproved]);
 
@@ -313,7 +303,6 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     try {
       const response = await api.approveOrder(orderId);
       const orderDetails = response.data.order || { approved: 1, status: 'preparing' };
-      // After approval, emit event to update OrderWaiting
       if (socket && socket.connected) {
         socket.emit('orderApproved', {
           orderId,
