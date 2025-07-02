@@ -56,7 +56,7 @@ function App() {
 
   const handleNewNotification = (notification) => {
     if (!notification.id) {
-      console.warn('Received notification without ID:', notification);
+      console.warn('Received notification without ID:', notification, { timestamp: new Date().toISOString() });
       return;
     }
     toast.info(notification.message, { autoClose: 5000 });
@@ -88,18 +88,34 @@ function App() {
         () => {}, // onRatingUpdate
         (data) => {
           if (socket && socket.connected) {
+            console.log('Broadcasting orderApproved event:', data, { timestamp: new Date().toISOString() });
             socket.emit('orderApproved', data); // Broadcast to all clients
+          } else {
+            console.warn('Socket not connected, cannot broadcast orderApproved:', data, { timestamp: new Date().toISOString() });
           }
         }, // onOrderApproved
         handleNewNotification
       );
-      setSocket(getSocket());
+      const socketInstance = getSocket();
+      setSocket(socketInstance);
+
+      // Monitor socket connection status
+      socketInstance.on('connect', () => {
+        console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, timestamp: new Date().toISOString() });
+      });
+      socketInstance.on('connect_error', (error) => {
+        console.error('Socket connection error in App.jsx:', error.message, { timestamp: new Date().toISOString() });
+        toast.warn('Real-time updates unavailable. Retrying connection...');
+      });
+      socketInstance.on('reconnect', (attempt) => {
+        console.log('Socket reconnected in App.jsx after attempt:', attempt, { timestamp: new Date().toISOString() });
+      });
 
       const checkAuth = async () => {
         try {
           const token = localStorage.getItem('jwt_token');
           if (!token || typeof token !== 'string' || token === 'null' || token === 'undefined') {
-            console.warn('No valid token found during auth check');
+            console.warn('No valid token found during auth check', { timestamp: new Date().toISOString() });
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('sessionId');
             delete api.defaults.headers.common['X-Session-Id'];
@@ -107,7 +123,7 @@ function App() {
             setUser(null);
             return;
           }
-          console.log('Checking auth with token:', token.substring(0, 10) + '...');
+          console.log('Checking auth with token:', token.substring(0, 10) + '...', { timestamp: new Date().toISOString() });
           const res = await api.get('/check-auth');
           setUser(res.data);
           const authSessionId = `user-${res.data.id}-${uuidv4()}`;
@@ -115,7 +131,7 @@ function App() {
           localStorage.setItem('sessionId', authSessionId);
           api.defaults.headers.common['X-Session-Id'] = authSessionId;
         } catch (err) {
-          console.error('Error checking auth:', err.response?.data || err.message);
+          console.error('Error checking auth:', err.response?.data || err.message, { timestamp: new Date().toISOString() });
           localStorage.removeItem('jwt_token');
           localStorage.removeItem('sessionId');
           delete api.defaults.headers.common['X-Session-Id'];
@@ -129,7 +145,7 @@ function App() {
           const response = await api.get('/promotions');
           setPromotions(response.data || []);
         } catch (error) {
-          console.error('Error fetching promotions:', error.response?.data || error.message);
+          console.error('Error fetching promotions:', error.response?.data || error.message, { timestamp: new Date().toISOString() });
           toast.error(error.response?.data?.error || 'Failed to load promotions');
           setPromotions([]);
         }
@@ -141,16 +157,19 @@ function App() {
           setTheme(response.data);
           applyTheme(response.data);
         } catch (error) {
-          console.error('Error fetching theme:', error.response?.data || error.message);
+          console.error('Error fetching theme:', error.response?.data || error.message, { timestamp: new Date().toISOString() });
           toast.error(error.response?.data?.error || 'Failed to load theme, applying default theme');
           setTheme(defaultTheme);
-          applyTheme(defaultTheme); // Apply default theme on failure
+          applyTheme(defaultTheme);
         }
       };
 
       await Promise.all([checkAuth(), fetchPromotions(), fetchTheme()]);
 
       return () => {
+        socketInstance.off('connect');
+        socketInstance.off('connect_error');
+        socketInstance.off('reconnect');
         socketCleanup();
       };
     };
@@ -160,7 +179,7 @@ function App() {
 
   const handleLogin = (user, token) => {
     if (!user || !token || typeof token !== 'string' || token === 'null' || token === 'undefined') {
-      console.error('Invalid login data:', { user, token });
+      console.error('Invalid login data:', { user, token }, { timestamp: new Date().toISOString() });
       toast.error('Invalid login data received from server');
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('sessionId');
@@ -176,7 +195,7 @@ function App() {
     setSessionId(authSessionId);
     localStorage.setItem('sessionId', authSessionId);
     api.defaults.headers.common['X-Session-Id'] = authSessionId;
-    console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId);
+    console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId, { timestamp: new Date().toISOString() });
     navigate(user.role === 'admin' ? '/admin' : '/staff');
   };
 
@@ -199,14 +218,14 @@ function App() {
       toast.success('Successfully logged out');
       navigate('/');
     } catch (error) {
-      console.error('Logout failed:', error.response?.data || error.message);
+      console.error('Logout failed:', error.response?.data || error.message, { timestamp: new Date().toISOString() });
       toast.error('Logout failed');
     }
   };
 
   const addToCart = (item) => {
     if (!item || (!item.item_id && !item.breakfast_id)) {
-      console.error('Invalid item:', item);
+      console.error('Invalid item:', item, { timestamp: new Date().toISOString() });
       toast.error('Cannot add item to cart');
       return;
     }
@@ -383,7 +402,7 @@ function App() {
 
   useEffect(() => {
     const handleError = (event) => {
-      console.error('Global error:', event.message || 'Unknown error');
+      console.error('Global error:', event.message || 'Unknown error', { timestamp: new Date().toISOString() });
       toast.error('An error occurred: ' + (event.message || 'Unknown error'));
       setError('An unexpected error occurred. Please try refreshing the page.');
     };
