@@ -27,7 +27,7 @@ const notificationStyles = {
   },
   notificationItem: {
     padding: '12px 16px',
-    borderBottom: '1px solid #f3f4f.Transparent',
+    borderBottom: '1px solid #f3f4f6',
     cursor: 'pointer',
     transition: 'background-color 0.2s ease-out',
     '&:hover': {
@@ -99,7 +99,7 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
   const hasInteracted = useRef(false);
   const location = useLocation();
 
-  // Preload audio separately
+  // Preload audio and validate
   useEffect(() => {
     if (!user) return;
 
@@ -107,6 +107,7 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
     audioRef.current = new Audio(audioPath);
     audioRef.current.preload = 'auto';
 
+    // Validate audio file existence
     fetch(audioPath, { method: 'HEAD' })
       .then((response) => {
         if (!response.ok) {
@@ -142,18 +143,45 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
     window.addEventListener('click', handleInteraction);
     window.addEventListener('keydown', handleInteraction);
 
-    const playSound = () => {
-      if (audioRef.current && hasInteracted.current) {
-        audioRef.current.currentTime = 0; // Reset to start
-        audioRef.current.play().catch((err) => {
-          console.error('Audio play error:', err, { timestamp: new Date().toISOString() });
-          toast.warn('Notification sound blocked by browser.');
-        });
+    const playSound = async () => {
+      if (!audioRef.current) {
+        console.warn('Audio not initialized', { timestamp: new Date().toISOString() });
+        return;
+      }
+      if (!hasInteracted.current) {
+        console.log('Waiting for user interaction to play sound', { timestamp: new Date().toISOString() });
+        // Retry after interaction
+        const retrySound = () => {
+          if (hasInteracted.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch((err) => {
+              console.error('Retry audio play error:', err, { timestamp: new Date().toISOString() });
+              toast.warn('Notification sound blocked by browser.');
+            });
+            window.removeEventListener('click', retrySound);
+            window.removeEventListener('keydown', retrySound);
+          }
+        };
+        window.addEventListener('click', retrySound);
+        window.addEventListener('keydown', retrySound);
+        return;
+      }
+      try {
+        audioRef.current.currentTime = 0;
+        await audioRef.current.play();
+        console.log('Notification sound played successfully', { timestamp: new Date().toISOString() });
+      } catch (err) {
+        console.error('Audio playback failed:', err, { timestamp: new Date().toISOString() });
+        toast.warn('Notification sound blocked by browser.');
       }
     };
 
     const handleSocketNotification = (notification) => {
-      if (notification?.type === 'order' && !notification.is_read) {
+      if (!notification?.type || !notification?.id) {
+        console.warn('Invalid notification data received:', notification, { timestamp: new Date().toISOString() });
+        return;
+      }
+      if (notification.type === 'order' && !notification.is_read) {
         console.log('New order notification received, attempting to play sound:', notification, {
           timestamp: new Date().toISOString(),
         });
@@ -164,7 +192,6 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
 
     socket.on('newNotification', handleSocketNotification);
 
-    // Force sound check on socket connect
     socket.on('connect', () => {
       console.log('Socket connected, checking for pending notifications', { timestamp: new Date().toISOString() });
       const unreadOrder = notifications.find((n) => n.type === 'order' && !n.is_read);
@@ -205,7 +232,6 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
       handleClose();
       if (notification.type === 'order' && notification.reference_id) {
         const targetPath = `/staff?expandOrder=${notification.reference_id}&scrollTo=${notification.reference_id}`;
-        // Prevent navigation if already on the target path
         if (location.pathname + location.search !== targetPath) {
           navigate(targetPath, { replace: true });
         }
