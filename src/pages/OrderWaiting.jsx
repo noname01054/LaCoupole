@@ -17,11 +17,42 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const [errorMessage, setErrorMessage] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [itemsVisible, setItemsVisible] = useState(false);
+  const audioRef = useRef(null);
   const hasPlayedSound = useRef(false);
+  const hasInteracted = useRef(false);
 
   // Prioritize sessionId from navigation state
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
   const isMounted = useRef(false);
+
+  // Preload audio and validate
+  useEffect(() => {
+    const audioPath = '/assets/notification1.mp3';
+    audioRef.current = new Audio(audioPath);
+    audioRef.current.preload = 'auto';
+
+    // Validate audio file existence
+    fetch(audioPath, { method: 'HEAD' })
+      .then((response) => {
+        if (!response.ok) {
+          console.error(`Audio file not found at ${audioPath}`, { timestamp: new Date().toISOString() });
+          toast.error('Order approval sound file is missing.');
+        } else {
+          console.log(`Audio file preloaded successfully: ${audioPath}`, { timestamp: new Date().toISOString() });
+        }
+      })
+      .catch((err) => {
+        console.error('Error checking audio file:', err, { timestamp: new Date().toISOString() });
+        toast.error('Failed to load order approval sound.');
+      });
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Debounced state update for orderDetails
   const debouncedSetOrderDetails = useCallback(
@@ -83,6 +114,41 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     }
   }, [orderId, debouncedSetOrderDetails]);
 
+  const playSound = async () => {
+    if (!audioRef.current) {
+      console.warn('Audio not initialized', { timestamp: new Date().toISOString() });
+      return;
+    }
+    if (!hasInteracted.current) {
+      console.log('Waiting for user interaction to play sound', { timestamp: new Date().toISOString() });
+      // Retry after interaction
+      const retrySound = () => {
+        if (hasInteracted.current && !hasPlayedSound.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch((err) => {
+            console.error('Retry audio play error:', err, { timestamp: new Date().toISOString() });
+            toast.warn('Order approval sound blocked by browser.');
+          });
+          hasPlayedSound.current = true;
+          window.removeEventListener('click', retrySound);
+          window.removeEventListener('keydown', retrySound);
+        }
+      };
+      window.addEventListener('click', retrySound);
+      window.addEventListener('keydown', retrySound);
+      return;
+    }
+    try {
+      audioRef.current.currentTime = 0;
+      await audioRef.current.play();
+      console.log('Order approval sound played successfully', { timestamp: new Date().toISOString() });
+      hasPlayedSound.current = true;
+    } catch (err) {
+      console.error('Audio playback failed:', err, { timestamp: new Date().toISOString() });
+      toast.warn('Order approval sound blocked by browser.');
+    }
+  };
+
   const onOrderApproved = useCallback(
     (data) => {
       console.log('OrderWaiting received orderApproved event:', {
@@ -101,9 +167,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         setIsProcessingApproval(true);
         setIsApproved(true);
         if (!hasPlayedSound.current) {
-          const audio = new Audio('/assets/notification1.mp3');
-          audio.play().catch((err) => console.error('Audio playback failed:', err));
-          hasPlayedSound.current = true;
+          playSound();
         }
         // Use orderDetails from event if available, otherwise fetch
         if (data.orderDetails && Object.keys(data.orderDetails).length > 0) {
@@ -172,6 +236,16 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       return;
     }
 
+    // Track user interaction for audio playback
+    const handleInteraction = () => {
+      hasInteracted.current = true;
+      console.log('User interaction detected, audio playback enabled', { timestamp: new Date().toISOString() });
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+    window.addEventListener('click', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+
     if (isMounted.current) return;
     isMounted.current = true;
 
@@ -215,7 +289,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           timestamp: new Date().toISOString(),
         });
       }
-    }, 5000); // Reduced to 5 seconds
+    }, 5000);
 
     return () => {
       socket.off('connect');
@@ -226,6 +300,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       socket.off('reconnect');
       clearInterval(pollInterval);
       isMounted.current = false;
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
       console.log('OrderWaiting cleanup complete for sessionId:', sessionId, 'timestamp:', new Date().toISOString());
     };
   }, [fetchOrder, sessionId, socket, onOrderApproved, onOrderUpdate, isApproved, orderId, isProcessingApproval]);
@@ -263,7 +339,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const groupedItems = (() => {
     if (!orderDetails) {
-      return []; // Guard clause to prevent null access
+      return [];
     }
 
     const acc = {};
