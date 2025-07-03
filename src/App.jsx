@@ -52,6 +52,9 @@ function App() {
     secondary_color: '#ff8c42',
     background_color: '#faf8f5',
     text_color: '#1f2937',
+    logo_url: null,
+    favicon_url: '/favicon.ico',
+    site_title: 'Café Local',
   };
 
   const handleNewNotification = (notification) => {
@@ -62,12 +65,27 @@ function App() {
     toast.info(notification.message, { autoClose: 5000 });
   };
 
-  // Apply theme to CSS custom properties
+  // Apply theme to CSS custom properties and update favicon and title
   const applyTheme = (themeData) => {
     document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
     document.documentElement.style.setProperty('--secondary-color', themeData.secondary_color);
     document.documentElement.style.setProperty('--background-color', themeData.background_color);
     document.documentElement.style.setProperty('--text-color', themeData.text_color);
+
+    // Update favicon with full URL and cache-busting
+    let favicon = document.querySelector("link[rel*='icon']");
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.rel = 'icon';
+      document.head.appendChild(favicon);
+    }
+    const faviconUrl = themeData.favicon_url
+      ? `${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${themeData.favicon_url}?v=${Date.now()}`
+      : defaultTheme.favicon_url;
+    favicon.href = faviconUrl;
+
+    // Update document title
+    document.title = themeData.site_title || defaultTheme.site_title;
   };
 
   useEffect(() => {
@@ -421,6 +439,7 @@ function App() {
         setIsCartOpen={setIsCartOpen}
         user={user}
         handleLogout={handleLogout}
+        theme={theme}
       />
       <Routes>
         <Route path="/" element={<Home addToCart={addToCart} />} />
