@@ -34,7 +34,6 @@ import {
   AdminPanelSettings as AdminPanelSettingsIcon,
   Work as WorkIcon,
   Logout as LogoutIcon,
-  LocalCafe as CafeIcon,
   Restaurant as RestaurantIcon,
   LocalOffer as PromotionIcon,
   Group as GroupIcon,
@@ -74,7 +73,7 @@ const Header = memo(
       { to: '/admin/add-menu-item', label: 'Add Menu Item', icon: <AddCircleOutlineIcon /> },
       { to: '/admin/manage-menu-items', label: 'Menu Items', icon: <RestaurantIcon /> },
       { to: '/admin/supplements', label: 'Manage Supplements', icon: <RestaurantIcon /> },
-      { to: '/admin/breakfasts', label: 'Breakfasts', icon: <CafeIcon /> },
+      { to: '/admin/breakfasts', label: 'Breakfasts', icon: <RestaurantIcon /> },
       { to: '/admin/promotions', label: 'Promotions', icon: <PromotionIcon /> },
       { to: '/admin/users', label: 'Staff Management', icon: <GroupIcon /> },
       { to: '/admin/tables', label: 'Table Management', icon: <TableIcon /> },
@@ -405,8 +404,18 @@ const Header = memo(
                 fontSize: { xs: '16px', md: '18px' },
               }}
             >
-              <CafeIcon sx={{ fontSize: { xs: '16px', md: '22px' }, color: 'var(--text-color)' }} />
-              Café Local
+              {customTheme?.logo_url ? (
+                <img
+                  src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${customTheme.logo_url}`}
+                  alt="Café Logo"
+                  style={{ maxHeight: '40px', maxWidth: '100px' }}
+                />
+              ) : (
+                <>
+                  <RestaurantIcon sx={{ fontSize: { xs: '16px', md: '22px' }, color: 'var(--text-color)' }} />
+                  Café Local
+                </>
+              )}
             </Typography>
 
             <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: '10px', position: 'absolute', right: '12px' }}>
@@ -476,8 +485,18 @@ const Header = memo(
                   variant="h6"
                   sx={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: { xs: '16px', md: '18px' } }}
                 >
-                  <CafeIcon sx={{ color: 'var(--primary-color)', fontSize: { xs: '20px', md: '24px' } }} />
-                  Café Local
+                  {customTheme?.logo_url ? (
+                    <img
+                      src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${customTheme.logo_url}`}
+                      alt="Café Logo"
+                      style={{ maxHeight: '40px', maxWidth: '100px' }}
+                    />
+                  ) : (
+                    <>
+                      <RestaurantIcon sx={{ fontSize: { xs: '20px', md: '24px' }, color: 'var(--primary-color)' }} />
+                      Café Local
+                    </>
+                  )}
                 </Typography>
                 <IconButton
                   onClick={() => setIsMobileMenuOpen(false)}
@@ -502,7 +521,7 @@ const Header = memo(
     prev.user?.role === next.user?.role &&
     prev.user?.name === next.user?.name &&
     prev.handleLogout === next.handleLogout &&
-    prev.theme === next.theme
+    prev.theme?.logo_url === next.theme?.logo_url
 );
 
 const NavItem = memo(
