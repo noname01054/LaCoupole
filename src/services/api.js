@@ -173,5 +173,6 @@ api.updateBreakfastOption = (breakfastId, optionId, data) => api.put(`/breakfast
 // Theme API methods
 api.getTheme = () => api.get('/theme');
 api.updateTheme = (data) => api.put('/theme', data);
+api.updateBranding = (data) => api.put('/theme/branding', data);
 
 export { api };
