@@ -80,7 +80,7 @@ function App() {
       document.head.appendChild(favicon);
     }
     const faviconUrl = themeData.favicon_url
-      ? `${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${themeData.favicon_url}?v=${Date.now()}`
+      ? `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/public${themeData.favicon_url}?v=${Date.now()}`
       : defaultTheme.favicon_url;
     favicon.href = faviconUrl;
 
@@ -272,7 +272,7 @@ function App() {
             quantity: item.quantity || 1,
             unit_price: parseFloat(item.unit_price || 0),
             name: item.name || 'Unknown Item',
-            image_url: item.image_url || null,
+            image_url: item.image_url ? `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/public${item.image_url}` : null,
             supplement_id: item.supplement_id || null,
             supplement_name: item.supplement_name || null,
             supplement_price: parseFloat(item.supplement_price || 0),
@@ -306,7 +306,7 @@ function App() {
             quantity: item.quantity || 1,
             unit_price: parseFloat(item.unit_price || 0),
             name: item.name || 'Unknown Breakfast',
-            image_url: item.image_url || null,
+            image_url: item.image_url ? `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/public${item.image_url}` : null,
             option_ids: item.option_ids || [],
             options: item.options || [],
           },
