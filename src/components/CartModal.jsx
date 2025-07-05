@@ -18,10 +18,12 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
   const imageSrc = useMemo(() => {
     let src = '/placeholder.jpg';
     if (item.image_url && item.image_url !== '/Uploads/undefined' && item.image_url !== 'null') {
-      src = item.image_url;
+      src = item.image_url.startsWith('/Uploads/')
+        ? `${api.defaults.baseURL.replace('/api', '')}${item.image_url}`
+        : item.image_url;
     }
     return src;
-  }, [item.image_url]);
+  }, [item.image_url, api]);
 
   const displayPrice = parseFloat(item.sale_price || item.unit_price || item.regular_price) || 0;
   const supplementPrice = parseFloat(supplementSelections[item.cartItemId]?.additional_price || item.supplement_price || 0) || 0;
