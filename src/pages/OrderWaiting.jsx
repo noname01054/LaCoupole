@@ -517,8 +517,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <h2 className="order-waiting-section-title">Your Order</h2>
           <div className="order-waiting-items">
             {groupedItems.map((item, index) => {
-              const totalOptionsPrice = (item.options || []).reduce((sum, opt) => sum + opt.price, 0);
-              const itemTotalPrice = (item.unitPrice + (item.supplementPrice || 0) + totalOptionsPrice) * item.quantity;
+              const itemTotalPrice = item.unitPrice * item.quantity;
               return (
                 <div
                   key={`${item.type}-${item.id}-${index}`}
