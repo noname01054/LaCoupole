@@ -162,7 +162,8 @@ function App() {
         try {
           const response = await api.get('/promotions');
           setPromotions(response.data || []);
-        } catch (error) {
+        }ionario
+        catch (error) {
           console.error('Error fetching promotions:', error.response?.data || error.message, { timestamp: new Date().toISOString() });
           toast.error(error.response?.data?.error || 'Failed to load promotions');
           setPromotions([]);
@@ -270,9 +271,9 @@ function App() {
             cartItemId: uuidv4(),
             item_id: item.item_id,
             quantity: item.quantity || 1,
-            unit_price: parseFloat(item.unit_price || 0),
+            unit_price: parseFloat(item.unit_price || item.sale_price || item.regular_price || 0),
             name: item.name || 'Unknown Item',
-            image_url: item.image_url ? `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/public${item.image_url}` : null,
+            image_url: item.image_url || null,
             supplement_id: item.supplement_id || null,
             supplement_name: item.supplement_name || null,
             supplement_price: parseFloat(item.supplement_price || 0),
@@ -304,9 +305,9 @@ function App() {
             cartItemId: uuidv4(),
             breakfast_id: item.breakfast_id,
             quantity: item.quantity || 1,
-            unit_price: parseFloat(item.unit_price || 0),
+            unit_price: parseFloat(item.unit_price || item.sale_price || item.regular_price || 0),
             name: item.name || 'Unknown Breakfast',
-            image_url: item.image_url ? `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/public${item.image_url}` : null,
+            image_url: item.image_url || null,
             option_ids: item.option_ids || [],
             options: item.options || [],
           },
