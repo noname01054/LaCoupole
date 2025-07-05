@@ -431,8 +431,7 @@ function OrderCard({
                 const imageUrl = item.imageUrl
                   ? `${BACKEND_URL}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
                   : FALLBACK_IMAGE;
-                const totalOptionsPrice = (item.options || []).reduce((sum, opt) => sum + safeParseFloat(opt.price, 0), 0);
-                const itemTotalPrice = (safeParseFloat(item.unitPrice, 0) + safeParseFloat(item.supplementPrice, 0) + totalOptionsPrice) * safeParseInt(item.quantity, 1);
+                const itemTotalPrice = safeParseFloat(item.unitPrice, 0) * safeParseInt(item.quantity, 1);
 
                 return (
                   <div key={`${item.type}-${item.id}-${index}`} style={itemRowStyle}>
