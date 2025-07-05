@@ -58,17 +58,21 @@ function OrderCard({
     // Process menu items
     const itemIds = order.item_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
     const itemNames = order.item_names?.split(',') || [];
+    const unitPrices = order.unit_prices?.split(',') || [];
     const menuQuantities = order.menu_quantities?.split(',').filter(q => q !== 'NULL' && q?.trim()) || [];
     const supplementIds = order.supplement_ids?.split(',') || [];
     const supplementNames = order.supplement_names?.split(',') || [];
+    const supplementPrices = order.supplement_prices?.split(',') || [];
     const imageUrls = order.image_urls?.split(',') || [];
 
     itemIds.forEach((id, idx) => {
-      if (idx >= menuQuantities.length || idx >= itemNames.length) return;
+      if (idx >= menuQuantities.length || idx >= itemNames.length || idx >= unitPrices.length) return;
       
       const supplementId = supplementIds[idx]?.trim() || null;
       const key = `${id.trim()}_${supplementId || 'none'}`;
       const quantity = safeParseInt(menuQuantities[idx], 1);
+      const unitPrice = safeParseFloat(unitPrices[idx], 0);
+      const supplementPrice = supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0;
 
       if (!acc[key]) {
         acc[key] = {
@@ -76,6 +80,9 @@ function OrderCard({
           type: 'menu',
           name: itemNames[idx]?.trim() || 'Unknown Item',
           quantity: 0,
+          unitPrice: unitPrice,
+          supplementName: supplementId ? supplementNames[idx]?.trim() || 'Unknown Supplement' : null,
+          supplementPrice: supplementPrice,
           imageUrl: imageUrls[idx]?.trim() || null,
           options: [],
         };
@@ -87,15 +94,18 @@ function OrderCard({
     const breakfastIds = order.breakfast_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
     const breakfastNames = order.breakfast_names?.split(',') || [];
     const breakfastQuantities = order.breakfast_quantities?.split(',').filter(q => q !== 'NULL' && q?.trim()) || [];
+    const unitPricesBreakfast = order.unit_prices?.split(',') || [];
     const breakfastImages = order.breakfast_images?.split(',') || [];
     const optionIds = order.breakfast_option_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
     const optionNames = order.breakfast_option_names?.split(',') || [];
+    const optionPrices = order.breakfast_option_prices?.split(',') || [];
 
     breakfastIds.forEach((id, idx) => {
-      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length) return;
+      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length || idx >= unitPricesBreakfast.length) return;
       
       const key = id.trim();
       const quantity = safeParseInt(breakfastQuantities[idx], 1);
+      const unitPrice = safeParseFloat(unitPricesBreakfast[idx], 0);
 
       if (!acc[key]) {
         acc[key] = {
@@ -103,6 +113,7 @@ function OrderCard({
           type: 'breakfast',
           name: breakfastNames[idx]?.trim() || 'Unknown Breakfast',
           quantity: 0,
+          unitPrice: unitPrice,
           imageUrl: breakfastImages[idx]?.trim() || null,
           options: [],
         };
@@ -117,11 +128,12 @@ function OrderCard({
         if (optionIds[i]) {
           acc[key].options.push({
             name: optionNames[i]?.trim() || 'Unknown Option',
+            price: safeParseFloat(optionPrices[i], 0),
           });
         }
       }
-      // Remove duplicates using a Set based on name
-      acc[key].options = Array.from(new Set(acc[key].options.map(opt => opt.name))).map(name => ({ name }));
+      // Remove duplicates
+      acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
     });
 
     return Object.values(acc).filter(item => item.quantity > 0);
@@ -289,6 +301,12 @@ function OrderCard({
     marginBottom: '2px',
   };
 
+  const itemPriceStyle = {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#059669',
+  };
+
   const quantityBadgeStyle = {
     backgroundColor: '#e5e7eb',
     color: '#374151',
@@ -413,6 +431,8 @@ function OrderCard({
                 const imageUrl = item.imageUrl
                   ? `${BACKEND_URL}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
                   : FALLBACK_IMAGE;
+                const totalOptionsPrice = (item.options || []).reduce((sum, opt) => sum + safeParseFloat(opt.price, 0), 0);
+                const itemTotalPrice = (safeParseFloat(item.unitPrice, 0) + safeParseFloat(item.supplementPrice, 0) + totalOptionsPrice) * safeParseInt(item.quantity, 1);
 
                 return (
                   <div key={`${item.type}-${item.id}-${index}`} style={itemRowStyle}>
@@ -427,14 +447,15 @@ function OrderCard({
                       <span style={itemNameStyle}>{item.name}</span>
                       {item.supplementName && (
                         <span style={itemOptionStyle}>
-                          + {item.supplementName}
+                          + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+$${safeParseFloat(item.supplementPrice, 0).toFixed(2)})`}
                         </span>
                       )}
                       {(item.options || []).map((opt, optIdx) => (
                         <span key={optIdx} style={itemOptionStyle}>
-                          + {opt.name}
+                          + {opt.name} (+${safeParseFloat(opt.price, 0).toFixed(2)})
                         </span>
                       ))}
+                      <span style={itemPriceStyle}>${itemTotalPrice.toFixed(2)}</span>
                     </div>
                     <span style={quantityBadgeStyle}>{item.quantity}</span>
                   </div>
