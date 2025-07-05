@@ -51,7 +51,7 @@ function OrderCard({
   const [isApproving, setIsApproving] = useState(false);
   const cardRef = useRef(null);
 
-  // Memoize expensive calculations
+  // Memoize expensive calculations with debugging
   const groupedItems = useMemo(() => {
     const acc = {};
 
@@ -132,10 +132,11 @@ function OrderCard({
           });
         }
       }
-      // Remove duplicates
-      acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
+      // Remove duplicates using a Set based on name and price
+      acc[key].options = Array.from(new Map(acc[key].options.map(opt => [JSON.stringify([opt.name, opt.price]), opt])).values());
     });
 
+    console.log('Grouped Items:', Object.values(acc)); // Debug log
     return Object.values(acc).filter(item => item.quantity > 0);
   }, [order]);
 
@@ -159,7 +160,7 @@ function OrderCard({
   // Calculate total with safe parsing
   const orderTotal = safeParseFloat(order.total_price, 0);
 
-  // Optimized styles object
+  // Optimized styles object (unchanged)
   const cardStyle = {
     maxWidth: '600px',
     margin: '0 auto 16px',
@@ -365,6 +366,17 @@ function OrderCard({
     boxShadow: order.approved ? 'none' : '0 4px 12px rgba(5, 150, 105, 0.3)',
   };
 
+  // Calculate UI total to compare with order.total_price
+  const uiTotal = useMemo(() => {
+    return groupedItems.reduce((sum, item) => {
+      const totalOptionsPrice = (item.options || []).reduce((optSum, opt) => optSum + safeParseFloat(opt.price, 0), 0);
+      return sum + (safeParseFloat(item.unitPrice, 0) + safeParseFloat(item.supplementPrice, 0) + totalOptionsPrice) * safeParseInt(item.quantity, 1);
+    }, 0).toFixed(2);
+  }, [groupedItems]);
+
+  console.log('Order Data:', order); // Debug log for order object
+  console.log('UI Total:', uiTotal, 'Order Total:', orderTotal); // Compare totals
+
   return (
     <div style={cardStyle} ref={cardRef}>
       {/* Header */}
@@ -473,6 +485,11 @@ function OrderCard({
                 <span>Total Amount</span>
                 <span style={totalValueStyle}>${orderTotal.toFixed(2)}</span>
               </div>
+              {uiTotal !== orderTotal.toFixed(2) && (
+                <div style={{ color: '#dc2626', fontSize: '12px', textAlign: 'center', marginTop: '4px' }}>
+                  Warning: UI Total (${uiTotal}) does not match Order Total (${orderTotal.toFixed(2)})
+                </div>
+              )}
             </div>
 
             {/* Action Section */}
