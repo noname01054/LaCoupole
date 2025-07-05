@@ -162,8 +162,7 @@ function App() {
         try {
           const response = await api.get('/promotions');
           setPromotions(response.data || []);
-        }ionario
-        catch (error) {
+        } catch (error) {
           console.error('Error fetching promotions:', error.response?.data || error.message, { timestamp: new Date().toISOString() });
           toast.error(error.response?.data?.error || 'Failed to load promotions');
           setPromotions([]);
