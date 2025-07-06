@@ -79,8 +79,9 @@ function App() {
       favicon.rel = 'icon';
       document.head.appendChild(favicon);
     }
+    const baseApiUrl = import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app';
     const faviconUrl = themeData.favicon_url
-      ? `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/public${themeData.favicon_url}?v=${Date.now()}`
+      ? `${baseApiUrl}/public${themeData.favicon_url}?v=${Date.now()}`
       : defaultTheme.favicon_url;
     favicon.href = faviconUrl;
 
@@ -117,7 +118,7 @@ function App() {
       const socketInstance = getSocket();
       setSocket(socketInstance);
 
-      // Monitor socket connection status
+      // Monitor socket connection status with retry logic
       socketInstance.on('connect', () => {
         console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, timestamp: new Date().toISOString() });
       });
@@ -182,7 +183,11 @@ function App() {
         }
       };
 
-      await Promise.all([checkAuth(), fetchPromotions(), fetchTheme()]);
+      // Parallelize initialization for performance
+      await Promise.all([checkAuth(), fetchPromotions(), fetchTheme()]).catch((err) => {
+        console.error('Initialization error:', err, { timestamp: new Date().toISOString() });
+        toast.error('Failed to initialize app');
+      });
 
       return () => {
         socketInstance.off('connect');
