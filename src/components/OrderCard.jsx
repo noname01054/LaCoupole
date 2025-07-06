@@ -41,6 +41,32 @@ const getOrderStatus = (approved) => ({
   urgency: approved ? 'none' : 'high'
 });
 
+// Map order_type to display text and icon
+const getOrderTypeDisplay = (orderType, tableNumber) => {
+  switch (orderType) {
+    case 'local':
+      return {
+        text: `Table ${tableNumber || 'N/A'}`,
+        icon: TableRestaurant,
+      };
+    case 'delivery':
+      return {
+        text: 'Delivery',
+        icon: LocalShipping,
+      };
+    case 'imported':
+      return {
+        text: 'Takeaway',
+        icon: Restaurant,
+      };
+    default:
+      return {
+        text: 'Unknown',
+        icon: Restaurant,
+      };
+  }
+};
+
 function OrderCard({ 
   order, 
   onApproveOrder, 
@@ -141,6 +167,7 @@ function OrderCard({
 
   const statusConfig = getOrderStatus(order.approved);
   const IconComponent = statusConfig.icon;
+  const OrderTypeIcon = getOrderTypeDisplay(order.order_type, order.table_number).icon;
 
   // Event handlers
   const handleApproveOrder = async () => {
@@ -378,16 +405,31 @@ function OrderCard({
         </div>
 
         <div style={quickInfoStyle}>
-          <div style={infoChipStyle}>
-            <TableRestaurant sx={{ fontSize: 16 }} />
-            <span>Table {order.table_number || 'N/A'}</span>
-          </div>
+          {order.order_type === 'local' && (
+            <div style={infoChipStyle}>
+              <TableRestaurant sx={{ fontSize: 16 }} />
+              <span>Table {order.table_number || 'N/A'}</span>
+            </div>
+          )}
+          {order.order_type === 'delivery' && (
+            <div style={infoChipStyle}>
+              <LocalShipping sx={{ fontSize: 16 }} />
+              <span>Delivery</span>
+            </div>
+          )}
+          {order.order_type === 'imported' && (
+            <div style={infoChipStyle}>
+              <Restaurant sx={{ fontSize: 16 }} />
+              <span>Takeaway</span>
+            </div>
+          )}
           <div style={infoChipStyle}>
             <AccessTime sx={{ fontSize: 16 }} />
             <span>{timeAgo}</span>
           </div>
           <div style={infoChipStyle}>
-            <span>{order.order_type?.charAt(0).toUpperCase() + order.order_type?.slice(1) || 'Dine-in'}</span>
+            <Schedule sx={{ fontSize: 16 }} />
+            <span>{order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Received'}</span>
           </div>
         </div>
       </div>
