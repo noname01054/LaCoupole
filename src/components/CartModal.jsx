@@ -18,12 +18,10 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
   const imageSrc = useMemo(() => {
     let src = '/placeholder.jpg';
     if (item.image_url && item.image_url !== '/Uploads/undefined' && item.image_url !== 'null') {
-      src = item.image_url.startsWith('/Uploads/')
-        ? `${api.defaults.baseURL.replace('/api', '')}${item.image_url}`
-        : item.image_url;
+      src = item.image_url;
     }
     return src;
-  }, [item.image_url, api]);
+  }, [item.image_url]);
 
   const displayPrice = parseFloat(item.sale_price || item.unit_price || item.regular_price) || 0;
   const supplementPrice = parseFloat(supplementSelections[item.cartItemId]?.additional_price || item.supplement_price || 0) || 0;
@@ -288,6 +286,7 @@ function CartModal({
     if (!cart?.length) return 'Cart is empty';
     if (orderType === 'local' && !tableId) return 'Please select a table';
     if (orderType === 'delivery' && !deliveryAddress?.trim()) return 'Please enter a delivery address';
+    // No tableId or deliveryAddress required for 'imported' orders
 
     for (const item of cart) {
       const id = item.item_id || item.breakfast_id;
@@ -387,7 +386,7 @@ function CartModal({
       setTableId('');
       setTableSearch('');
       setDeliveryAddress('');
-      toast.success('Order placed successfully!');
+      toast.success(`Order placed successfully! ${orderType === 'imported' ? 'Please proceed to pickup.' : ''}`);
 
       navigate(`/order-waiting/${response.data.orderId}`, { state: { sessionId } });
     } catch (error) {
@@ -526,6 +525,7 @@ function CartModal({
                   >
                     <option value="local">Dine In</option>
                     <option value="delivery">Delivery</option>
+                    <option value="imported">Takeaway</option>
                   </select>
                 </div>
 
