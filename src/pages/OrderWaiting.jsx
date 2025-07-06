@@ -482,6 +482,21 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   }
 
   const baseImageUrl = api.defaults.baseURL.replace('/api', '');
+
+  // Map order_type to display text
+  const getOrderTypeDisplay = (orderType) => {
+    switch (orderType) {
+      case 'local':
+        return `Table ${orderDetails.table_number || 'N/A'}`;
+      case 'delivery':
+        return 'Delivery';
+      case 'imported':
+        return 'Takeaway';
+      default:
+        return 'Unknown';
+    }
+  };
+
   return (
     <div className="order-waiting-container">
       <div className={`order-waiting-header ${isVisible ? 'visible' : ''} ${isApproved ? 'approved' : ''}`}>
@@ -489,7 +504,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           {isApproved ? 'Order Confirmed!' : 'Waiting for Confirmation'}
         </h1>
         <p className="order-waiting-header-subtitle">
-          Order #{orderId} • {orderDetails.order_type === 'delivery' ? 'Delivery' : `Table ${orderDetails.table_number || 'N/A'}`}
+          Order #{orderId} • {getOrderTypeDisplay(orderDetails.order_type)} • Status: {orderDetails.status || 'received'}
         </p>
       </div>
 
