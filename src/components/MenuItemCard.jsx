@@ -59,7 +59,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         }
         setSupplements(data);
       } catch (err) {
-        console.error(`Failed to load ${item.type === 'breakfast' ? 'options' : 'supplements'} for item ${item.id}:`, err);
+        console.error(`Échec du chargement des ${item.type === 'breakfast' ? 'options' : 'suppléments'} pour l'article ${item.id}:`, err);
         setSupplements({ options: [], optionGroups: [] });
       }
     };
@@ -159,7 +159,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           .filter((opt) => selectedOptionIds.includes(opt.id))
           .map((opt) => ({
             ...opt,
-            group_title: supplements.optionGroups.find((g) => g.id === opt.group_id)?.title || 'Unknown Group',
+            group_title: supplements.optionGroups.find((g) => g.id === opt.group_id)?.title || 'Groupe inconnu',
           })),
         cartItemId: `${item.id}-${Date.now()}`,
       });
@@ -190,7 +190,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       if (onView && item?.id) {
         onView(item.id, item?.type);
       } else {
-        console.warn('onView prop is missing or item ID is invalid');
+        console.warn('La propriété onView est manquante ou l\'ID de l\'article est invalide');
       }
     },
     [onView, item?.id, item?.type]
@@ -203,7 +203,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       if (item?.id) {
         window.location.href = `/edit-product/${item.id}`;
       } else {
-        console.warn('Item ID is invalid');
+        console.warn('L\'ID de l\'article est invalide');
       }
     },
     [item?.id]
@@ -653,7 +653,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           {!imageLoaded && <div style={styles.loadingPlaceholder} />}
           <img
             src={imageSrc}
-            alt={item.name || 'Item'}
+            alt={item.name || 'Article'}
             style={styles.image}
             loading="lazy"
             decoding="async"
@@ -666,7 +666,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           <div style={styles.imageOverlay} />
 
           {discountPercentage > 0 && (
-            <div style={styles.discountBadge}>-{discountPercentage}% OFF</div>
+            <div style={styles.discountBadge}>-{discountPercentage}% DE RÉDUCTION</div>
           )}
 
           {!isMobile && (
@@ -676,7 +676,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                   style={styles.editButton}
                   className="action-btn"
                   onClick={handleEditProduct}
-                  title="Edit Product"
+                  title="Modifier l'article"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -698,7 +698,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     style={styles.actionButton}
                     className="action-btn"
                     onClick={handleViewProduct}
-                    title="View Details"
+                    title="Voir les détails"
                   >
                     <RemoveRedEyeIcon
                       sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
@@ -711,7 +711,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     }}
                     className="action-btn"
                     onClick={handleAddToCart}
-                    title={item.availability ? 'Add to Cart' : 'Item Unavailable'}
+                    title={item.availability ? 'Ajouter au panier' : 'Article indisponible'}
                     disabled={!item.availability}
                   >
                     <ShoppingCartIcon
@@ -726,12 +726,12 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
 
         <div style={styles.content}>
           {!item.availability && (
-            <div style={styles.unavailableBadge}>Unavailable</div>
+            <div style={styles.unavailableBadge}>Indisponible</div>
           )}
 
-          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Breakfast' : 'Uncategorized')}</div>
+          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Petit-déjeuner' : 'Non classé')}</div>
 
-          <h3 style={styles.title}>{item.name || 'Unknown Item'}</h3>
+          <h3 style={styles.title}>{item.name || 'Article inconnu'}</h3>
 
           {(rating > 0 || reviewCount > 0) && (
             <div style={styles.ratingContainer}>
@@ -745,10 +745,10 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           <div style={styles.priceContainer}>
             <div style={styles.priceInfo}>
               <span style={styles.currentPrice}>
-                ${displayPrice}
+                {displayPrice} DT
               </span>
               {salePrice && (
-                <span style={styles.originalPrice}>${regularPrice.toFixed(2)}</span>
+                <span style={styles.originalPrice}>{regularPrice.toFixed(2)} DT</span>
               )}
             </div>
 
@@ -759,7 +759,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     style={styles.mobileEditButton}
                     className="mobile-action-btn"
                     onClick={handleEditProduct}
-                    title="Edit Product"
+                    title="Modifier l'article"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -781,7 +781,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       style={styles.mobileActionButton}
                       className="mobile-action-btn"
                       onClick={handleViewProduct}
-                      title="View Details"
+                      title="Voir les détails"
                     >
                       <RemoveRedEyeIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
                     </button>
@@ -792,7 +792,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       }}
                       className="mobile-action-btn"
                       onClick={handleAddToCart}
-                      title={item.availability ? 'Add to Cart' : 'Item Unavailable'}
+                      title={item.availability ? 'Ajouter au panier' : 'Article indisponible'}
                       disabled={!item.availability}
                     >
                       <ShoppingCartIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
@@ -817,7 +817,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           />
           <div style={styles.popup}>
             <h3 style={styles.popupTitle}>
-              Choose {item.type === 'breakfast' ? 'Options' : 'Supplement'} for<br />
+              Choisir {item.type === 'breakfast' ? 'les options' : 'le supplément'} pour<br />
               {item.name}
             </h3>
             {item.type === 'breakfast' && supplements.optionGroups?.length > 0 && (
@@ -832,7 +832,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                   >
                     <div style={styles.groupTitle}>
                       {group.title}
-                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> (Required)</span>}
+                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> (Requis)</span>}
                     </div>
                     {supplements.options
                       .filter((opt) => opt.group_id === group.id)
@@ -858,7 +858,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                           >
                             {opt.option_name}{' '}
                             <span style={styles.optionPrice}>
-                              +${parseFloat(opt.additional_price || 0).toFixed(2)}
+                              +{parseFloat(opt.additional_price || 0).toFixed(2)} DT
                             </span>
                           </span>
                         </label>
@@ -874,14 +874,13 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                 style={styles.popupSelect}
                 className="popup-select"
               >
-                <option value="0">No Supplement</option>
+                <option value="0">Aucun supplément</option>
                 {supplements.options.map((supplement) => (
                   <option
                     key={supplement.supplement_id}
                     value={supplement.supplement_id}
                   >
-                    {supplement.name} (+$
-                    {parseFloat(supplement.additional_price || 0).toFixed(2)})
+                    {supplement.name} (+{parseFloat(supplement.additional_price || 0).toFixed(2)} DT)
                   </option>
                 ))}
               </select>
@@ -893,7 +892,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                 onClick={() => handleOptionSelection()}
                 disabled={!item.availability || (item.type === 'breakfast' && supplements.optionGroups?.length > 0 && Object.keys(selectedOptions).length < supplements.optionGroups.length)}
               >
-                Add to Cart
+                Ajouter au panier
               </button>
               <button
                 style={{ ...styles.popupButton, ...styles.cancelButton }}
@@ -904,7 +903,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                   setValidationErrors({});
                 }}
               >
-                Cancel
+                Annuler
               </button>
             </div>
           </div>
