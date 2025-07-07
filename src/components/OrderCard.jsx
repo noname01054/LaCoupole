@@ -208,7 +208,7 @@ function OrderCard({
 
   const orderInfoStyle = {
     display: 'flex',
-    justifyContent: 'space XVIII-between',
+    justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '16px',
   };
@@ -441,7 +441,7 @@ function OrderCard({
           <div style={deliveryAlertStyle}>
             <LocationOn sx={{ fontSize: 18, color: '#f59e0b' }} />
             <div>
-              <div style={{ fontWeight: '600', color: '#\fs92400e', marginBottom: '2px' }}>
+              <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '2px' }}>
                 Commande de livraison
               </div>
               <div style={{ fontSize: '13px', color: '#92400e' }}>
@@ -467,7 +467,6 @@ function OrderCard({
         {/* Expanded Content */}
         {isExpanded && (
           <>
-2025-07-07 23:17:55,331 - root - INFO - Processing code changes for French translation and currency update
             {/* Items List */}
             <div style={itemsListStyle}>
               {groupedItems.length > 0 ? groupedItems.map((item, index) => {
