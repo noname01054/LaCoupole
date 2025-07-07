@@ -296,12 +296,12 @@ function CategoryMenu({ addToCart }) {
               <Coffee size={64} color="#8e8e93" />
             </div>
             <h3 className="category-menu-empty-state-title">
-              {searchQuery ? 'No items found' : 'No menu items available'}
+              {searchQuery ? 'No items found' : 'Aucun élément de menu disponible'}
             </h3>
             <p className="category-menu-empty-state-text">
               {searchQuery 
-                ? 'Try adjusting your search terms or browse all items.'
-                : 'This category is currently empty. Check back soon for new items!'
+                ? 'ajuster vos termes de recherche ou parcourez tous les éléments.'
+                : 'Cette catégorie est actuellement vide. Revenez bientôt pour découvrir de nouveaux articles !'
               }
             </p>
             {searchQuery && (
