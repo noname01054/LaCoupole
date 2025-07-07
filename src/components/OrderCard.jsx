@@ -13,7 +13,7 @@ import {
 } from '@mui/icons-material';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
-const FALLBACK_IMAGE = 'https://via.placeholder.com/40?text=No+Image';
+const FALLBACK_IMAGE = 'https://via.placeholder.com/40?text=Aucune+Image';
 
 // Helper function to safely parse numbers
 const safeParseFloat = (value, defaultValue = 0) => {
@@ -37,7 +37,7 @@ const getOrderStatus = (approved) => ({
   color: approved ? '#10b981' : '#f59e0b',
   bgColor: approved ? '#d1fae5' : '#fef3c7',
   icon: approved ? Check : AccessTime,
-  label: approved ? 'Approved' : 'Pending',
+  label: approved ? 'Approuvé' : 'En attente',
   urgency: approved ? 'none' : 'high'
 });
 
@@ -46,22 +46,22 @@ const getOrderTypeDisplay = (orderType, tableNumber) => {
   switch (orderType) {
     case 'local':
       return {
-        text: `Table ${tableNumber || 'N/A'}`,
+        text: `Tableau ${tableNumber || 'N/A'}`,
         icon: TableRestaurant,
       };
     case 'delivery':
       return {
-        text: 'Delivery',
+        text: 'Livraison',
         icon: LocalShipping,
       };
     case 'imported':
       return {
-        text: 'Takeaway',
+        text: 'À emporter',
         icon: Restaurant,
       };
     default:
       return {
-        text: 'Unknown',
+        text: 'Inconnu',
         icon: Restaurant,
       };
   }
@@ -104,10 +104,10 @@ function OrderCard({
         acc[key] = {
           id: safeParseInt(id, 0),
           type: 'menu',
-          name: itemNames[idx]?.trim() || 'Unknown Item',
+          name: itemNames[idx]?.trim() || 'Article inconnu',
           quantity: 0,
           unitPrice: unitPrice,
-          supplementName: supplementId ? supplementNames[idx]?.trim() || 'Unknown Supplement' : null,
+          supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
           supplementPrice: supplementPrice,
           imageUrl: imageUrls[idx]?.trim() || null,
           options: [],
@@ -137,7 +137,7 @@ function OrderCard({
         acc[key] = {
           id: safeParseInt(id, 0),
           type: 'breakfast',
-          name: breakfastNames[idx]?.trim() || 'Unknown Breakfast',
+          name: breakfastNames[idx]?.trim() || 'Petit-déjeuner inconnu',
           quantity: 0,
           unitPrice: unitPrice,
           imageUrl: breakfastImages[idx]?.trim() || null,
@@ -153,7 +153,7 @@ function OrderCard({
       for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
         if (optionIds[i]) {
           acc[key].options.push({
-            name: optionNames[i]?.trim() || 'Unknown Option',
+            name: optionNames[i]?.trim() || 'Option inconnue',
             price: safeParseFloat(optionPrices[i], 0),
           });
         }
@@ -208,7 +208,7 @@ function OrderCard({
 
   const orderInfoStyle = {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'space XVIII-between',
     alignItems: 'center',
     marginBottom: '16px',
   };
@@ -397,7 +397,7 @@ function OrderCard({
       {/* Header */}
       <div style={headerStyle}>
         <div style={orderInfoStyle}>
-          <h3 style={orderNumberStyle}>Order #{order.id}</h3>
+          <h3 style={orderNumberStyle}>Commande #{order.id}</h3>
           <div style={statusBadgeStyle}>
             <IconComponent sx={{ fontSize: 16 }} />
             {statusConfig.label}
@@ -408,19 +408,19 @@ function OrderCard({
           {order.order_type === 'local' && (
             <div style={infoChipStyle}>
               <TableRestaurant sx={{ fontSize: 16 }} />
-              <span>Table {order.table_number || 'N/A'}</span>
+              <span>Tableau {order.table_number || 'N/A'}</span>
             </div>
           )}
           {order.order_type === 'delivery' && (
             <div style={infoChipStyle}>
               <LocalShipping sx={{ fontSize: 16 }} />
-              <span>Delivery</span>
+              <span>Livraison</span>
             </div>
           )}
           {order.order_type === 'imported' && (
             <div style={infoChipStyle}>
               <Restaurant sx={{ fontSize: 16 }} />
-              <span>Takeaway</span>
+              <span>À emporter</span>
             </div>
           )}
           <div style={infoChipStyle}>
@@ -429,7 +429,7 @@ function OrderCard({
           </div>
           <div style={infoChipStyle}>
             <Schedule sx={{ fontSize: 16 }} />
-            <span>{order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Received'}</span>
+            <span>{order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Reçue'}</span>
           </div>
         </div>
       </div>
@@ -441,8 +441,8 @@ function OrderCard({
           <div style={deliveryAlertStyle}>
             <LocationOn sx={{ fontSize: 18, color: '#f59e0b' }} />
             <div>
-              <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '2px' }}>
-                Delivery Order
+              <div style={{ fontWeight: '600', color: '#\fs92400e', marginBottom: '2px' }}>
+                Commande de livraison
               </div>
               <div style={{ fontSize: '13px', color: '#92400e' }}>
                 {order.delivery_address}
@@ -454,7 +454,7 @@ function OrderCard({
         {/* Expand Button */}
         <button style={expandButtonStyle} onClick={handleExpandToggle}>
           <Receipt sx={{ fontSize: 16 }} />
-          <span>{isExpanded ? 'Hide Details' : `View Items (${groupedItems.length})`}</span>
+          <span>{isExpanded ? 'Masquer les détails' : `Voir les articles (${groupedItems.length})`}</span>
           <ExpandMore 
             sx={{ 
               fontSize: 16, 
@@ -467,6 +467,7 @@ function OrderCard({
         {/* Expanded Content */}
         {isExpanded && (
           <>
+2025-07-07 23:17:55,331 - root - INFO - Processing code changes for French translation and currency update
             {/* Items List */}
             <div style={itemsListStyle}>
               {groupedItems.length > 0 ? groupedItems.map((item, index) => {
@@ -488,22 +489,22 @@ function OrderCard({
                       <span style={itemNameStyle}>{item.name}</span>
                       {item.supplementName && (
                         <span style={itemOptionStyle}>
-                          + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+$${safeParseFloat(item.supplementPrice, 0).toFixed(2)})`}
+                          + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+${safeParseFloat(item.supplementPrice, 0).toFixed(2)} DT)`}
                         </span>
                       )}
                       {(item.options || []).map((opt, optIdx) => (
                         <span key={optIdx} style={itemOptionStyle}>
-                          + {opt.name} (+${safeParseFloat(opt.price, 0).toFixed(2)})
+                          + {opt.name} (+${safeParseFloat(opt.price, 0).toFixed(2)} DT)
                         </span>
                       ))}
-                      <span style={itemPriceStyle}>${itemTotalPrice.toFixed(2)}</span>
+                      <span style={itemPriceStyle}>{itemTotalPrice.toFixed(2)} DT</span>
                     </div>
                     <span style={quantityBadgeStyle}>{item.quantity}</span>
                   </div>
                 );
               }) : (
                 <div style={itemRowStyle}>
-                  <div style={itemDetailsStyle}>No items to display</div>
+                  <div style={itemDetailsStyle}>Aucun article à afficher</div>
                 </div>
               )}
             </div>
@@ -511,8 +512,8 @@ function OrderCard({
             {/* Total Section */}
             <div style={totalSectionStyle}>
               <div style={totalRowStyle}>
-                <span>Total Amount</span>
-                <span style={totalValueStyle}>${orderTotal.toFixed(2)}</span>
+                <span>Montant total</span>
+                <span style={totalValueStyle}>{orderTotal.toFixed(2)} DT</span>
               </div>
             </div>
 
@@ -525,7 +526,7 @@ function OrderCard({
                   disabled={isApproving || order.approved}
                 >
                   <Check sx={{ fontSize: 18 }} />
-                  {isApproving ? 'Approving Order...' : 'Accept Order'}
+                  {isApproving ? 'Approbation en cours...' : 'Accepter la commande'}
                 </button>
               </div>
             )}
