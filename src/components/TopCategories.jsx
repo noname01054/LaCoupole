@@ -24,8 +24,8 @@ function TopCategories() {
         const response = await api.getTopCategories();
         setTopCategories(response.data || []);
       } catch (error) {
-        console.error('Error fetching top categories:', error);
-        toast.error(error.response?.data?.error || 'Failed to load top categories');
+        console.error('Erreur lors de la récupération des catégories principales :', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des catégories principales');
       } finally {
         setLoading(false);
       }
@@ -181,7 +181,7 @@ function TopCategories() {
     return (
       <div style={styles.loadingContainer}>
         <div style={styles.loadingSpinner}></div>
-        <p style={styles.loadingText}>Loading top categories...</p>
+        <p style={styles.loadingText}>Chargement des catégories principales...</p>
       </div>
     );
   }
@@ -195,7 +195,7 @@ function TopCategories() {
       <style>{cssStyles}</style>
       <div style={styles.topCategoriesSection}>
         <div style={styles.topCategoriesHeader}>
-          <h2 style={styles.topCategoriesTitle}>Top Categories</h2>
+          <h2 style={styles.topCategoriesTitle}>Catégories principales</h2>
         </div>
         <div
           style={styles.topCategoriesScrollContainer}
