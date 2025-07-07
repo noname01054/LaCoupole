@@ -196,7 +196,7 @@ function BestSellers({ addToCart }) {
     return (
       <div style={{ ...styles.loadingContainer, backgroundColor: theme.background_color }}>
         <div style={{ ...styles.loadingSpinner, borderTopColor: theme.primary_color }}></div>
-        <p style={{ ...styles.loadingText, color: theme.text_color }}>Loading best sellers...</p>
+        <p style={{ ...styles.loadingText, color: theme.text_color }}>Chargement des meilleures ventes...</p>
       </div>
     );
   }
@@ -212,7 +212,7 @@ function BestSellers({ addToCart }) {
         <div style={styles.bestSellersHeader}>
           <div style={styles.titleContainer}>
             <Star size={20} style={{ ...styles.starIcon, color: theme.primary_color }} />
-            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color }}>Best Sellers</h2>
+            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color }}>Meilleures ventes</h2>
           </div>
           <div style={styles.indicatorContainer}>
             {bestSellers.map((_, index) => (
