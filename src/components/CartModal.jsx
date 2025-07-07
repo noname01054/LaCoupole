@@ -40,7 +40,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
               ${imageSrc}?w=48 1x,
               ${imageSrc}?w=96 2x
             `}
-            alt={item.name || 'Item'}
+            alt={item.name || 'Article'}
             className="cart-modal-item-img"
             loading="lazy"
             decoding="async"
@@ -48,14 +48,14 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
           />
         </div>
         <div className="cart-modal-item-details">
-          <h4 className="cart-modal-item-name">{item.name || 'Unnamed Item'}</h4>
+          <h4 className="cart-modal-item-name">{item.name || 'Article sans nom'}</h4>
           <div className="cart-modal-item-price">
             {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} DT
             {supplementPrice > 0 && (
-              <span className="cart-modal-supplement-price">+${supplementPrice.toFixed(2)} (Supplement)</span>
+              <span className="cart-modal-supplement-price">+{supplementPrice.toFixed(2)} DT (Supplément)</span>
             )}
             {breakfastOptionPrices > 0 && (
-              <span className="cart-modal-supplement-price">+${breakfastOptionPrices.toFixed(2)} (Options)</span>
+              <span className="cart-modal-supplement-price">+{breakfastOptionPrices.toFixed(2)} DT (Options)</span>
             )}
           </div>
           {item.breakfast_id && item.option_ids && (
@@ -64,7 +64,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
                 .filter(option => item.option_ids.includes(option.id))
                 .map(option => (
                   <span key={option.id} className="cart-modal-option-detail">
-                    {option.option_name} ({parseFloat(option.additional_price || 0).toFixed(2)}+DT)
+                    {option.option_name} (+{parseFloat(option.additional_price || 0).toFixed(2)} DT)
                   </span>
                 ))}
             </div>
@@ -72,16 +72,16 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         </div>
       </div>
 
-      {!item.breakfast_id && upplements?.length > 0 && (
+      {!item.breakfast_id && itemSupplements?.length > 0 && (
         <select
           onChange={(e) => handleSupplementChange(item.cartItemId, e.target.value)}
           value={supplementSelections[item.cartItemId]?.supplement_id || item.supplement_id || '0'}
           className="cart-modal-supplement-select"
         >
           <option value="0">Aucun supplément</option>
-          {upplements.map((s) => (
+          {itemSupplements.map((s) => (
             <option key={s.supplement_id} value={s.supplement_id}>
-              {s.name} (+${parseFloat(s.additional_price || 0).toFixed(2)})
+              {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} DT)
             </option>
           ))}
         </select>
@@ -132,7 +132,7 @@ function CartModal({
   const [tableId, setTableId] = useState('');
   const [tableSearch, setTableSearch] = useState('');
   const [supplementSelections, setSupplementSelections] = useState({});
-  const [upplements, setupplements] = useState({});
+  const [itemSupplements, setItemSupplements] = useState({});
   const [breakfastOptions, setBreakfastOptions] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -153,8 +153,8 @@ function CartModal({
     api.getTables()
       .then((res) => setTables(res.data?.filter(table => table.id && table.table_number) || []))
       .catch((error) => {
-        console.error('Failed to load tables:', error);
-        toast.error('Failed to load tables');
+        console.error('Échec du chargement des tables:', error);
+        toast.error('Échec du chargement des tables');
         setTables([]);
       });
   }, [isOpen, orderType]);
@@ -183,7 +183,7 @@ function CartModal({
             optionsData[itemId] = res.data?.filter(o => o.id && o.option_name) || [];
           }
         } catch (error) {
-          console.error(`Failed to fetch data for item ${itemId}:`, error);
+          console.error(`Échec du chargement des données pour l'article ${itemId}:`, error);
           supplementsData[itemId] = [];
           optionsData[itemId] = [];
         }
@@ -283,24 +283,24 @@ function CartModal({
   }, [cart, itemSupplements, updateQuantity]);
 
   const validateOrder = useCallback(() => {
-    if (!cart?.length) return 'Cart is empty';
-    if (orderType === 'local' && !tableId) return 'Please select a table';
-    if (orderType === 'delivery' && !deliveryAddress?.trim()) return 'Please enter a delivery address';
+    if (!cart?.length) return 'Panier vide';
+    if (orderType === 'local' && !tableId) return 'Veuillez choisir une table';
+    if (orderType === 'delivery' && !deliveryAddress?.trim()) return 'Veuillez entrer une adresse de livraison';
     // No tableId or deliveryAddress required for 'imported' orders
 
     for (const item of cart) {
       const id = item.item_id || item.breakfast_id;
-      if (!id || isNaN(id) || id <= 0) return `Invalid item ID: ${id}`;
-      if (!item.quantity || item.quantity <= 0) return `Invalid quantity for ${item.name || 'item'}`;
+      if (!id || isNaN(id) || id <= 0) return `ID d'article invalide: ${id}`;
+      if (!item.quantity || item.quantity <= 0) return `Quantité invalide pour ${item.name || 'article'}`;
       const basePrice = parseFloat(item.sale_price || item.unit_price || item.regular_price) || 0;
-      if (basePrice <= 0) return `Invalid price for ${item.name || 'item'}`;
-      if (item.supplement_id && !item.supplement_name) return `Invalid supplement for ${item.name || 'item'}`;
+      if (basePrice <= 0) return `Prix invalide pour ${item.name || 'article'}`;
+      if (item.supplement_id && !item.supplement_name) return `Supplément invalide pour ${item.name || 'article'}`;
       if (item.breakfast_id && item.option_ids?.length) {
         const options = breakfastOptions[item.breakfast_id] || [];
         const groups = [...new Set(options.map(o => o.group_id).filter(id => id))];
         const selectedGroups = [...new Set(options.filter(o => item.option_ids.includes(o.id)).map(o => o.group_id))];
         if (groups.length && selectedGroups.length !== groups.length) {
-          return `Select one option from each of the ${groups.length} groups for ${item.name || 'item'}`;
+          return `Choisissez une option par groupe pour ${item.name || 'article'}`;
         }
       }
     }
@@ -326,7 +326,7 @@ function CartModal({
 
       const orderItems = aggregatedCart.map((item) => {
         let unitPrice = parseFloat(item.sale_price || item.unit_price || item.regular_price) || 0;
-        if (unitPrice <= 0) throw new Error(`Invalid price for ${item.name || 'item'}`);
+        if (unitPrice <= 0) throw new Error(`Prix invalide pour ${item.name || 'article'}`);
 
         if (item.breakfast_id && item.option_ids) {
           const options = breakfastOptions[item.breakfast_id] || [];
@@ -371,14 +371,14 @@ function CartModal({
       const response = await api.submitOrder(orderData, {
         headers: { 'X-Session-Id': sessionId },
       });
-      if (!response.data?.orderId) throw new Error('Order creation failed: No orderId returned');
+      if (!response.data?.orderId) throw new Error('Échec de la création de la commande: Aucun orderId retourné');
 
       socket.emit('newOrder', {
         id: response.data.orderId,
         ...orderData,
         created_at: new Date().toISOString(),
         approved: 0,
-        status: 'received',
+        status: 'reçu',
       });
 
       clearCart();
@@ -386,15 +386,15 @@ function CartModal({
       setTableId('');
       setTableSearch('');
       setDeliveryAddress('');
-      toast.success(`Order placed successfully! ${orderType === 'imported' ? 'Please proceed to pickup.' : ''}`);
+      toast.success(`Commande passée avec succès ! ${orderType === 'imported' ? 'Veuillez procéder à la récupération.' : ''}`);
 
-      navigate(`/order-waiting/${response.data.orderId}`, { state: { sessionId } });
+      navigate(`/attente-commande/${response.data.orderId}`, { state: { sessionId } });
     } catch (error) {
-      const message = error.response?.data?.error || error.message || 'Failed to place order';
+      const message = error.response?.data?.error || error.message || 'Échec de la commande';
       if (error.response?.status === 429) {
-        toast.error('Please wait before placing another order.');
+        toast.error('Veuillez attendre avant de passer une autre commande.');
       } else if (message.includes('Price mismatch')) {
-        toast.error('Price mismatch detected. Please refresh and try again.');
+        toast.error('Erreur de prix détectée. Veuillez actualiser et réessayer.');
       } else {
         toast.error(message);
       }
@@ -490,8 +490,8 @@ function CartModal({
           {cart.length === 0 ? (
             <div className="cart-modal-empty-cart">
               <CoffeeIcon className="cart-modal-empty-cart-icon" />
-              <p className="cart-modal-empty-cart-text">Your cart is empty</p>
-              <p className="cart-modal-empty-cart-subtext">Add some delicious items to get started!</p>
+              <p className="cart-modal-empty-cart-text">Votre panier est vide</p>
+              <p className="cart-modal-empty-cart-subtext">Ajoutez des articles délicieux pour commencer !</p>
             </div>
           ) : (
             <>
@@ -511,7 +511,7 @@ function CartModal({
               </ul>
 
               <div className="cart-modal-summary">
-                <div className="cart-modal-total-price">Total: {total}DT</div>
+                <div className="cart-modal-total-price">Total : {total} DT</div>
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
@@ -523,9 +523,9 @@ function CartModal({
                     value={orderType}
                     className="cart-modal-select"
                   >
-                    <option value="local">Local (sur place)</option>
-                    <option value="delivery">Livraison (chez toi)</option>
-                    <option value="imported">Importé (prendre à emporter)</option>
+                    <option value="local">Manger sur place</option>
+                    <option value="delivery">Livré chez toi</option>
+                    <option value="imported">Prendre à emporter</option>
                   </select>
                 </div>
 
@@ -534,7 +534,7 @@ function CartModal({
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
                         <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                        Recherche Des Tbales
+                        Rechercher une table
                       </label>
                       <div className="cart-modal-table-search-container">
                         <SearchIcon className="cart-modal-table-search-icon" />
@@ -550,7 +550,7 @@ function CartModal({
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
                         <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                        Choisir la table
+                        Choisir une table
                       </label>
                       <div className="cart-modal-table-list-container">
                         {filteredTables.length > 0 ? (
@@ -566,7 +566,7 @@ function CartModal({
                             ))}
                           </ul>
                         ) : (
-                          <div className="cart-modal-table-list-empty">No tables found</div>
+                          <div className="cart-modal-table-list-empty">Aucune table trouvée</div>
                         )}
                       </div>
                     </div>
@@ -577,12 +577,12 @@ function CartModal({
                   <div className="cart-modal-form-group">
                     <label className="cart-modal-label">
                       <LocalShippingIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                      Delivery Address
+                      Adresse de livraison
                     </label>
                     <input
                       value={deliveryAddress || ''}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
-                      placeholder="Enter your delivery address"
+                      placeholder="Entrez votre adresse de livraison"
                       className="cart-modal-input"
                     />
                   </div>
@@ -604,10 +604,10 @@ function CartModal({
                   {isSubmitting ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }}>
                       <div className="cart-modal-spinner"></div>
-                      Placing Order...
+                      Commande en cours...
                     </div>
                   ) : (
-                    `Place Order -${total} DT`
+                    `Passer la commande - ${total} DT`
                   )}
                 </button>
               </div>
