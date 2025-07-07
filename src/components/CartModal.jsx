@@ -72,14 +72,14 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         </div>
       </div>
 
-      {!item.breakfast_id && itemSupplements?.length > 0 && (
+      {!item.breakfast_id && upplements?.length > 0 && (
         <select
           onChange={(e) => handleSupplementChange(item.cartItemId, e.target.value)}
           value={supplementSelections[item.cartItemId]?.supplement_id || item.supplement_id || '0'}
           className="cart-modal-supplement-select"
         >
           <option value="0">Aucun supplément</option>
-          {itemSupplements.map((s) => (
+          {upplements.map((s) => (
             <option key={s.supplement_id} value={s.supplement_id}>
               {s.name} (+${parseFloat(s.additional_price || 0).toFixed(2)})
             </option>
@@ -132,7 +132,7 @@ function CartModal({
   const [tableId, setTableId] = useState('');
   const [tableSearch, setTableSearch] = useState('');
   const [supplementSelections, setSupplementSelections] = useState({});
-  const [itemSupplements, setItemSupplements] = useState({});
+  const [upplements, setupplements] = useState({});
   const [breakfastOptions, setBreakfastOptions] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
@@ -482,8 +482,8 @@ function CartModal({
           >
             <CloseIcon fontSize="small" />
           </button>
-          <h3 className="cart-modal-title">Your Cart</h3>
-          <div className="cart-modal-badge">{itemCount} items</div>
+          <h3 className="cart-modal-title">Votre panier</h3>
+          <div className="cart-modal-badge">{itemCount} Articles</div>
         </div>
 
         <div ref={contentRef} className="cart-modal-content">
