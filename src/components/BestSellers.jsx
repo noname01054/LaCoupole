@@ -294,8 +294,8 @@ function BestSellers({ addToCart }) {
                         ...(centerIndex === index ? { ...styles.centerItemPriceContainer, backgroundColor: theme.primary_color } : { backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color }),
                       }}
                     >
-                      <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}>$</span>
                       <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}>
+                      <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}> DT</span>
                         {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
                       </span>
                     </div>
