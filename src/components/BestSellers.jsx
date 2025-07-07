@@ -295,8 +295,8 @@ function BestSellers({ addToCart }) {
                       }}
                     >
                       <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}>
-                      <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}> DT</span>
                         {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
+                        <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}> DT</span>
                       </span>
                     </div>
                   </div>
