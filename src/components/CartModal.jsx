@@ -50,7 +50,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-details">
           <h4 className="cart-modal-item-name">{item.name || 'Unnamed Item'}</h4>
           <div className="cart-modal-item-price">
-            ${(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)}
+            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} DT
             {supplementPrice > 0 && (
               <span className="cart-modal-supplement-price">+${supplementPrice.toFixed(2)} (Supplement)</span>
             )}
@@ -64,7 +64,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
                 .filter(option => item.option_ids.includes(option.id))
                 .map(option => (
                   <span key={option.id} className="cart-modal-option-detail">
-                    {option.option_name} (+${parseFloat(option.additional_price || 0).toFixed(2)})
+                    {option.option_name} ({parseFloat(option.additional_price || 0).toFixed(2)}+DT)
                   </span>
                 ))}
             </div>
@@ -511,7 +511,7 @@ function CartModal({
               </ul>
 
               <div className="cart-modal-summary">
-                <div className="cart-modal-total-price">Total: ${total}</div>
+                <div className="cart-modal-total-price">Total: {total}DT</div>
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
@@ -607,7 +607,7 @@ function CartModal({
                       Placing Order...
                     </div>
                   ) : (
-                    `Place Order - $${total}`
+                    `Place Order -${total} DT`
                   )}
                 </button>
               </div>
