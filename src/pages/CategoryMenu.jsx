@@ -216,7 +216,7 @@ function CategoryMenu({ addToCart }) {
         onTouchEnd={handleTouchEnd}
       >
         <div className="category-menu-loading-spinner"></div>
-        <p className="category-menu-loading-text">Loading delicious menu...</p>
+        <p className="category-menu-loading-text">Chargement du délicieux menu...</p>
       </div>
     );
   }
@@ -255,7 +255,7 @@ function CategoryMenu({ addToCart }) {
             <div className="category-menu-header-title">
               <h1 className="category-menu-category-title">{categoryName}</h1>
               <p className="category-menu-category-subtitle">
-                {filteredItems.length} delicious item{filteredItems.length !== 1 ? 's' : ''} available
+                {filteredItems.length} Article Délicieux Disponible!
               </p>
             </div>
           </div>
