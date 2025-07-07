@@ -309,7 +309,7 @@ function CategoryMenu({ addToCart }) {
                 className="category-menu-clear-search-button"
                 onClick={() => setSearchQuery('')}
               >
-                Clear Search
+                Effacer la recherche
               </button>
             )}
           </div>
