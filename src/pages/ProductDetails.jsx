@@ -42,7 +42,7 @@ function ProductDetails({ addToCart }) {
         setLoading(true);
         const itemId = parseInt(id);
         if (isNaN(itemId) || itemId <= 0) {
-          throw new Error('Invalid product ID');
+          throw new Error('ID de produit invalide');
         }
 
         const [productResponse, relatedResponse, supplementsResponse, ratingResponse, categoriesResponse] = await Promise.all([
@@ -65,9 +65,9 @@ function ProductDetails({ addToCart }) {
           setRating(parseInt(ratingResponse.data[0].rating) || 0);
         }
       } catch (error) {
-        console.error('Error fetching product details:', error);
-        toast.error(error.response?.data?.error || 'Failed to load product details');
-        setError('Failed to load product details');
+        console.error('Erreur lors du chargement des détails du produit:', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des détails du produit');
+        setError('Échec du chargement des détails du produit');
       } finally {
         setLoading(false);
       }
@@ -79,7 +79,7 @@ function ProductDetails({ addToCart }) {
     () =>
       debounce(async (ratingValue) => {
         if (ratingValue < 1 || ratingValue > 5) {
-          toast.error('Please select a rating between 1 and 5');
+          toast.error('Veuillez sélectionner une note entre 1 et 5');
           return;
         }
         try {
@@ -88,12 +88,12 @@ function ProductDetails({ addToCart }) {
             rating: parseInt(ratingValue),
           });
           setIsRating(true);
-          toast.success('Rating submitted!');
+          toast.success('Note soumise !');
           const response = await api.get(`/menu-items/${id}`);
           setProduct(response.data);
         } catch (error) {
-          console.error('Error posting rating:', error);
-          toast.error(error.response?.data?.error || 'Failed to submit rating');
+          console.error('Erreur lors de la soumission de la note:', error);
+          toast.error(error.response?.data?.error || 'Échec de la soumission de la note');
         }
       }, 500),
     [id]
@@ -101,11 +101,11 @@ function ProductDetails({ addToCart }) {
 
   const handleAddToCart = useCallback(async () => {
     if (!product) {
-      toast.error('Product not loaded');
+      toast.error('Produit non chargé');
       return;
     }
     if (!product.availability) {
-      toast.error('Item is not available');
+      toast.error('Article non disponible');
       return;
     }
     try {
@@ -119,7 +119,7 @@ function ProductDetails({ addToCart }) {
         : '/placeholder.jpg';
       const itemToAdd = {
         item_id: parseInt(product.id),
-        name: product.name || 'Unknown Product',
+        name: product.name || 'Produit inconnu',
         unit_price: parseFloat(product.sale_price || product.regular_price) || 0,
         quantity: parseInt(quantity) || 1,
         image_url: imageSrc,
@@ -129,12 +129,12 @@ function ProductDetails({ addToCart }) {
         cartItemId: `${product.id}-${Date.now()}`,
       };
       await addToCart(itemToAdd);
-      toast.success(`${product.name} added to cart!`);
+      toast.success(`${product.name} ajouté au panier !`);
       setSelectedSupplement('0');
       setQuantity(1);
     } catch (error) {
-      console.error('Error adding to cart:', error);
-      toast.error(error.response?.data?.error || 'Failed to add to cart');
+      console.error('Erreur lors de l\'ajout au panier:', error);
+      toast.error(error.response?.data?.error || 'Échec de l\'ajout au panier');
     }
   }, [product, quantity, selectedSupplement, supplements, addToCart]);
 
@@ -168,7 +168,7 @@ function ProductDetails({ addToCart }) {
       if (!isSwiping || window.innerWidth > 768) return;
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limite la distance de glissement
       if (containerRef.current) {
         containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
@@ -190,7 +190,7 @@ function ProductDetails({ addToCart }) {
     }
 
     if (deltaX > swipeThreshold) {
-      // Left-to-right swipe: go to category menu if first product, otherwise previous product
+      // Glissement de gauche à droite : aller au menu de la catégorie si premier produit, sinon produit précédent
       if (currentIndex === 0 && product?.category_id) {
         navigate(`/category/${product.category_id}`);
       } else if (currentIndex > 0) {
@@ -198,7 +198,7 @@ function ProductDetails({ addToCart }) {
         navigate(`/product/${prevProduct.id}`);
       }
     } else if (deltaX < -swipeThreshold) {
-      // Right-to-left swipe: next product or next non-empty category if last product
+      // Glissement de droite à gauche : produit suivant ou catégorie suivante non vide si dernier produit
       if (currentIndex < categoryProducts.length - 1) {
         const nextProduct = categoryProducts[currentIndex + 1];
         navigate(`/product/${nextProduct.id}`);
@@ -207,7 +207,7 @@ function ProductDetails({ addToCart }) {
         let currentCategoryIndex = categoryIds.indexOf(parseInt(product.category_id));
         let nextCategoryId = null;
 
-        // Find the next non-empty category
+        // Trouver la prochaine catégorie non vide
         while (currentCategoryIndex < categoryIds.length - 1) {
           currentCategoryIndex += 1;
           const candidateCategoryId = categoryIds[currentCategoryIndex];
@@ -218,7 +218,7 @@ function ProductDetails({ addToCart }) {
               break;
             }
           } catch (error) {
-            console.error(`Error checking category ${candidateCategoryId}:`, error);
+            console.error(`Erreur lors de la vérification de la catégorie ${candidateCategoryId}:`, error);
           }
         }
 
@@ -255,7 +255,7 @@ function ProductDetails({ addToCart }) {
           <div className="product-details-error-icon">🍽️</div>
           <p className="product-details-error-text">{error}</p>
           <button className="product-details-retry-button" onClick={() => window.location.reload()}>
-            Try Again
+            Réessayer
           </button>
         </div>
       </div>
@@ -273,7 +273,7 @@ function ProductDetails({ addToCart }) {
       >
         <div className="product-details-loading-container">
           <div className="product-details-loading-spinner"></div>
-          <p className="product-details-loading-text">Loading...</p>
+          <p className="product-details-loading-text">Chargement...</p>
         </div>
       </div>
     );
@@ -290,9 +290,9 @@ function ProductDetails({ addToCart }) {
       >
         <div className="product-details-error-container">
           <div className="product-details-error-icon">🔍</div>
-          <p className="product-details-error-text">Product not found</p>
+          <p className="product-details-error-text">Produit non trouvé</p>
           <button className="product-details-retry-button" onClick={() => navigate('/')}>
-            Go Home
+            Retour à l'accueil
           </button>
         </div>
       </div>
@@ -320,7 +320,7 @@ function ProductDetails({ addToCart }) {
         <div className="product-details-image-container">
           <img
             src={imageSrc}
-            alt={product.name || 'Product'}
+            alt={product.name || 'Produit'}
             className="product-details-product-image"
             loading="lazy"
             decoding="async"
@@ -330,7 +330,7 @@ function ProductDetails({ addToCart }) {
       </div>
 
       <div className="product-details-details-section">
-        <h2 className="product-details-product-title">{product.name || 'Unknown Product'}</h2>
+        <h2 className="product-details-product-title">{product.name || 'Produit inconnu'}</h2>
         <div className="product-details-rating-container">
           <div className="product-details-rating-stars">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -341,28 +341,28 @@ function ProductDetails({ addToCart }) {
             ))}
           </div>
           <span className="product-details-rating-text">
-            {averageRating.toFixed(1)} ({reviewCount} reviews)
+            {averageRating.toFixed(1)} ({reviewCount} avis)
           </span>
         </div>
 
         <p className="product-details-product-description">
-          {product.description || 'No description available.'}
+          {product.description || 'Aucune description disponible.'}
         </p>
 
         <div className="product-details-price-section">
           <div className="product-details-price-container">
             {salePrice ? (
               <>
-                <span className="product-details-original-price">${regularPrice.toFixed(2)}</span>
-                <span className="product-details-sale-price">${salePrice.toFixed(2)}</span>
-                <span className="product-details-save-badge">SAVE ${(regularPrice - salePrice).toFixed(2)}</span>
+                <span className="product-details-original-price">{regularPrice.toFixed(2)} DT</span>
+                <span className="product-details-sale-price">{salePrice.toFixed(2)} DT</span>
+                <span className="product-details-save-badge">ÉCONOMISEZ {(regularPrice - salePrice).toFixed(2)} DT</span>
               </>
             ) : (
-              <span className="product-details-regular-price-only">${regularPrice.toFixed(2)}</span>
+              <span className="product-details-regular-price-only">{regularPrice.toFixed(2)} DT</span>
             )}
           </div>
           <div className="product-details-total-price">
-            Total: <span className="product-details-total-amount">${calculateTotalPrice()}</span>
+            Total : <span className="product-details-total-amount">{calculateTotalPrice()} DT</span>
           </div>
         </div>
 
@@ -372,12 +372,12 @@ function ProductDetails({ addToCart }) {
               <CheckCircleOutlined
                 className={product.availability ? 'text-green-500' : 'text-red-500'}
               />
-              <span className="product-details-option-label">Availability</span>
+              <span className="product-details-option-label">Disponibilité</span>
             </div>
             <span
               className="product-details-option-value"
             >
-              {product.availability ? 'In Stock' : 'Out of Stock'}
+              {product.availability ? 'En stock' : 'En rupture de stock'}
             </span>
           </div>
 
@@ -385,10 +385,10 @@ function ProductDetails({ addToCart }) {
             <div className="product-details-option-row">
               <div className="product-details-option-left">
                 <RestaurantMenuOutlined className="text-orange-500" />
-                <span className="product-details-option-label">Dietary Tags</span>
+                <span className="product-details-option-label">Étiquettes diététiques</span>
               </div>
               <span className="product-details-option-value">
-                {JSON.parse(product.dietary_tags || '[]').join(', ') || 'None'}
+                {JSON.parse(product.dietary_tags || '[]').join(', ') || 'Aucune'}
               </span>
             </div>
           )}
@@ -397,17 +397,17 @@ function ProductDetails({ addToCart }) {
             <div className="product-details-option-row">
               <div className="product-details-option-left">
                 <CategoryOutlined className="text-orange-500" />
-                <span className="product-details-option-label">Add Supplement</span>
+                <span className="product-details-option-label">Ajouter un supplément</span>
               </div>
               <select
                 value={selectedSupplement}
                 onChange={(e) => setSelectedSupplement(e.target.value)}
                 className="product-details-supplement-select"
               >
-                <option value="0">None</option>
+                <option value="0">Aucun</option>
                 {supplements.map((s) => (
                   <option key={s.supplement_id} value={s.supplement_id}>
-                    {s.name} (+${parseFloat(s.additional_price || 0).toFixed(2)})
+                    {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} DT)
                   </option>
                 ))}
               </select>
@@ -417,7 +417,7 @@ function ProductDetails({ addToCart }) {
           <div className="product-details-option-row">
             <div className="product-details-option-left">
               <Star className="text-yellow-400" />
-              <span className="product-details-option-label">Rate this item</span>
+              <span className="product-details-option-label">Noter cet article</span>
             </div>
             <div className="product-details-user-rating-container">
               <div className="product-details-user-rating-stars">
@@ -434,16 +434,16 @@ function ProductDetails({ addToCart }) {
                   className="product-details-rating-submit-button"
                   onClick={() => debouncedRatingSubmit(rating)}
                 >
-                  Submit
+                  Soumettre
                 </button>
               )}
-              {isRatingSubmitted && <span className="product-details-rating-thank-you">Thank you!</span>}
+              {isRatingSubmitted && <span className="product-details-rating-thank-you">Merci !</span>}
             </div>
           </div>
 
           <div className="product-details-option-row">
             <div className="product-details-option-left">
-              <span className="product-details-option-label">Quantity</span>
+              <span className="product-details-option-label">Quantité</span>
             </div>
             <div className="product-details-quantity-container">
               <button
@@ -471,13 +471,13 @@ function ProductDetails({ addToCart }) {
           disabled={!product.availability}
         >
           <ShoppingCartOutlined />
-          {product.availability ? `Add to Cart • $${calculateTotalPrice()}` : 'Unavailable'}
+          {product.availability ? `Ajouter au panier • ${calculateTotalPrice()} DT` : 'Indisponible'}
         </button>
       </div>
 
       {relatedProducts.length > 0 && (
         <div className="product-details-related-section">
-          <h3 className="product-details-section-title">You might also like</h3>
+          <h3 className="product-details-section-title">Vous pourriez aussi aimer</h3>
           <div className="product-details-related-grid">
             {relatedProducts.map((item) => (
               <MenuItemCard
