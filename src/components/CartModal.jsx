@@ -516,16 +516,16 @@ function CartModal({
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
                     <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                    Order Type
+                    Type de commande
                   </label>
                   <select
                     onChange={(e) => setOrderType(e.target.value)}
                     value={orderType}
                     className="cart-modal-select"
                   >
-                    <option value="local">Dine In</option>
-                    <option value="delivery">Delivery</option>
-                    <option value="imported">Takeaway</option>
+                    <option value="local">Local (sur place)</option>
+                    <option value="delivery">Livraison (chez toi)</option>
+                    <option value="imported">Importé (prendre à emporter)</option>
                   </select>
                 </div>
 
@@ -534,7 +534,7 @@ function CartModal({
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
                         <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                        Search Table
+                        Recherche Des Tbales
                       </label>
                       <div className="cart-modal-table-search-container">
                         <SearchIcon className="cart-modal-table-search-icon" />
@@ -542,7 +542,7 @@ function CartModal({
                           type="text"
                           value={tableSearch}
                           onChange={(e) => setTableSearch(e.target.value)}
-                          placeholder="Search table number..."
+                          placeholder="Entrez le numéro de votre table"
                           className="cart-modal-table-search-input"
                         />
                       </div>
@@ -550,7 +550,7 @@ function CartModal({
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
                         <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                        Select Table
+                        Choisir la table
                       </label>
                       <div className="cart-modal-table-list-container">
                         {filteredTables.length > 0 ? (
