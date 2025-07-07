@@ -266,7 +266,7 @@ function CategoryMenu({ addToCart }) {
                 <Search size={20} color="#8e8e93" className="category-menu-search-icon" />
                 <input
                   type="text"
-                  placeholder="Search in this category..."
+                  placeholder="Rechercher dans cette catégorie..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={handleSearchFocus}
