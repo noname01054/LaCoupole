@@ -388,7 +388,7 @@ function CartModal({
       setDeliveryAddress('');
       toast.success(`Commande passée avec succès ! ${orderType === 'imported' ? 'Veuillez procéder à la récupération.' : ''}`);
 
-      navigate(`/attente-commande/${response.data.orderId}`, { state: { sessionId } });
+      navigate(`/order-waiting/${response.data.orderId}`, { state: { sessionId } });
     } catch (error) {
       const message = error.response?.data?.error || error.message || 'Échec de la commande';
       if (error.response?.status === 429) {
