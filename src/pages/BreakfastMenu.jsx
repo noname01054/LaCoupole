@@ -33,11 +33,13 @@ function BreakfastMenu({ addToCart }) {
   const containerRef = useRef(null);
 
   const getImageUrl = (imageUrl) => {
-    if (!imageUrl || imageUrl === '/Uploads/undefined' || imageUrl === 'null') {
-      return '/placeholder.jpg';
-    }
-    return `${api.defaults.baseURL.replace('/api', '')}${imageUrl}`;
-  };
+  if (!imageUrl || imageUrl === '/Uploads/undefined' || imageUrl === 'null') {
+    return '/placeholder.jpg';
+  }
+  // Ensure leading slash for consistency
+  const normalizedPath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+  return `${api.defaults.baseURL.replace('/api', '')}${normalizedPath}`;
+};
 
   useEffect(() => {
     window.scrollTo(0, 0);
