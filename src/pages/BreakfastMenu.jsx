@@ -56,7 +56,7 @@ function BreakfastMenu({ addToCart }) {
             api.getBreakfasts(),
           ]);
           if (!breakfastResponse.data.availability) {
-            throw new Error('Breakfast is not available');
+            throw new Error('Petit-déjeuner non disponible');
           }
           breakfastsData = [{
             ...breakfastResponse.data,
@@ -106,9 +106,9 @@ function BreakfastMenu({ addToCart }) {
         setSelectedOptions(initialOptions);
         setExpandedOptions(initialExpanded);
       } catch (error) {
-        console.error('Error fetching breakfasts:', error);
-        toast.error(error.response?.data?.error || 'Failed to load breakfasts');
-        setError('Failed to load breakfasts');
+        console.error('Erreur lors du chargement des petits-déjeuners:', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des petits-déjeuners');
+        setError('Échec du chargement des petits-déjeuners');
       } finally {
         setLoading(false);
       }
@@ -150,7 +150,7 @@ function BreakfastMenu({ addToCart }) {
         const missingGroups = requiredGroups.filter((gId) => !selectedGroupOptions[gId]);
         
         if (missingGroups.length > 0) {
-          toast.error('Please select one option for each option group');
+          toast.error('Veuillez sélectionner une option pour chaque groupe d\'options');
           setValidationErrors((prev) => ({
             ...prev,
             [breakfast.id]: {
@@ -170,7 +170,7 @@ function BreakfastMenu({ addToCart }) {
 
         const itemToAdd = {
           breakfast_id: parseInt(breakfast.id),
-          name: breakfast.name || 'Unknown Breakfast',
+          name: breakfast.name || 'Petit-déjeuner inconnu',
           unit_price: basePrice,
           total_price: totalPrice,
           quantity: parseInt(quantities[breakfast.id]) || 1,
@@ -180,19 +180,19 @@ function BreakfastMenu({ addToCart }) {
             .filter((opt) => selectedOptionIds.includes(opt.id))
             .map((opt) => ({
               ...opt,
-              group_title: breakfast.optionGroups.find((g) => g.id === opt.group_id)?.title || 'Unknown Group',
+              group_title: breakfast.optionGroups.find((g) => g.id === opt.group_id)?.title || 'Groupe inconnu',
             })),
           cartItemId: `${breakfast.id}-${Date.now()}`,
         };
         
         await addToCart(itemToAdd);
-        toast.success(`${breakfast.name} added to cart!`);
+        toast.success(`${breakfast.name} ajouté au panier !`);
         setQuantities((prev) => ({ ...prev, [breakfast.id]: 1 }));
         setSelectedOptions((prev) => ({ ...prev, [breakfast.id]: {} }));
         setValidationErrors((prev) => ({ ...prev, [breakfast.id]: {} }));
       } catch (error) {
-        console.error('Error adding to cart:', error);
-        toast.error(error.response?.data?.error || 'Failed to add to cart');
+        console.error('Erreur lors de l\'ajout au panier:', error);
+        toast.error(error.response?.data?.error || 'Échec de l\'ajout au panier');
       } finally {
         setAddingToCart((prev) => ({ ...prev, [breakfast.id]: false }));
       }
@@ -229,7 +229,7 @@ function BreakfastMenu({ addToCart }) {
       if (!isSwiping || window.innerWidth > 768 || !id) return;
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limite la distance de glissement
       if (containerRef.current) {
         containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
@@ -251,7 +251,7 @@ function BreakfastMenu({ addToCart }) {
     }
 
     if (deltaX > swipeThreshold) {
-      // Left-to-right swipe: go to category menu if first breakfast, otherwise previous breakfast
+      // Glissement de gauche à droite : aller au menu de la catégorie si premier petit-déjeuner, sinon petit-déjeuner précédent
       if (currentIndex === 0 && breakfasts[0]?.category_id) {
         navigate(`/category/${breakfasts[0].category_id}`);
       } else if (currentIndex > 0) {
@@ -259,7 +259,7 @@ function BreakfastMenu({ addToCart }) {
         navigate(`/breakfast/${prevBreakfast.id}`);
       }
     } else if (deltaX < -swipeThreshold) {
-      // Right-to-left swipe: next breakfast or next non-empty category if last breakfast
+      // Glissement de droite à gauche : petit-déjeuner suivant ou catégorie suivante non vide si dernier petit-déjeuner
       if (currentIndex < categoryBreakfasts.length - 1) {
         const nextBreakfast = categoryBreakfasts[currentIndex + 1];
         navigate(`/breakfast/${nextBreakfast.id}`);
@@ -268,7 +268,7 @@ function BreakfastMenu({ addToCart }) {
         let currentCategoryIndex = categoryIds.indexOf(parseInt(breakfasts[0].category_id));
         let nextCategoryId = null;
 
-        // Find the next non-empty category
+        // Trouver la prochaine catégorie non vide
         while (currentCategoryIndex < categoryIds.length - 1) {
           currentCategoryIndex += 1;
           const candidateCategoryId = categoryIds[currentCategoryIndex];
@@ -283,7 +283,7 @@ function BreakfastMenu({ addToCart }) {
               break;
             }
           } catch (error) {
-            console.error(`Error checking category ${candidateCategoryId}:`, error);
+            console.error(`Erreur lors de la vérification de la catégorie ${candidateCategoryId}:`, error);
           }
         }
 
@@ -335,7 +335,7 @@ function BreakfastMenu({ addToCart }) {
             <div className="breakfast-menu__image-container">
               <img
                 src={imageSrc}
-                alt={breakfast.name || 'Breakfast'}
+                alt={breakfast.name || 'Petit-déjeuner'}
                 className="breakfast-menu__product-image"
                 loading="lazy"
                 onError={(e) => (e.target.src = '/placeholder.jpg')}
@@ -343,7 +343,7 @@ function BreakfastMenu({ addToCart }) {
               <div className="breakfast-menu__image-overlay">
                 <div className={`breakfast-menu__availability-badge ${breakfast.availability ? 'breakfast-menu__available-badge' : 'breakfast-menu__unavailable-badge'}`}>
                   <CheckCircleOutlined className="breakfast-menu__availability-icon" />
-                  {breakfast.availability ? 'Available' : 'Unavailable'}
+                  {breakfast.availability ? 'Disponible' : 'Indisponible'}
                 </div>
               </div>
             </div>
@@ -352,15 +352,15 @@ function BreakfastMenu({ addToCart }) {
           <div className="breakfast-menu__content-section">
             <div className="breakfast-menu__product-header">
               <h2 className="breakfast-menu__product-title">
-                {breakfast.name || 'Unknown Breakfast'}
+                {breakfast.name || 'Petit-déjeuner inconnu'}
               </h2>
               <div className="breakfast-menu__price-badge">
-                ${priceBreakdown.basePrice}
+                {priceBreakdown.basePrice} DT
               </div>
             </div>
 
             <p className="breakfast-menu__product-description">
-              {breakfast.description || 'No description available.'}
+              {breakfast.description || 'Aucune description disponible.'}
             </p>
 
             {hasOptions && (
@@ -370,7 +370,7 @@ function BreakfastMenu({ addToCart }) {
                   onClick={() => toggleOptionsExpanded(breakfast.id)}
                 >
                   <CategoryOutlined className="breakfast-menu__category-icon" />
-                  <span>Customize ({Object.keys(optionsByGroup).length} options)</span>
+                  <span>Personnaliser ({Object.keys(optionsByGroup).length} options)</span>
                   {isExpanded ? 
                     <ExpandLessOutlined className="breakfast-menu__expand-icon" /> : 
                     <ExpandMoreOutlined className="breakfast-menu__expand-icon" />
@@ -412,7 +412,7 @@ function BreakfastMenu({ addToCart }) {
                                   {opt.option_name}
                                 </span>
                                 <span className="breakfast-menu__option-price">
-                                  +${parseFloat(opt.additional_price).toFixed(2)}
+                                  +{parseFloat(opt.additional_price).toFixed(2)} DT
                                 </span>
                               </div>
                               <div className={`breakfast-menu__radio-indicator ${isSelected ? 'breakfast-menu__radio-indicator--selected' : ''}`}>
@@ -431,7 +431,7 @@ function BreakfastMenu({ addToCart }) {
             <div className="breakfast-menu__bottom-section">
               <div className="breakfast-menu__quantity-price-row">
                 <div className="breakfast-menu__quantity-section">
-                  <span className="breakfast-menu__quantity-label">Qty</span>
+                  <span className="breakfast-menu__quantity-label">Qté</span>
                   <div className="breakfast-menu__quantity-controls">
                     <button
                       className={`breakfast-menu__quantity-btn ${quantities[breakfast.id] <= 1 || !breakfast.availability ? 'breakfast-menu__quantity-btn--disabled' : ''}`}
@@ -466,7 +466,7 @@ function BreakfastMenu({ addToCart }) {
                 <div className="breakfast-menu__total-price">
                   <span className="breakfast-menu__total-label">Total</span>
                   <span className="breakfast-menu__total-amount">
-                    ${priceBreakdown.total}
+                    {priceBreakdown.total} DT
                   </span>
                 </div>
               </div>
@@ -479,12 +479,12 @@ function BreakfastMenu({ addToCart }) {
                 {isAddingToCart ? (
                   <>
                     <div className="breakfast-menu__loading-spinner"></div>
-                    Adding...
+                    Ajout en cours...
                   </>
                 ) : (
                   <>
                     <ShoppingCartOutlined className="breakfast-menu__cart-icon" />
-                    {breakfast.availability ? 'Add to Cart' : 'Unavailable'}
+                    {breakfast.availability ? 'Ajouter au panier' : 'Indisponible'}
                   </>
                 )}
               </button>
@@ -509,7 +509,7 @@ function BreakfastMenu({ addToCart }) {
           <div className="breakfast-menu__error-icon">🍽️</div>
           <p className="breakfast-menu__error-text">{error}</p>
           <button className="breakfast-menu__retry-button" onClick={() => window.location.reload()}>
-            Try Again
+            Réessayer
           </button>
         </div>
       </div>
@@ -527,7 +527,7 @@ function BreakfastMenu({ addToCart }) {
       >
         <div className="breakfast-menu__loading-container">
           <div className="breakfast-menu__main-loading-spinner"></div>
-          <p className="breakfast-menu__loading-text">Loading delicious breakfasts...</p>
+          <p className="breakfast-menu__loading-text">Chargement des petits-déjeuners délicieux...</p>
         </div>
       </div>
     );
@@ -544,9 +544,9 @@ function BreakfastMenu({ addToCart }) {
       >
         <div className="breakfast-menu__error-container">
           <div className="breakfast-menu__error-icon">🔍</div>
-          <p className="breakfast-menu__error-text">No breakfasts available</p>
+          <p className="breakfast-menu__error-text">Aucun petit-déjeuner disponible</p>
           <button className="breakfast-menu__retry-button" onClick={() => navigate('/')}>
-            Go Home
+            Retour à l'accueil
           </button>
         </div>
       </div>
@@ -569,7 +569,7 @@ function BreakfastMenu({ addToCart }) {
           <ArrowBackIosOutlined className="breakfast-menu__back-icon" />
         </button>
         <h1 className="breakfast-menu__header-title">
-          {id ? breakfasts[0]?.name || 'Breakfast' : 'Breakfast Menu'}
+          {id ? breakfasts[0]?.name || 'Petit-déjeuner' : 'Menu Petit-déjeuner'}
         </h1>
         <div className="breakfast-menu__header-spacer"></div>
       </div>
