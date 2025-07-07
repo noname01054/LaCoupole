@@ -78,7 +78,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
           value={supplementSelections[item.cartItemId]?.supplement_id || item.supplement_id || '0'}
           className="cart-modal-supplement-select"
         >
-          <option value="0">No Supplement</option>
+          <option value="0">Aucun supplément</option>
           {itemSupplements.map((s) => (
             <option key={s.supplement_id} value={s.supplement_id}>
               {s.name} (+${parseFloat(s.additional_price || 0).toFixed(2)})
