@@ -42,8 +42,8 @@ function Home({ addToCart }) {
           const response = await api.searchMenuItems(query);
           setFilteredItems(response.data || []);
         } catch (error) {
-          console.error('Error searching menu items:', error);
-          toast.error(error.response?.data?.error || 'Failed to search menu items');
+          console.error('Erreur lors de la recherche des éléments du menu :', error);
+          toast.error(error.response?.data?.error || 'Échec de la recherche des éléments du menu');
           setFilteredItems([]);
         }
       }, 500),
@@ -66,15 +66,15 @@ function Home({ addToCart }) {
 
         setMenuItems(menuData);
         setCategories([
-          { id: 'all', name: 'All Menu', image_url: null },
+          { id: 'all', name: 'Tout le menu', image_url: null },
           ...categoriesData,
         ]);
         setFilteredItems(menuData);
         setBanners(bannersData);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error(error.response?.data?.error || 'Failed to load data');
-        setError('Failed to load data.');
+        console.error('Erreur lors de la récupération des données :', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des données');
+        setError('Échec du chargement des données.');
       } finally {
         setLoading(false);
       }
@@ -126,7 +126,6 @@ function Home({ addToCart }) {
 
   const handleTouchStart = useCallback((e) => {
     if (window.innerWidth > 768) return;
-    // Check if the touch event originates from any scrollable section
     const isScrollable = e.target.closest(
       '.home-categories-scroll-container, .home-banner-container, [class*="top-categories"], [class*="best-sellers"]'
     );
@@ -249,7 +248,7 @@ function Home({ addToCart }) {
     return filteredItems.map((item) => (
       <MenuItemCard
         key={item.id}
-        item={item}
+        item={{ ...item, price: `${item.price} DT` }}
         onAddToCart={addToCart}
         onView={handleViewProduct}
       />
@@ -266,7 +265,7 @@ function Home({ addToCart }) {
         onTouchEnd={handleTouchEnd}
       >
         <div className="home-error-content">
-          <p className="home-error-text">Error: {error}</p>
+          <p className="home-error-text">Erreur : {error}</p>
         </div>
       </div>
     );
@@ -282,7 +281,7 @@ function Home({ addToCart }) {
         onTouchEnd={handleTouchEnd}
       >
         <div className="home-loading-spinner"></div>
-        <p className="home-loading-text">Loading menu...</p>
+        <p className="home-loading-text">Chargement du menu...</p>
       </div>
     );
   }
@@ -298,8 +297,8 @@ function Home({ addToCart }) {
       <div className="home-header">
         <div className="home-welcome-section">
           <div className="home-welcome-content">
-            <h1 className="home-welcome-title">Welcome Back!</h1>
-            <p className="home-welcome-subtitle">What would you like to eat today?</p>
+            <h1 className="home-welcome-title">Bon retour !</h1>
+            <p className="home-welcome-subtitle">Que souhaitez-vous manger aujourd'hui ?</p>
           </div>
           <div className="home-welcome-emoji">🍽️</div>
         </div>
@@ -309,7 +308,7 @@ function Home({ addToCart }) {
             <Search size={18} color="#8e8e93" className="home-search-icon" />
             <input
               type="text"
-              placeholder="Search something"
+              placeholder="Rechercher quelque chose"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="home-search-input"
@@ -325,12 +324,12 @@ function Home({ addToCart }) {
 
         <div className="home-categories-section">
           <div className="home-categories-header">
-            <h2 className="home-categories-title">Categories</h2>
+            <h2 className="home-categories-title">Catégories</h2>
             <button
               className="home-see-all-button"
               onClick={() => navigate('/categories')}
             >
-              See all
+              Voir tout
             </button>
           </div>
 
@@ -355,14 +354,14 @@ function Home({ addToCart }) {
 
       <div className="home-menu-section" ref={menuSectionRef}>
         <h2 className="home-menu-title">
-          {searchQuery ? `Search Results (${filteredItems.length})` : 'Featured Menu'}
+          {searchQuery ? `Résultats de recherche (${filteredItems.length})` : 'Menu en vedette'}
         </h2>
 
         {filteredItems.length === 0 && !loading && (
           <div className="home-empty-state">
             <Coffee size={40} color="#8e8e93" />
             <p className="home-empty-text">
-              {searchQuery ? 'No items found for your search.' : 'No menu items available.'}
+              {searchQuery ? 'Aucun élément trouvé pour votre recherche.' : 'Aucun élément de menu disponible.'}
             </p>
           </div>
         )}
