@@ -12,6 +12,7 @@ import './css/Home.css';
 
 function Home({ addToCart }) {
   const [menuItems, setMenuItems] = useState([]);
+  const [breakfastItems, setBreakfastItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,7 +20,6 @@ function Home({ addToCart }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
   const navigate = useNavigate();
-  const menuSectionRef = useRef(null);
   const bannerContainerRef = useRef(null);
   const containerRef = useRef(null);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
@@ -30,56 +30,81 @@ function Home({ addToCart }) {
   const [isSwiping, setIsSwiping] = useState(false);
   const [swipeEnabled, setSwipeEnabled] = useState(true);
   const lastTouchTime = useRef(0);
+  const isMounted = useRef(true);
 
   const debouncedSearch = useMemo(
     () =>
       debounce(async (query) => {
+        if (!isMounted.current) return;
         if (query.trim() === '') {
-          setFilteredItems(menuItems);
+          setFilteredItems([...menuItems, ...breakfastItems]);
           return;
         }
         try {
           const response = await api.searchMenuItems(query);
-          setFilteredItems(response.data || []);
+          const breakfastResponse = await api.searchBreakfasts(query);
+          setFilteredItems([...(response.data || []), ...(breakfastResponse.data || [])]);
         } catch (error) {
           console.error('Erreur lors de la recherche des éléments du menu :', error);
           toast.error(error.response?.data?.error || 'Échec de la recherche des éléments du menu');
           setFilteredItems([]);
         }
       }, 500),
-    [menuItems]
+    [menuItems, breakfastItems]
   );
 
   useEffect(() => {
+    let isActive = true;
     const fetchData = async () => {
       try {
+        console.log('Récupération des données pour la page d\'accueil', { timestamp: new Date().toISOString() });
         setLoading(true);
-        const [menuResponse, categoriesResponse, bannersResponse] = await Promise.all([
+        const [menuResponse, breakfastResponse, categoriesResponse, bannersResponse] = await Promise.all([
           api.get('/menu-items'),
+          api.get('/breakfasts'),
           api.get('/categories'),
           api.getEnabledBanners(),
         ]);
 
-        const menuData = menuResponse.data || [];
-        const categoriesData = categoriesResponse.data || [];
-        const bannersData = bannersResponse.data || [];
+        if (isActive) {
+          const menuData = menuResponse.data || [];
+          const breakfastData = (breakfastResponse.data || []).map(item => ({
+            ...item,
+            type: 'breakfast',
+            category_name: 'Petit-déjeuner',
+          }));
+          const categoriesData = categoriesResponse.data || [];
+          const bannersData = bannersResponse.data || [];
 
-        setMenuItems(menuData);
-        setCategories([
-          { id: 'all', name: 'Tout le menu', image_url: null },
-          ...categoriesData,
-        ]);
-        setFilteredItems(menuData);
-        setBanners(bannersData);
+          setMenuItems(menuData);
+          setBreakfastItems(breakfastData);
+          setCategories([
+            { id: 'all', name: 'Tout le menu', image_url: null },
+            ...categoriesData,
+          ]);
+          setFilteredItems([...menuData, ...breakfastData]);
+          setBanners(bannersData);
+        }
       } catch (error) {
         console.error('Erreur lors de la récupération des données :', error);
-        toast.error(error.response?.data?.error || 'Échec du chargement des données');
-        setError('Échec du chargement des données.');
+        if (isActive) {
+          toast.error(error.response?.data?.error || 'Échec du chargement des données');
+          setError('Échec du chargement des données.');
+        }
       } finally {
-        setLoading(false);
+        if (isActive) {
+          setLoading(false);
+          console.log('Récupération des données terminée', { loading: false, timestamp: new Date().toISOString() });
+        }
       }
     };
     fetchData();
+    return () => {
+      isActive = false;
+      console.log('Nettoyage de l\'effet Home', { timestamp: new Date().toISOString() });
+      debouncedSearch.cancel();
+      isMounted.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -108,8 +133,12 @@ function Home({ addToCart }) {
     return () => clearInterval(interval);
   }, [banners.length]);
 
-  const handleViewProduct = useCallback((id) => {
-    navigate(`/product/${id}`);
+  const handleViewProduct = useCallback((id, type = 'menuItem') => {
+    if (type === 'breakfast') {
+      navigate(`/breakfast/${id}`);
+    } else {
+      navigate(`/product/${id}`);
+    }
   }, [navigate]);
 
   const handleCategoryClick = useCallback((categoryId) => {
@@ -120,14 +149,10 @@ function Home({ addToCart }) {
     }
   }, [navigate]);
 
-  const handleScrollToResults = useCallback(() => {
-    menuSectionRef.current?.scrollIntoView({ behavior: 'auto' });
-  }, []);
-
   const handleTouchStart = useCallback((e) => {
     if (window.innerWidth > 768) return;
     const isScrollable = e.target.closest(
-      '.home-categories-scroll-container, .home-banner-container, [class*="top-categories"], [class*="best-sellers"]'
+      '.home-categories-scroll-container, .home-banner-container, .home-sale-scroll-container, .home-breakfast-scroll-container, .home-category-scroll-container, [class*="top-categories"], [class*="best-sellers"]'
     );
     setSwipeEnabled(!isScrollable);
     if (!isScrollable) {
@@ -244,16 +269,67 @@ function Home({ addToCart }) {
     ));
   }, [banners]);
 
-  const menuItemCards = useMemo(() => {
-    return filteredItems.map((item) => (
-      <MenuItemCard
-        key={item.id}
-        item={{ ...item, price: `${item.price} DT` }}
-        onAddToCart={addToCart}
-        onView={handleViewProduct}
-      />
+  const saleItems = useMemo(() => {
+    return menuItems
+      .filter((item) => item.sale_price && item.sale_price < item.regular_price)
+      .map((item) => (
+        <div key={item.id} className="home-sale-item">
+          <MenuItemCard
+            item={item}
+            onAddToCart={addToCart}
+            onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
+          />
+        </div>
+      ));
+  }, [menuItems, addToCart, handleViewProduct]);
+
+  const breakfastItemsList = useMemo(() => {
+    return breakfastItems.map((item) => (
+      <div key={`breakfast-${item.id}`} className="home-breakfast-item">
+        <MenuItemCard
+          item={item}
+          onAddToCart={addToCart}
+          onView={() => handleViewProduct(item.id, item.type || 'breakfast')}
+        />
+      </div>
     ));
-  }, [filteredItems, addToCart, handleViewProduct]);
+  }, [breakfastItems, addToCart, handleViewProduct]);
+
+  const categorySections = useMemo(() => {
+    return categories
+      .filter((category) => category.id !== 'all')
+      .map((category) => {
+        const items = [...menuItems, ...breakfastItems].filter((item) => item.category_id === category.id);
+        if (items.length === 0) return null;
+        return (
+          <div key={category.id} className="home-category-section">
+            <div className="home-category-section-header">
+              <h2 className="home-category-section-title">{category.name}</h2>
+              <button
+                className="home-see-all-button"
+                onClick={() => handleCategoryClick(category.id)}
+              >
+                Voir tout
+              </button>
+            </div>
+            <div className="home-category-scroll-container">
+              <div className="home-category-grid">
+                {items.map((item) => (
+                  <div key={`${item.type || 'menuItem'}-${item.id}`} className="home-category-item-scroll">
+                    <MenuItemCard
+                      item={item}
+                      onAddToCart={addToCart}
+                      onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })
+      .filter(Boolean);
+  }, [categories, menuItems, breakfastItems, addToCart, handleViewProduct, handleCategoryClick]);
 
   if (error) {
     return (
@@ -265,7 +341,7 @@ function Home({ addToCart }) {
         onTouchEnd={handleTouchEnd}
       >
         <div className="home-error-content">
-          <p className="home-error-text">Erreur : {error}</p>
+          <p className="home-error-text">Erreur: {error}</p>
         </div>
       </div>
     );
@@ -316,7 +392,7 @@ function Home({ addToCart }) {
           </div>
           <button
             className="home-filter-button"
-            onClick={handleScrollToResults}
+            onClick={() => navigate('/categories')}
           >
             <ChevronDown size={18} color="#8e8e93" />
           </button>
@@ -350,40 +426,53 @@ function Home({ addToCart }) {
           </div>
         )}
         <TopCategories />
-      </div>
-
-      <div className="home-menu-section" ref={menuSectionRef}>
-        <h2 className="home-menu-title">
-          {searchQuery ? `Résultats de recherche (${filteredItems.length})` : 'Menu en vedette'}
-        </h2>
-
-        {filteredItems.length === 0 && !loading && (
-          <div className="home-empty-state">
-            <Coffee size={40} color="#8e8e93" />
-            <p className="home-empty-text">
-              {searchQuery ? 'Aucun élément trouvé pour votre recherche.' : 'Aucun élément de menu disponible.'}
-            </p>
+        {saleItems.length > 0 && (
+          <div className="home-sale-section">
+            <div className="home-sale-header">
+              <h2 className="home-sale-title">En promotion</h2>
+              <button
+                className="home-see-all-button"
+                onClick={() => navigate('/sale')}
+              >
+                Voir tout
+              </button>
+            </div>
+            <div className="home-sale-scroll-container">
+              <div className="home-sale-grid">
+                {saleItems}
+              </div>
+            </div>
           </div>
         )}
-
-        <div className="home-menu-grid">
-          {menuItemCards}
-        </div>
-
+        {breakfastItemsList.length > 0 && (
+          <div className="home-breakfast-section">
+            <div className="home-breakfast-header">
+              <h2 className="home-breakfast-title">Petit-déjeuner</h2>
+              <button
+                className="home-see-all-button"
+                onClick={() => navigate('/breakfasts')}
+              >
+                Voir tout
+              </button>
+            </div>
+            <div className="home-breakfast-scroll-container">
+              <div className="home-breakfast-grid">
+                {breakfastItemsList}
+              </div>
+            </div>
+          </div>
+        )}
+        {categorySections}
         <BestSellers addToCart={addToCart} />
       </div>
 
       <style>
         {`
-          .home-categories-scroll-container {
-            scroll-behavior: auto;
-            scroll-snap-type: x mandatory;
-            will-change: scroll-position;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior-x: contain;
-          }
-
-          .home-banner-container {
+          .home-categories-scroll-container,
+          .home-banner-container,
+          .home-sale-scroll-container,
+          .home-breakfast-scroll-container,
+          .home-category-scroll-container {
             scroll-behavior: auto;
             scroll-snap-type: x mandatory;
             will-change: scroll-position;
@@ -392,17 +481,26 @@ function Home({ addToCart }) {
           }
 
           .home-categories-scroll-container::-webkit-scrollbar,
-          .home-banner-container::-webkit-scrollbar {
+          .home-banner-container::-webkit-scrollbar,
+          .home-sale-scroll-container::-webkit-scrollbar,
+          .home-breakfast-scroll-container::-webkit-scrollbar,
+          .home-category-scroll-container::-webkit-scrollbar {
             display: none;
           }
 
           .home-categories-scroll-container,
-          .home-banner-container {
+          .home-banner-container,
+          .home-sale-scroll-container,
+          .home-breakfast-scroll-container,
+          .home-category-scroll-container {
             scrollbar-width: none;
             -ms-overflow-style: none;
           }
 
-          .home-category-item {
+          .home-category-item,
+          .home-sale-item,
+          .home-breakfast-item,
+          .home-category-item-scroll {
             will-change: transform, opacity;
             opacity: 1;
           }
@@ -415,7 +513,13 @@ function Home({ addToCart }) {
           @media (prefers-reduced-motion: reduce) {
             .home-categories-scroll-container,
             .home-banner-container,
-            .home-category-item {
+            .home-sale-scroll-container,
+            .home-breakfast-scroll-container,
+            .home-category-scroll-container,
+            .home-category-item,
+            .home-sale-item,
+            .home-breakfast-item,
+            .home-category-item-scroll {
               scroll-behavior: auto !important;
               transition: none !important;
             }
