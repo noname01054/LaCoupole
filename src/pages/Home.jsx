@@ -71,7 +71,6 @@ function Home({ addToCart }) {
           const breakfastData = (breakfastResponse.data || []).map(item => ({
             ...item,
             type: 'breakfast',
-            category_name: 'Petit-déjeuner',
           }));
           const categoriesData = categoriesResponse.data || [];
           const bannersData = bannersResponse.data || [];
@@ -152,7 +151,7 @@ function Home({ addToCart }) {
   const handleTouchStart = useCallback((e) => {
     if (window.innerWidth > 768) return;
     const isScrollable = e.target.closest(
-      '.home-categories-scroll-container, .home-banner-container, .home-sale-scroll-container, .home-breakfast-scroll-container, .home-category-scroll-container, [class*="top-categories"], [class*="best-sellers"]'
+      '.home-categories-scroll-container, .home-banner-container, .home-sale-scroll-container, .home-category-scroll-container, [class*="top-categories"], [class*="best-sellers"]'
     );
     setSwipeEnabled(!isScrollable);
     if (!isScrollable) {
@@ -270,10 +269,10 @@ function Home({ addToCart }) {
   }, [banners]);
 
   const saleItems = useMemo(() => {
-    return menuItems
+    return [...menuItems, ...breakfastItems]
       .filter((item) => item.sale_price && item.sale_price < item.regular_price)
       .map((item) => (
-        <div key={item.id} className="home-sale-item">
+        <div key={`${item.type || 'menuItem'}-${item.id}`} className="home-sale-item">
           <MenuItemCard
             item={item}
             onAddToCart={addToCart}
@@ -281,19 +280,7 @@ function Home({ addToCart }) {
           />
         </div>
       ));
-  }, [menuItems, addToCart, handleViewProduct]);
-
-  const breakfastItemsList = useMemo(() => {
-    return breakfastItems.map((item) => (
-      <div key={`breakfast-${item.id}`} className="home-breakfast-item">
-        <MenuItemCard
-          item={item}
-          onAddToCart={addToCart}
-          onView={() => handleViewProduct(item.id, item.type || 'breakfast')}
-        />
-      </div>
-    ));
-  }, [breakfastItems, addToCart, handleViewProduct]);
+  }, [menuItems, breakfastItems, addToCart, handleViewProduct]);
 
   const categorySections = useMemo(() => {
     return categories
@@ -303,7 +290,7 @@ function Home({ addToCart }) {
         if (items.length === 0) return null;
         return (
           <div key={category.id} className="home-category-section">
-            <div className="home-category-section-header">
+            <div sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
               <h2 className="home-category-section-title">{category.name}</h2>
               <button
                 className="home-see-all-button"
@@ -444,24 +431,6 @@ function Home({ addToCart }) {
             </div>
           </div>
         )}
-        {breakfastItemsList.length > 0 && (
-          <div className="home-breakfast-section">
-            <div className="home-breakfast-header">
-              <h2 className="home-breakfast-title">Petit-déjeuner</h2>
-              <button
-                className="home-see-all-button"
-                onClick={() => navigate('/breakfasts')}
-              >
-                Voir tout
-              </button>
-            </div>
-            <div className="home-breakfast-scroll-container">
-              <div className="home-breakfast-grid">
-                {breakfastItemsList}
-              </div>
-            </div>
-          </div>
-        )}
         {categorySections}
         <BestSellers addToCart={addToCart} />
       </div>
@@ -471,7 +440,6 @@ function Home({ addToCart }) {
           .home-categories-scroll-container,
           .home-banner-container,
           .home-sale-scroll-container,
-          .home-breakfast-scroll-container,
           .home-category-scroll-container {
             scroll-behavior: auto;
             scroll-snap-type: x mandatory;
@@ -483,7 +451,6 @@ function Home({ addToCart }) {
           .home-categories-scroll-container::-webkit-scrollbar,
           .home-banner-container::-webkit-scrollbar,
           .home-sale-scroll-container::-webkit-scrollbar,
-          .home-breakfast-scroll-container::-webkit-scrollbar,
           .home-category-scroll-container::-webkit-scrollbar {
             display: none;
           }
@@ -491,7 +458,6 @@ function Home({ addToCart }) {
           .home-categories-scroll-container,
           .home-banner-container,
           .home-sale-scroll-container,
-          .home-breakfast-scroll-container,
           .home-category-scroll-container {
             scrollbar-width: none;
             -ms-overflow-style: none;
@@ -499,7 +465,6 @@ function Home({ addToCart }) {
 
           .home-category-item,
           .home-sale-item,
-          .home-breakfast-item,
           .home-category-item-scroll {
             will-change: transform, opacity;
             opacity: 1;
@@ -514,11 +479,9 @@ function Home({ addToCart }) {
             .home-categories-scroll-container,
             .home-banner-container,
             .home-sale-scroll-container,
-            .home-breakfast-scroll-container,
             .home-category-scroll-container,
             .home-category-item,
             .home-sale-item,
-            .home-breakfast-item,
             .home-category-item-scroll {
               scroll-behavior: auto !important;
               transition: none !important;
