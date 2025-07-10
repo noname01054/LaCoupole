@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
-import { Search, ChevronDown, Coffee } from 'lucide-react';
+import { Search, Coffee } from 'lucide-react';
 import MenuItemCard from '../components/MenuItemCard';
 import Banner from '../components/Banner';
 import TopCategories from '../components/TopCategories';
@@ -16,6 +16,7 @@ function Home({ addToCart }) {
   const [categories, setCategories] = useState([]);
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
@@ -36,21 +37,24 @@ function Home({ addToCart }) {
     () =>
       debounce(async (query) => {
         if (!isMounted.current) return;
-        if (query.trim() === '') {
-          setFilteredItems([...menuItems, ...breakfastItems]);
+        setSearchLoading(true);
+        if (query.trim().length < 2) {
+          setFilteredItems(menuItems);
+          setSearchLoading(false);
           return;
         }
         try {
           const response = await api.searchMenuItems(query);
-          const breakfastResponse = await api.searchBreakfasts(query);
-          setFilteredItems([...(response.data || []), ...(breakfastResponse.data || [])]);
+          setFilteredItems(response.data || []);
         } catch (error) {
           console.error('Erreur lors de la recherche des éléments du menu :', error);
           toast.error(error.response?.data?.error || 'Échec de la recherche des éléments du menu');
           setFilteredItems([]);
+        } finally {
+          setSearchLoading(false);
         }
       }, 500),
-    [menuItems, breakfastItems]
+    [menuItems]
   );
 
   useEffect(() => {
@@ -61,17 +65,14 @@ function Home({ addToCart }) {
         setLoading(true);
         const [menuResponse, breakfastResponse, categoriesResponse, bannersResponse] = await Promise.all([
           api.get('/menu-items'),
-          api.get('/breakfasts'),
+          api.getBreakfasts(),
           api.get('/categories'),
           api.getEnabledBanners(),
         ]);
 
         if (isActive) {
           const menuData = menuResponse.data || [];
-          const breakfastData = (breakfastResponse.data || []).map(item => ({
-            ...item,
-            type: 'breakfast',
-          }));
+          const breakfastData = breakfastResponse.data || [];
           const categoriesData = categoriesResponse.data || [];
           const bannersData = bannersResponse.data || [];
 
@@ -81,7 +82,7 @@ function Home({ addToCart }) {
             { id: 'all', name: 'Tout le menu', image_url: null },
             ...categoriesData,
           ]);
-          setFilteredItems([...menuData, ...breakfastData]);
+          setFilteredItems(menuData);
           setBanners(bannersData);
         }
       } catch (error) {
@@ -132,8 +133,8 @@ function Home({ addToCart }) {
     return () => clearInterval(interval);
   }, [banners.length]);
 
-  const handleViewProduct = useCallback((id, type = 'menuItem') => {
-    if (type === 'breakfast') {
+  const handleViewProduct = useCallback((id, itemType = 'menuItem') => {
+    if (itemType === 'breakfast') {
       navigate(`/breakfast/${id}`);
     } else {
       navigate(`/product/${id}`);
@@ -269,7 +270,13 @@ function Home({ addToCart }) {
   }, [banners]);
 
   const saleItems = useMemo(() => {
-    return [...menuItems, ...breakfastItems]
+    return [
+      ...menuItems,
+      ...breakfastItems.map(breakfast => ({
+        ...breakfast,
+        type: 'breakfast',
+      })),
+    ]
       .filter((item) => item.sale_price && item.sale_price < item.regular_price)
       .map((item) => (
         <div key={`${item.type || 'menuItem'}-${item.id}`} className="home-sale-item">
@@ -277,6 +284,7 @@ function Home({ addToCart }) {
             item={item}
             onAddToCart={addToCart}
             onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
+            popupClassName="home-menu-item-popup"
           />
         </div>
       ));
@@ -286,8 +294,16 @@ function Home({ addToCart }) {
     return categories
       .filter((category) => category.id !== 'all')
       .map((category) => {
-        const items = [...menuItems, ...breakfastItems].filter((item) => item.category_id === category.id);
-        if (items.length === 0) return null;
+        const categoryMenuItems = menuItems.filter((item) => item.category_id === category.id);
+        const categoryBreakfastItems = breakfastItems
+          .filter((breakfast) => breakfast.category_id === category.id)
+          .map(breakfast => ({
+            ...breakfast,
+            type: 'breakfast',
+            category_name: category.name,
+          }));
+        const combinedItems = [...categoryMenuItems, ...categoryBreakfastItems];
+        if (combinedItems.length === 0) return null;
         return (
           <div key={category.id} className="home-category-section">
             <div sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -301,12 +317,13 @@ function Home({ addToCart }) {
             </div>
             <div className="home-category-scroll-container">
               <div className="home-category-grid">
-                {items.map((item) => (
+                {combinedItems.map((item) => (
                   <div key={`${item.type || 'menuItem'}-${item.id}`} className="home-category-item-scroll">
                     <MenuItemCard
                       item={item}
                       onAddToCart={addToCart}
                       onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
+                      popupClassName="home-menu-item-popup"
                     />
                   </div>
                 ))}
@@ -377,118 +394,109 @@ function Home({ addToCart }) {
               className="home-search-input"
             />
           </div>
-          <button
-            className="home-filter-button"
-            onClick={() => navigate('/categories')}
-          >
-            <ChevronDown size={18} color="#8e8e93" />
-          </button>
-        </div>
-
-        <div className="home-categories-section">
-          <div className="home-categories-header">
-            <h2 className="home-categories-title">Catégories</h2>
+          {searchQuery && filteredItems.length > 0 && !searchLoading && (
             <button
-              className="home-see-all-button"
-              onClick={() => navigate('/categories')}
+              className="home-clear-results-button"
+              onClick={() => setSearchQuery('')}
             >
-              Voir tout
+              Effacer
             </button>
-          </div>
-
-          <div className="home-categories-scroll-container">
-            <div className="home-categories-grid">
-              {categoryItems}
-            </div>
-          </div>
+          )}
         </div>
-      </div>
 
-      <div className="home-action-section">
-        {banners.length > 0 && (
-          <div className="home-banner-container" ref={bannerContainerRef}>
-            <div className="home-banner-grid">
-              {bannerItems}
-            </div>
-          </div>
-        )}
-        <TopCategories />
-        {saleItems.length > 0 && (
-          <div className="home-sale-section">
-            <div className="home-sale-header">
-              <h2 className="home-sale-title">En promotion</h2>
+        {searchQuery.trim() ? (
+          <div className="home-search-results-section">
+            <div className="home-search-results-header">
+              <h2 className="home-search-results-title">
+                Résultats de recherche pour "{searchQuery}"
+              </h2>
               <button
                 className="home-see-all-button"
-                onClick={() => navigate('/sale')}
+                onClick={() => navigate('/categories')}
               >
                 Voir tout
               </button>
             </div>
-            <div className="home-sale-scroll-container">
-              <div className="home-sale-grid">
-                {saleItems}
+            {searchLoading ? (
+              <div className="home-search-loading">
+                <div className="home-loading-spinner"></div>
+                <p>Recherche en cours...</p>
+              </div>
+            ) : filteredItems.length > 0 ? (
+              <div className="home-search-results-container">
+                <div className="home-search-results-grid">
+                  {filteredItems.map((item, index) => (
+                    <div
+                      key={`menuItem-${item.id}`}
+                      className="home-search-result-item"
+                      style={{ animationDelay: `${index * 0.08}s` }}
+                    >
+                      <MenuItemCard
+                        item={item}
+                        onAddToCart={addToCart}
+                        onView={() => handleViewProduct(item.id)}
+                        popupClassName="home-menu-item-popup"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="home-no-results-text">Aucun résultat trouvé pour "{searchQuery}".</p>
+            )}
+          </div>
+        ) : (
+          <div className="home-categories-section">
+            <div className="home-categories-header">
+              <h2 className="home-categories-title">Catégories</h2>
+              <button
+                className="home-see-all-button"
+                onClick={() => navigate('/categories')}
+              >
+                Voir tout
+              </button>
+            </div>
+            <div className="home-categories-scroll-container">
+              <div className="home-categories-grid">
+                {categoryItems}
               </div>
             </div>
           </div>
         )}
-        {categorySections}
-        <BestSellers addToCart={addToCart} />
       </div>
 
-      <style>
-        {`
-          .home-categories-scroll-container,
-          .home-banner-container,
-          .home-sale-scroll-container,
-          .home-category-scroll-container {
-            scroll-behavior: auto;
-            scroll-snap-type: x mandatory;
-            will-change: scroll-position;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior-x: contain;
-          }
-
-          .home-categories-scroll-container::-webkit-scrollbar,
-          .home-banner-container::-webkit-scrollbar,
-          .home-sale-scroll-container::-webkit-scrollbar,
-          .home-category-scroll-container::-webkit-scrollbar {
-            display: none;
-          }
-
-          .home-categories-scroll-container,
-          .home-banner-container,
-          .home-sale-scroll-container,
-          .home-category-scroll-container {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-          }
-
-          .home-category-item,
-          .home-sale-item,
-          .home-category-item-scroll {
-            will-change: transform, opacity;
-            opacity: 1;
-          }
-
-          .home-banner-item {
-            will-change: transform;
-            opacity: 1;
-          }
-
-          @media (prefers-reduced-motion: reduce) {
-            .home-categories-scroll-container,
-            .home-banner-container,
-            .home-sale-scroll-container,
-            .home-category-scroll-container,
-            .home-category-item,
-            .home-sale-item,
-            .home-category-item-scroll {
-              scroll-behavior: auto !important;
-              transition: none !important;
-            }
-          }
-        `}
-      </style>
+      {!searchQuery.trim() && (
+        <div className="home-action-section">
+          {banners.length > 0 && (
+            <div className="home-banner-container" ref={bannerContainerRef}>
+              <div className="home-banner-grid">
+                {bannerItems}
+              </div>
+            </div>
+          )}
+          <TopCategories />
+          {saleItems.length > 0 && (
+            <div className="home-sale-section">
+              <div className="home-sale-header">
+                <h2 className="home-sale-title">En promotion</h2>
+                <button
+                  className="home-see-all-button"
+                  onClick={() => navigate('/sale')}
+                >
+                  Voir tout
+                </button>
+              </div>
+              <div className="home-sale-scroll-container">
+                <div className="home-sale-grid">
+                  {saleItems}
+                </div>
+              </div>
+            </div>
+          )}
+          {categorySections}
+          <BestSellers addToCart={addToCart} />
+        </div>
+      )}
     </div>
   );
 }
