@@ -56,7 +56,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     const message = error.response?.data?.error || error.message;
-    console.error(`[Error] ${error.config?.url}: ${message}`, { status: error.response?.status, headers: error.response?.headers });
+    console.error(`[Error] ${error.config?.url}: ${message}`, {
+      status: error.response?.status,
+      headers: error.response?.headers,
+      responseData: error.response?.data,
+    });
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
