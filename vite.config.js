@@ -8,13 +8,13 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:5000',
+        target: process.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
         changeOrigin: true,
         secure: true,
         ws: true,
       },
       '/socket.io': {
-        target: process.env.VITE_API_URL || 'http://localhost:5000',
+        target: process.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
         changeOrigin: true,
         secure: true,
         ws: true,
@@ -26,6 +26,6 @@ export default defineConfig({
     },
   },
   define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:5000'),
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'),
   },
 });
