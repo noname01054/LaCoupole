@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
+  baseURL: `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -26,8 +26,7 @@ api.interceptors.request.use(
         console.log('Setting Authorization header:', `Bearer ${token.substring(0, 10)}...`);
       }
     } else {
-      // Suppress warning for public endpoints to reduce noise
-      // console.warn('No token found for request:', config.url);
+      console.warn('No token found for request:', config.url);
       delete config.headers.Authorization;
     }
     const sessionId = localStorage.getItem('sessionId');
@@ -56,7 +55,7 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    const message = error.response?.data?.error || error.message || 'Unknown error';
+    const message = error.response?.data?.error || error.message;
     console.error(`[Error] ${error.config?.url}: ${message}`);
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
@@ -175,11 +174,5 @@ api.updateBreakfastOption = (breakfastId, optionId, data) => api.put(`/breakfast
 api.getTheme = () => api.get('/theme');
 api.updateTheme = (data) => api.put('/theme', data);
 api.updateBranding = (data) => api.put('/theme/branding', data);
-
-// Promotion API methods
-api.getPromotions = () => api.get('/promotions');
-api.addPromotion = (data) => api.post('/promotions', data);
-api.updatePromotion = (id, data) => api.put(`/promotions/${id}`, data);
-api.deletePromotion = (id, data) => api.delete(`/promotions/${id}`, { data });
 
 export { api };
