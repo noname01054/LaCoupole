@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}`,
+  baseURL: `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -55,7 +55,7 @@ api.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
-    const message = error.response?.data?.error || error.message;
+    const message = error.response?.data?.error || error.message || 'Unknown error';
     console.error(`[Error] ${error.config?.url}: ${message}`);
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
