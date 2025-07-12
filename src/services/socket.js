@@ -2,7 +2,7 @@ import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : 'https://coffe-back-production-e0b2.up.railway.app';
+const API_URL = import.meta.env.VITE_API_URL;
 
 let socket = null;
 let socketConnected = false;
