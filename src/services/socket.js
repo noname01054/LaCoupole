@@ -23,7 +23,7 @@ export const initSocket = (
   }
   initialized = true;
 
-  socket = io(`${API_URL}/`, { // Explicitly target root namespace
+  socket = io(`${API_URL}/`, {
     withCredentials: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -35,6 +35,10 @@ export const initSocket = (
     auth: {
       token: localStorage.getItem('jwt_token') || null,
       sessionId: localStorage.getItem('sessionId') || null,
+    },
+    // Explicitly handle CORS origin
+    extraHeaders: {
+      Origin: import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
     },
   });
 
