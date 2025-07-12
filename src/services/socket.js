@@ -2,7 +2,8 @@ import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app';
+// Hardcode the WebSocket URL to ensure consistency
+const SOCKET_URL = 'wss://coffe-back-production-e0b2.up.railway.app/socket.io/';
 
 let socket = null;
 let socketConnected = false;
@@ -23,7 +24,7 @@ export const initSocket = (
   }
   initialized = true;
 
-  socket = io(`${API_URL}/`, {
+  socket = io(SOCKET_URL, {
     withCredentials: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
@@ -35,10 +36,6 @@ export const initSocket = (
     auth: {
       token: localStorage.getItem('jwt_token') || null,
       sessionId: localStorage.getItem('sessionId') || null,
-    },
-    // Explicitly handle CORS origin
-    extraHeaders: {
-      Origin: import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
     },
   });
 
