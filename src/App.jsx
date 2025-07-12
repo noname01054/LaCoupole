@@ -65,12 +65,14 @@ function App() {
     toast.info(notification.message, { autoClose: 5000 });
   };
 
+  // Apply theme to CSS custom properties and update favicon and title
   const applyTheme = (themeData) => {
     document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
     document.documentElement.style.setProperty('--secondary-color', themeData.secondary_color);
     document.documentElement.style.setProperty('--background-color', themeData.background_color);
     document.documentElement.style.setProperty('--text-color', themeData.text_color);
 
+    // Update favicon with full URL and cache-busting
     let favicon = document.querySelector("link[rel*='icon']");
     if (!favicon) {
       favicon = document.createElement('link');
@@ -83,6 +85,7 @@ function App() {
       : defaultTheme.favicon_url;
     favicon.href = faviconUrl;
 
+    // Update document title
     document.title = themeData.site_title || defaultTheme.site_title;
   };
 
@@ -97,24 +100,25 @@ function App() {
       api.defaults.headers.common['X-Session-Id'] = fallbackSessionId;
 
       const socketCleanup = initSocket(
-        () => {},
-        () => {},
-        () => {},
-        () => {},
-        () => {},
+        () => {}, // onNewOrder
+        () => {}, // onOrderUpdate
+        () => {}, // onTableStatusUpdate
+        () => {}, // onReservationUpdate
+        () => {}, // onRatingUpdate
         (data) => {
           if (socket && socket.connected) {
             console.log('Broadcasting orderApproved event:', data, { timestamp: new Date().toISOString() });
-            socket.emit('orderApproved', data);
+            socket.emit('orderApproved', data); // Broadcast to all clients
           } else {
             console.warn('Socket not connected, cannot broadcast orderApproved:', data, { timestamp: new Date().toISOString() });
           }
-        },
+        }, // onOrderApproved
         handleNewNotification
       );
       const socketInstance = getSocket();
       setSocket(socketInstance);
 
+      // Monitor socket connection status with retry logic
       socketInstance.on('connect', () => {
         console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, timestamp: new Date().toISOString() });
       });
@@ -179,6 +183,7 @@ function App() {
         }
       };
 
+      // Parallelize initialization for performance
       await Promise.all([checkAuth(), fetchPromotions(), fetchTheme()]).catch((err) => {
         console.error('Initialization error:', err, { timestamp: new Date().toISOString() });
         toast.error('Failed to initialize app');
