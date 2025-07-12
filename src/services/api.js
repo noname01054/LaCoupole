@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/api`,
+  baseURL: `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -72,7 +72,7 @@ api.interceptors.response.use(
         }
         console.log('Attempting token refresh with:', token.substring(0, 10) + '...');
         const res = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'https://coffe-back-production.up.railway.app'}/api/refresh-token`,
+          `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}/api/refresh-token`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
