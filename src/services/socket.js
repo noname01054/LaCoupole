@@ -2,7 +2,7 @@ import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app';
 
 let socket = null;
 let socketConnected = false;
@@ -23,7 +23,7 @@ export const initSocket = (
   }
   initialized = true;
 
-  socket = io(API_URL, {
+  socket = io(`${API_URL}/`, { // Explicitly target root namespace
     withCredentials: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
