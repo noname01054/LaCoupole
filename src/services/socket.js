@@ -2,8 +2,7 @@ import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 
-// Hardcode the WebSocket URL for production
-const SOCKET_URL = 'wss://coffe-back-production-e0b2.up.railway.app/socket.io/';
+const API_URL = import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app';
 
 let socket = null;
 let socketConnected = false;
@@ -24,7 +23,7 @@ export const initSocket = (
   }
   initialized = true;
 
-  socket = io(SOCKET_URL, {
+  socket = io(API_URL, {
     withCredentials: true,
     reconnection: true,
     reconnectionAttempts: Infinity,
