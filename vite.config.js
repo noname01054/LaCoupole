@@ -11,8 +11,8 @@ export default defineConfig({
         target: process.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
         changeOrigin: true,
         secure: true,
-        ws: false, // WebSocket handled separately
-        rewrite: (path) => path.replace(/^\/api/, ''), // Remove /api prefix
+        ws: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/socket.io': {
         target: process.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app',
