@@ -2,7 +2,7 @@ import io from 'socket.io-client';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 
-// Hardcode the WebSocket URL to ensure consistency
+// Hardcode the WebSocket URL for production
 const SOCKET_URL = 'wss://coffe-back-production-e0b2.up.railway.app/socket.io/';
 
 let socket = null;
