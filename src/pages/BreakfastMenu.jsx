@@ -500,7 +500,7 @@ function BreakfastMenu({ addToCart }) {
                           <span className="breakfast-menu__error-indicator">*</span>
                         )}
                       </div>
-                      <div className="breakfast-menu__options-grid">
+                      <div className={`breakfast-menu__options-grid ${group.options.length > 7 ? 'breakfast-menu__options-grid--scrollable' : ''}`}>
                         {group.options.map((opt) => {
                           const isSelected = selectedOptions[breakfast.id]?.[groupId]?.includes(opt.id);
                           return (
