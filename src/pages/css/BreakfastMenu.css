@@ -17,6 +17,9 @@
   background-color: var(--background-color, #f8fafc);
   min-height: 100vh;
   position: relative;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 @media (max-width: 767px) {
@@ -93,6 +96,7 @@
 .breakfast-menu__content {
   padding: 16px;
   padding-bottom: 32px;
+  width: 100%;
 }
 
 .breakfast-menu__breakfast-card {
@@ -106,6 +110,8 @@
   animation: breakfast-menu__slideUp 0.6s ease-out forwards;
   opacity: 0;
   transform: translateY(20px);
+  width: 100%;
+  max-width: 100%;
 }
 
 .breakfast-menu__breakfast-card--index-0 { animation-delay: 0s; }
@@ -306,13 +312,13 @@
   gap: 8px;
 }
 
-.breakfast-menu__user-rating-stars {
+.breakfast-menu__user-ranking-stars {
   display: flex;
   gap: 4px;
 }
 
 .breakfast-menu__user-rating-star,
-.breakfast-menu__user-rating-star-filled {
+breakfast-menu__user-rating-star-filled {
   font-size: 18px;
   cursor: pointer;
   transition: color 0.2s ease;
@@ -348,7 +354,7 @@
   box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
 }
 
-.breakfast-menu__rating-thank-you {
+.breakfast-menu__rating-th oku-thank-you {
   font-size: 13px;
   color: var(--success-color, #22c55e);
   font-weight: 500;
@@ -465,6 +471,30 @@
   gap: 8px;
 }
 
+.breakfast-menu__options-grid--scrollable {
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.breakfast-menu__options-grid--scrollable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.breakfast-menu__options-grid--scrollable::-webkit-scrollbar-track {
+  background: var(--scrollbar-track-color, #f1f5f9);
+  border-radius: 3px;
+}
+
+.breakfast-menu__options-grid--scrollable::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb-color, #d1d5db);
+  border-radius: 3px;
+}
+
+.breakfast-menu__options-grid--scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover-color, #9ca3af);
+}
+
 @media (min-width: 768px) {
   .breakfast-menu__options-grid {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -538,7 +568,7 @@
 .breakfast-menu__checkbox-indicator {
   width: 20px;
   height: 20px;
-  border-radius: ... 50%;
+  border-radius: 50%;
   border: 2px solid var(--radio-border-color, #d1d5db);
   display: flex;
   align-items: center;
@@ -591,7 +621,7 @@
 }
 
 .breakfast-menu__quantity-btn {
-  width:  elixir32px;
+  width: 32px;
   height: 32px;
   background-color: var(--primary-color, #ff6b35);
   color: var(--badge-text-color, white);
@@ -749,21 +779,6 @@
 .breakfast-menu__retry-button:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
-}
-
-.breakfast-menu__loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  gap: 16px;
-}
-
-.breakfast-menu__loading-text {
-  font-size: 16px;
-  color: var(--secondary-text-color, #6b7280);
-  font-weight: 500;
 }
 
 .breakfast-menu__related-section {
