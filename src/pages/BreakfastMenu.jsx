@@ -11,13 +11,17 @@ import {
   AddOutlined,
   ExpandMoreOutlined,
   ExpandLessOutlined,
+  Star,
 } from '@mui/icons-material';
+import { debounce } from 'lodash';
+import MenuItemCard from '../components/MenuItemCard';
 import './css/BreakfastMenu.css';
 
 function BreakfastMenu({ addToCart }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [breakfasts, setBreakfasts] = useState([]);
+  const [relatedProducts, setRelatedProducts] = useState([]);
   const [isLoading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [quantities, setQuantities] = useState({});
@@ -30,16 +34,16 @@ function BreakfastMenu({ addToCart }) {
   const [touchStartX, setTouchStartX] = useState(null);
   const [touchCurrentX, setTouchCurrentX] = useState(null);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [isRatingSubmitted, setIsRating] = useState(false);
   const containerRef = useRef(null);
 
   const getImageUrl = (imageUrl) => {
-  if (!imageUrl || imageUrl === '/Uploads/undefined' || imageUrl === 'null') {
-    return '/placeholder.jpg';
-  }
-  // Ensure leading slash for consistency
-  const normalizedPath = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
-  return `${api.defaults.baseURL.replace('/api', '')}${normalizedPath}`;
-};
+    if (!imageUrl || imageUrl === '/Uploads/undefined' || imageUrl === 'null') {
+      return '/placeholder.jpg';
+    }
+    return `${api.defaults.baseURL.replace('/api', '')}${imageUrl}`;
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -50,27 +54,36 @@ function BreakfastMenu({ addToCart }) {
         let breakfastsData = [];
 
         if (id) {
-          const [breakfastResponse, optionsResponse, groupsResponse, categoriesResponse, allBreakfastsResponse] = await Promise.all([
+          const [breakfastResponse, optionsResponse, groupsResponse, categoriesResponse, allBreakfastsResponse, relatedResponse, ratingResponse] = await Promise.all([
             api.getBreakfast(id),
             api.getBreakfastOptions(id),
             api.getBreakfastOptionGroups(id),
             api.get('/categories'),
             api.getBreakfasts(),
+            api.get(`/breakfasts/${id}/related`),
+            api.getRatingsByBreakfast(id),
           ]);
           if (!breakfastResponse.data.availability) {
-            throw new Error('Petit-déjeuner non disponible');
+            throw new Error("Le petit-déjeuner n'est pas disponible");
           }
           breakfastsData = [{
             ...breakfastResponse.data,
             options: optionsResponse.data || [],
             optionGroups: groupsResponse.data || [],
+            average_rating: parseFloat(breakfastResponse.data.average_rating || 0).toFixed(1),
+            review_count: parseInt(breakfastResponse.data.review_count || 0),
           }];
           setCategories(categoriesResponse.data || []);
+          setRelatedProducts(relatedResponse.data || []);
           const categoryId = breakfastResponse.data.category_id;
           const categoryBreakfastsData = allBreakfastsResponse.data
             .filter(b => b.category_id === categoryId && b.availability)
             .sort((a, b) => a.id - b.id);
           setCategoryBreakfasts(categoryBreakfastsData);
+          if (ratingResponse.data?.length > 0) {
+            setIsRating(true);
+            setRating(parseInt(ratingResponse.data[0].rating) || 0);
+          }
         } else {
           const [breakfastResponse, categoriesResponse] = await Promise.all([
             api.getBreakfasts(),
@@ -88,6 +101,8 @@ function BreakfastMenu({ addToCart }) {
                   ...breakfast,
                   options: optionsResponse.data || [],
                   optionGroups: groupsResponse.data || [],
+                  average_rating: parseFloat(breakfast.average_rating || 0).toFixed(1),
+                  review_count: parseInt(breakfast.review_count || 0),
                 };
               })
           );
@@ -108,7 +123,7 @@ function BreakfastMenu({ addToCart }) {
         setSelectedOptions(initialOptions);
         setExpandedOptions(initialExpanded);
       } catch (error) {
-        console.error('Erreur lors du chargement des petits-déjeuners:', error);
+        console.error('Erreur lors de la récupération des petits-déjeuners:', error);
         toast.error(error.response?.data?.error || 'Échec du chargement des petits-déjeuners');
         setError('Échec du chargement des petits-déjeuners');
       } finally {
@@ -118,14 +133,73 @@ function BreakfastMenu({ addToCart }) {
     fetchData();
   }, [id]);
 
+  const debouncedRatingSubmit = useMemo(
+    () =>
+      debounce(async (ratingValue) => {
+        if (ratingValue < 1 || ratingValue > 5) {
+          toast.error('Veuillez sélectionner une note entre 1 et 5');
+          return;
+        }
+        try {
+          await api.submitBreakfastRating({
+            breakfast_id: parseInt(id),
+            rating: parseInt(ratingValue),
+          });
+          setIsRating(true);
+          toast.success('Note soumise !');
+          const response = await api.getBreakfast(id);
+          setBreakfasts((prev) =>
+            prev.map((b) =>
+              b.id === parseInt(id)
+                ? {
+                    ...b,
+                    average_rating: parseFloat(response.data.average_rating || 0).toFixed(1),
+                    review_count: parseInt(response.data.review_count || 0),
+                  }
+                : b
+            )
+          );
+        } catch (error) {
+          console.error('Erreur lors de la soumission de la note:', error);
+          toast.error(error.response?.data?.error || 'Échec de la soumission de la note');
+        }
+      }, 500),
+    [id]
+  );
+
+  const handleStarClick = useCallback((star) => {
+    if (!isRatingSubmitted) {
+      setRating(star);
+    }
+  }, [isRatingSubmitted]);
+
   const handleOptionChange = useCallback((breakfastId, groupId, optionId) => {
-    setSelectedOptions((prev) => ({
-      ...prev,
-      [breakfastId]: {
-        ...prev[breakfastId],
-        [groupId]: optionId,
-      },
-    }));
+    setSelectedOptions((prev) => {
+      const currentSelections = prev[breakfastId]?.[groupId] || [];
+      const group = breakfasts.find(b => b.id === breakfastId)?.optionGroups.find(g => g.id === groupId);
+      const maxSelections = group?.max_selections || 0;
+      let newSelections;
+
+      if (Array.isArray(currentSelections)) {
+        if (currentSelections.includes(optionId)) {
+          newSelections = currentSelections.filter(id => id !== optionId);
+        } else if (maxSelections === 0 || currentSelections.length < maxSelections) {
+          newSelections = [...currentSelections, optionId];
+        } else {
+          newSelections = [...currentSelections.slice(1), optionId];
+        }
+      } else {
+        newSelections = [optionId];
+      }
+
+      return {
+        ...prev,
+        [breakfastId]: {
+          ...prev[breakfastId],
+          [groupId]: newSelections,
+        },
+      };
+    });
     setValidationErrors((prev) => ({
       ...prev,
       [breakfastId]: {
@@ -133,7 +207,7 @@ function BreakfastMenu({ addToCart }) {
         [groupId]: false,
       },
     }));
-  }, []);
+  }, [breakfasts]);
 
   const toggleOptionsExpanded = useCallback((breakfastId) => {
     setExpandedOptions((prev) => ({
@@ -148,22 +222,34 @@ function BreakfastMenu({ addToCart }) {
         setAddingToCart((prev) => ({ ...prev, [breakfast.id]: true }));
         
         const selectedGroupOptions = selectedOptions[breakfast.id] || {};
-        const requiredGroups = breakfast.optionGroups.map((g) => g.id);
-        const missingGroups = requiredGroups.filter((gId) => !selectedGroupOptions[gId]);
-        
-        if (missingGroups.length > 0) {
-          toast.error('Veuillez sélectionner une option pour chaque groupe d\'options');
+        const errors = {};
+        let hasErrors = false;
+
+        breakfast.optionGroups.forEach((group) => {
+          const selections = selectedGroupOptions[group.id] || [];
+          if (group.is_required && selections.length === 0) {
+            errors[group.id] = true;
+            hasErrors = true;
+          }
+          if (group.max_selections > 0 && selections.length > group.max_selections) {
+            errors[group.id] = true;
+            hasErrors = true;
+          }
+        });
+
+        if (hasErrors) {
+          const errorMessage = Object.values(errors).some(e => e) 
+            ? 'Veuillez sélectionner le nombre correct d\'options pour chaque groupe requis'
+            : 'Trop de sélections pour certains groupes d\'options';
+          toast.error(errorMessage);
           setValidationErrors((prev) => ({
             ...prev,
-            [breakfast.id]: {
-              ...prev[breakfast.id],
-              ...missingGroups.reduce((acc, gId) => ({ ...acc, [gId]: true }), {}),
-            },
+            [breakfast.id]: errors,
           }));
           return;
         }
 
-        const selectedOptionIds = Object.values(selectedGroupOptions).filter((id) => id);
+        const selectedOptionIds = Object.values(selectedGroupOptions).flat().filter(id => id);
         const basePrice = parseFloat(breakfast.price) || 0;
         const optionsPrice = breakfast.options
           .filter((opt) => selectedOptionIds.includes(opt.id))
@@ -199,14 +285,14 @@ function BreakfastMenu({ addToCart }) {
         setAddingToCart((prev) => ({ ...prev, [breakfast.id]: false }));
       }
     },
-    [addToCart, quantities, selectedOptions]
+    [addToCart, quantities, selectedOptions, breakfasts]
   );
 
   const calculatePriceBreakdown = useCallback(
     (breakfast) => {
       const basePrice = parseFloat(breakfast.price) || 0;
       const optionsPrice = breakfast.options
-        .filter((opt) => Object.values(selectedOptions[breakfast.id] || {}).includes(opt.id))
+        .filter((opt) => Object.values(selectedOptions[breakfast.id] || {}).flat().includes(opt.id))
         .reduce((sum, opt) => sum + parseFloat(opt.additional_price), 0);
       const quantity = quantities[breakfast.id] || 1;
       const total = (basePrice + optionsPrice) * quantity;
@@ -218,6 +304,14 @@ function BreakfastMenu({ addToCart }) {
     },
     [quantities, selectedOptions]
   );
+
+  const handleViewProduct = useCallback((itemId, itemType = 'menuItem') => {
+    if (itemType === 'breakfast') {
+      navigate(`/breakfast/${itemId}`);
+    } else {
+      navigate(`/product/${itemId}`);
+    }
+  }, [navigate]);
 
   const handleTouchStart = useCallback((e) => {
     if (window.innerWidth > 768 || !id) return;
@@ -231,7 +325,7 @@ function BreakfastMenu({ addToCart }) {
       if (!isSwiping || window.innerWidth > 768 || !id) return;
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limite la distance de glissement
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
       if (containerRef.current) {
         containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
@@ -253,7 +347,6 @@ function BreakfastMenu({ addToCart }) {
     }
 
     if (deltaX > swipeThreshold) {
-      // Glissement de gauche à droite : aller au menu de la catégorie si premier petit-déjeuner, sinon petit-déjeuner précédent
       if (currentIndex === 0 && breakfasts[0]?.category_id) {
         navigate(`/category/${breakfasts[0].category_id}`);
       } else if (currentIndex > 0) {
@@ -261,7 +354,6 @@ function BreakfastMenu({ addToCart }) {
         navigate(`/breakfast/${prevBreakfast.id}`);
       }
     } else if (deltaX < -swipeThreshold) {
-      // Glissement de droite à gauche : petit-déjeuner suivant ou catégorie suivante non vide si dernier petit-déjeuner
       if (currentIndex < categoryBreakfasts.length - 1) {
         const nextBreakfast = categoryBreakfasts[currentIndex + 1];
         navigate(`/breakfast/${nextBreakfast.id}`);
@@ -270,7 +362,6 @@ function BreakfastMenu({ addToCart }) {
         let currentCategoryIndex = categoryIds.indexOf(parseInt(breakfasts[0].category_id));
         let nextCategoryId = null;
 
-        // Trouver la prochaine catégorie non vide
         while (currentCategoryIndex < categoryIds.length - 1) {
           currentCategoryIndex += 1;
           const candidateCategoryId = categoryIds[currentCategoryIndex];
@@ -318,12 +409,13 @@ function BreakfastMenu({ addToCart }) {
         if (groupOptions.length > 0) {
           acc[group.id] = {
             title: group.title,
+            is_required: group.is_required,
+            max_selections: group.max_selections,
             options: groupOptions,
           };
         }
         return acc;
       }, {});
-
       const hasOptions = Object.keys(optionsByGroup).length > 0;
       const isExpanded = expandedOptions[breakfast.id];
       const isAddingToCart = addingToCart[breakfast.id];
@@ -340,7 +432,7 @@ function BreakfastMenu({ addToCart }) {
                 alt={breakfast.name || 'Petit-déjeuner'}
                 className="breakfast-menu__product-image"
                 loading="lazy"
-                onError={(e) => (e.target.src = '/placeholder.jpg')}
+                onError={(e) => { e.target.src = '/placeholder.jpg'; }}
               />
               <div className="breakfast-menu__image-overlay">
                 <div className={`breakfast-menu__availability-badge ${breakfast.availability ? 'breakfast-menu__available-badge' : 'breakfast-menu__unavailable-badge'}`}>
@@ -359,6 +451,20 @@ function BreakfastMenu({ addToCart }) {
               <div className="breakfast-menu__price-badge">
                 {priceBreakdown.basePrice} DT
               </div>
+            </div>
+
+            <div className="breakfast-menu__rating-container">
+              <div className="breakfast-menu__rating-stars">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    className={star <= Math.round(breakfast.average_rating) ? 'breakfast-menu__rating-star-filled' : 'breakfast-menu__rating-star'}
+                  />
+                ))}
+              </div>
+              <span className="breakfast-menu__rating-text">
+                {breakfast.average_rating} ({breakfast.review_count} avis)
+              </span>
             </div>
 
             <p className="breakfast-menu__product-description">
@@ -388,26 +494,27 @@ function BreakfastMenu({ addToCart }) {
                       className={`breakfast-menu__option-group ${validationErrors[breakfast.id]?.[groupId] ? 'breakfast-menu__option-group--error' : ''}`}
                     >
                       <div className="breakfast-menu__group-title">
-                        {group.title}
+                        {group.title} {group.is_required ? '(Requis)' : '(Optionnel)'}
+                        {group.max_selections > 0 && `, Max: ${group.max_selections}`}
                         {validationErrors[breakfast.id]?.[groupId] && (
                           <span className="breakfast-menu__error-indicator">*</span>
                         )}
                       </div>
                       <div className="breakfast-menu__options-grid">
                         {group.options.map((opt) => {
-                          const isSelected = selectedOptions[breakfast.id]?.[groupId] === opt.id;
+                          const isSelected = selectedOptions[breakfast.id]?.[groupId]?.includes(opt.id);
                           return (
                             <label
                               key={opt.id}
                               className={`breakfast-menu__option-item ${isSelected ? 'breakfast-menu__option-item--selected' : ''}`}
                             >
                               <input
-                                type="radio"
+                                type="checkbox"
                                 name={`group-${breakfast.id}-${groupId}`}
                                 checked={isSelected}
                                 onChange={() => handleOptionChange(breakfast.id, groupId, opt.id)}
                                 disabled={!breakfast.availability}
-                                className="breakfast-menu__hidden-radio"
+                                className="breakfast-menu__hidden-checkbox"
                               />
                               <div className="breakfast-menu__option-content">
                                 <span className="breakfast-menu__option-name">
@@ -417,8 +524,8 @@ function BreakfastMenu({ addToCart }) {
                                   +{parseFloat(opt.additional_price).toFixed(2)} DT
                                 </span>
                               </div>
-                              <div className={`breakfast-menu__radio-indicator ${isSelected ? 'breakfast-menu__radio-indicator--selected' : ''}`}>
-                                {isSelected && <div className="breakfast-menu__radio-indicator-dot"></div>}
+                              <div className={`breakfast-menu__checkbox-indicator ${isSelected ? 'breakfast-menu__checkbox-indicator--selected' : ''}`}>
+                                {isSelected && <div className="breakfast-menu__checkbox-indicator-dot"></div>}
                               </div>
                             </label>
                           );
@@ -430,6 +537,35 @@ function BreakfastMenu({ addToCart }) {
               </div>
             )}
 
+            <div className="breakfast-menu__options-card">
+              <div className="breakfast-menu__option-row">
+                <div className="breakfast-menu__option-left">
+                  <Star className="text-yellow-400" />
+                  <span className="breakfast-menu__option-label">Noter cet article</span>
+                </div>
+                <div className="breakfast-menu__user-rating-container">
+                  <div className="breakfast-menu__user-rating-stars">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={star <= rating ? 'breakfast-menu__user-rating-star-filled' : 'breakfast-menu__user-rating-star'}
+                        onClick={() => handleStarClick(star)}
+                      />
+                    ))}
+                  </div>
+                  {!isRatingSubmitted && rating > 0 && (
+                    <button
+                      className="breakfast-menu__rating-submit-button"
+                      onClick={() => debouncedRatingSubmit(rating)}
+                    >
+                      Soumettre
+                    </button>
+                  )}
+                  {isRatingSubmitted && <span className="breakfast-menu__rating-thank-you">Merci !</span>}
+                </div>
+              </div>
+            </div>
+
             <div className="breakfast-menu__bottom-section">
               <div className="breakfast-menu__quantity-price-row">
                 <div className="breakfast-menu__quantity-section">
@@ -437,12 +573,10 @@ function BreakfastMenu({ addToCart }) {
                   <div className="breakfast-menu__quantity-controls">
                     <button
                       className={`breakfast-menu__quantity-btn ${quantities[breakfast.id] <= 1 || !breakfast.availability ? 'breakfast-menu__quantity-btn--disabled' : ''}`}
-                      onClick={() =>
-                        setQuantities((prev) => ({
-                          ...prev,
-                          [breakfast.id]: Math.max(1, prev[breakfast.id] - 1),
-                        }))
-                      }
+                      onClick={() => setQuantities((prev) => ({
+                        ...prev,
+                        [breakfast.id]: Math.max(1, prev[breakfast.id] - 1),
+                      }))}
                       disabled={quantities[breakfast.id] <= 1 || !breakfast.availability}
                     >
                       <RemoveOutlined className="breakfast-menu__remove-icon" />
@@ -452,12 +586,10 @@ function BreakfastMenu({ addToCart }) {
                     </span>
                     <button
                       className={`breakfast-menu__quantity-btn ${!breakfast.availability ? 'breakfast-menu__quantity-btn--disabled' : ''}`}
-                      onClick={() =>
-                        setQuantities((prev) => ({
-                          ...prev,
-                          [breakfast.id]: prev[breakfast.id] + 1,
-                        }))
-                      }
+                      onClick={() => setQuantities((prev) => ({
+                        ...prev,
+                        [breakfast.id]: prev[breakfast.id] + 1,
+                      }))}
                       disabled={!breakfast.availability}
                     >
                       <AddOutlined className="breakfast-menu__add-icon" />
@@ -492,11 +624,28 @@ function BreakfastMenu({ addToCart }) {
               </button>
             </div>
           </div>
+
+          {relatedProducts.length > 0 && id && (
+            <div className="breakfast-menu__related-section">
+              <h3 className="breakfast-menu__section-title">Vous aimerez peut-être aussi</h3>
+              <div className="breakfast-menu__related-grid">
+                {relatedProducts.map((item) => (
+                  <MenuItemCard
+                    key={`${item.type || 'menuItem'}-${item.id}`}
+                    item={item}
+                    onAddToCart={addToCart}
+                    onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       );
     });
   }, [breakfasts, quantities, selectedOptions, validationErrors, expandedOptions, addingToCart, 
-      handleAddToCart, handleOptionChange, toggleOptionsExpanded]);
+      handleAddToCart, handleOptionChange, toggleOptionsExpanded, relatedProducts, id, handleViewProduct,
+      rating, isRatingSubmitted, debouncedRatingSubmit]);
 
   if (error) {
     return (
@@ -529,7 +678,7 @@ function BreakfastMenu({ addToCart }) {
       >
         <div className="breakfast-menu__loading-container">
           <div className="breakfast-menu__main-loading-spinner"></div>
-          <p className="breakfast-menu__loading-text">Chargement des petits-déjeuners délicieux...</p>
+          <p className="breakfast-menu__loading-text">Chargement des délicieux petits-déjeuners...</p>
         </div>
       </div>
     );
@@ -571,7 +720,7 @@ function BreakfastMenu({ addToCart }) {
           <ArrowBackIosOutlined className="breakfast-menu__back-icon" />
         </button>
         <h1 className="breakfast-menu__header-title">
-          {id ? breakfasts[0]?.name || 'Petit-déjeuner' : 'Menu Petit-déjeuner'}
+          {id ? breakfasts[0]?.name || 'Petit-déjeuner' : 'Menu des petits-déjeuners'}
         </h1>
         <div className="breakfast-menu__header-spacer"></div>
       </div>
