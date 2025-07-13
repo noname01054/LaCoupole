@@ -117,7 +117,8 @@ api.updateReservation = (id, data) => api.put(`/reservations/${id}`, data);
 // Rating API methods
 api.submitRating = (data) => api.post('/ratings', data);
 api.getRatingsByItem = (itemId) => api.get(`/ratings?item_id=${itemId}`);
-api.getRatingsByBreakfast = (breakfastId) => api.get(`/ratings?breakfast_id=${breakfastId}`);
+api.getRatingsByBreakfast = (breakfastId) => api.get(`/breakfast-ratings?breakfast_id=${breakfastId}`);
+api.submitBreakfastRating = (data) => api.post('/breakfast-ratings', data);
 
 // User management API methods
 api.updateUser = (id, data) => api.put(`/users/${id}`, data);
@@ -169,6 +170,7 @@ api.addBreakfastOptionGroup = (id, data) => api.post(`/breakfasts/${id}/option-g
 api.updateBreakfastOptionGroup = (breakfastId, groupId, data) => api.put(`/breakfasts/${breakfastId}/option-groups/${groupId}`, data);
 api.deleteBreakfastOptionGroup = (breakfastId, groupId, data) => api.delete(`/breakfasts/${breakfastId}/option-groups/${groupId}`, { data });
 api.updateBreakfastOption = (breakfastId, optionId, data) => api.put(`/breakfasts/${breakfastId}/options/${optionId}`, data);
+api.getRelatedBreakfastProducts = (id) => api.get(`/breakfasts/${id}/related`);
 
 // Theme API methods
 api.getTheme = () => api.get('/theme');
