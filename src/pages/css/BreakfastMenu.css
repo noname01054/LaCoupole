@@ -236,6 +236,124 @@
   flex-shrink: 0;
 }
 
+.breakfast-menu__rating-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  background-color: var(--rating-background-color, #f1f5f9);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--rating-border-color, #e5e7eb);
+}
+
+.breakfast-menu__rating-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.breakfast-menu__rating-star,
+.breakfast-menu__rating-star-filled {
+  font-size: 18px;
+  cursor: default;
+  transition: color 0.2s ease;
+}
+
+.breakfast-menu__rating-star {
+  color: var(--rating-star-color, #d1d5db);
+}
+
+.breakfast-menu__rating-star-filled {
+  color: var(--rating-star-filled-color, #f59e0b);
+}
+
+.breakfast-menu__rating-text {
+  font-size: 13px;
+  color: var(--secondary-text-color, #6b7280);
+  font-weight: 500;
+}
+
+.breakfast-menu__options-card {
+  background-color: var(--card-background-color, white);
+  border: 1px solid var(--card-border-color, #e5e7eb);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 20px;
+}
+
+.breakfast-menu__option-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.breakfast-menu__option-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.breakfast-menu__option-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-color, #ff6b35);
+}
+
+.breakfast-menu__user-rating-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.breakfast-menu__user-rating-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.breakfast-menu__user-rating-star,
+.breakfast-menu__user-rating-star-filled {
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.breakfast-menu__user-rating-star {
+  color: var(--rating-star-color, #d1d5db);
+}
+
+.breakfast-menu__user-rating-star-filled {
+  color: var(--rating-star-filled-color, #f59e0b);
+}
+
+.breakfast-menu__user-rating-star:hover,
+.breakfast-menu__user-rating-star-filled:hover {
+  color: var(--rating-star-hover-color, #d97706);
+}
+
+.breakfast-menu__rating-submit-button {
+  background: linear-gradient(135deg, var(--secondary-color, #ff8c42) 0%, var(--primary-color, #ff6b35) 100%);
+  color: var(--badge-text-color, white);
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.breakfast-menu__rating-submit-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.2);
+}
+
+.breakfast-menu__rating-thank-you {
+  font-size: 13px;
+  color: var(--success-color, #22c55e);
+  font-weight: 500;
+}
+
 .breakfast-menu__product-description {
   font-size: 14px;
   color: var(--secondary-text-color, #6b7280);
@@ -382,7 +500,7 @@
   background-color: var(--selected-option-background-color, #fff7ed);
 }
 
-.breakfast-menu__hidden-radio {
+.breakfast-menu__hidden-checkbox {
   display: none;
 }
 
@@ -417,10 +535,10 @@
   }
 }
 
-.breakfast-menu__radio-indicator {
+.breakfast-menu__checkbox-indicator {
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: ... 50%;
   border: 2px solid var(--radio-border-color, #d1d5db);
   display: flex;
   align-items: center;
@@ -428,12 +546,12 @@
   transition: all 0.2s ease;
 }
 
-.breakfast-menu__radio-indicator--selected {
+.breakfast-menu__checkbox-indicator--selected {
   border-color: var(--primary-color, #ff6b35);
   background-color: var(--primary-color, #ff6b35);
 }
 
-.breakfast-menu__radio-indicator-dot {
+.breakfast-menu__checkbox-indicator-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -473,7 +591,7 @@
 }
 
 .breakfast-menu__quantity-btn {
-  width: 32px;
+  width:  elixir32px;
   height: 32px;
   background-color: var(--primary-color, #ff6b35);
   color: var(--badge-text-color, white);
@@ -646,4 +764,31 @@
   font-size: 16px;
   color: var(--secondary-text-color, #6b7280);
   font-weight: 500;
+}
+
+.breakfast-menu__related-section {
+  margin-top: 24px;
+  padding: 16px;
+  background-color: var(--related-section-background, #f1f5f9);
+  border-radius: 12px;
+}
+
+.breakfast-menu__section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary-color, #ff6b35);
+  margin-bottom: 16px;
+}
+
+.breakfast-menu__related-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 767px) {
+  .breakfast-menu__related-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
 }
