@@ -20,11 +20,12 @@ function AdminBreakfasts() {
   const [categories, setCategories] = useState([]);
   const [editingBreakfast, setEditingBreakfast] = useState(null);
   const [newOption, setNewOption] = useState({ group_id: '', option_type: '', option_name: '', additional_price: '' });
-  const [newOptionGroup, setNewOptionGroup] = useState({ title: '' });
+  const [newOptionGroup, setNewOptionGroup] = useState({ title: '', is_required: true, max_selections: '1' });
   const [editingOptionGroup, setEditingOptionGroup] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [formErrors, setFormErrors] = useState({ name: '', price: '' });
   const navigate = useNavigate();
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
@@ -77,7 +78,7 @@ function AdminBreakfasts() {
       id: breakfast.id,
       name: breakfast.name || '',
       description: breakfast.description || '',
-      price: parseFloat(breakfast.price) || '',
+      price: breakfast.price ? String(breakfast.price) : '',
       availability: !!breakfast.availability,
       image: null,
       image_url: breakfast.image_url,
@@ -88,37 +89,59 @@ function AdminBreakfasts() {
       })),
       optionGroups: breakfast.optionGroups || []
     });
+    setFormErrors({ name: '', price: '' });
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked, files } = e.target;
     setEditingBreakfast(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : 
-              type === 'file' ? files[0] : 
-              type === 'number' ? (value === '' ? '' : parseFloat(value)) : 
-              name === 'category_id' ? (value === '' ? '' : parseInt(value)) : 
+      [name]: type === 'checkbox' ? checked :
+              type === 'file' ? files[0] :
+              type === 'number' && name === 'category_id' ? (value === '' ? '' : parseInt(value)) :
               value
     }));
+    setFormErrors(prev => ({
+      ...prev,
+      [name]: validateField(name, value)
+    }));
+  };
+
+  const validateField = (name, value) => {
+    if (name === 'name') {
+      return value && value.trim() ? '' : 'Name is required';
+    }
+    if (name === 'price') {
+      return value && value.trim() ? '' : 'Price is required';
+    }
+    return '';
   };
 
   const handleOptionChange = (e) => {
     const { name, value } = e.target;
     setNewOption(prev => ({
       ...prev,
-      [name]: name === 'additional_price' ? (value === '' ? '' : parseFloat(value)) : 
+      [name]: name === 'additional_price' ? (value === '' ? '' : parseFloat(value)) :
               name === 'group_id' ? (value === '' ? '' : parseInt(value)) : value
     }));
   };
 
   const handleOptionGroupChange = (e) => {
-    const { value } = e.target;
-    setNewOptionGroup({ title: value });
+    const { name, value, type, checked } = e.target;
+    setNewOptionGroup(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked :
+              name === 'max_selections' ? (value === '' ? '' : parseInt(value)) : value
+    }));
   };
 
   const handleEditOptionGroupChange = (e) => {
-    const { value } = e.target;
-    setEditingOptionGroup(prev => ({ ...prev, title: value }));
+    const { name, value, type, checked } = e.target;
+    setEditingOptionGroup(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked :
+              name === 'max_selections' ? (value === '' ? '' : parseInt(value)) : value
+    }));
   };
 
   const handleAddOptionGroup = async () => {
@@ -126,14 +149,20 @@ function AdminBreakfasts() {
       toast.error('Option group title is required');
       return;
     }
+    if (newOptionGroup.max_selections === '' || parseInt(newOptionGroup.max_selections) < 0) {
+      toast.error('Max selections must be a non-negative number');
+      return;
+    }
     try {
       setIsSubmitting(true);
       await api.addBreakfastOptionGroup(editingBreakfast.id, {
-        user_id: userId,
-        title: newOptionGroup.title
+        user_id: String(userId),
+        title: newOptionGroup.title,
+        is_required: String(newOptionGroup.is_required),
+        max_selections: String(newOptionGroup.max_selections)
       });
       toast.success('Option group added');
-      setNewOptionGroup({ title: '' });
+      setNewOptionGroup({ title: '', is_required: true, max_selections: '1' });
       const groupsRes = await api.getBreakfastOptionGroups(editingBreakfast.id);
       setEditingBreakfast(prev => ({
         ...prev,
@@ -165,7 +194,12 @@ function AdminBreakfasts() {
   };
 
   const handleEditOptionGroup = (group) => {
-    setEditingOptionGroup(group);
+    setEditingOptionGroup({
+      id: group.id,
+      title: group.title,
+      is_required: group.is_required,
+      max_selections: String(group.max_selections)
+    });
   };
 
   const handleUpdateOptionGroup = async (groupId) => {
@@ -173,11 +207,17 @@ function AdminBreakfasts() {
       toast.error('Option group title is required');
       return;
     }
+    if (editingOptionGroup.max_selections === '' || parseInt(editingOptionGroup.max_selections) < 0) {
+      toast.error('Max selections must be a non-negative number');
+      return;
+    }
     try {
       setIsSubmitting(true);
       await api.updateBreakfastOptionGroup(editingBreakfast.id, groupId, {
-        user_id: userId,
-        title: editingOptionGroup.title
+        user_id: String(userId),
+        title: editingOptionGroup.title,
+        is_required: String(editingOptionGroup.is_required),
+        max_selections: String(editingOptionGroup.max_selections)
       });
       toast.success('Option group updated');
       setEditingOptionGroup(null);
@@ -215,7 +255,7 @@ function AdminBreakfasts() {
     if (!window.confirm('Remove this option group? This will also remove associated options.')) return;
     try {
       setIsSubmitting(true);
-      await api.deleteBreakfastOptionGroup(editingBreakfast.id, groupId, { user_id: userId });
+      await api.deleteBreakfastOptionGroup(editingBreakfast.id, groupId, { user_id: String(userId) });
       toast.success('Option group removed');
       const [groupsRes, optionsRes] = await Promise.all([
         api.getBreakfastOptionGroups(editingBreakfast.id),
@@ -266,7 +306,7 @@ function AdminBreakfasts() {
     try {
       setIsSubmitting(true);
       await api.addBreakfastOption(editingBreakfast.id, {
-        user_id: userId,
+        user_id: String(userId),
         group_id: newOption.group_id,
         option_type: newOption.option_type,
         option_name: newOption.option_name,
@@ -311,7 +351,7 @@ function AdminBreakfasts() {
     if (!window.confirm('Remove this option?')) return;
     try {
       setIsSubmitting(true);
-      await api.deleteBreakfastOption(editingBreakfast.id, optionId, { user_id: userId });
+      await api.deleteBreakfastOption(editingBreakfast.id, optionId, { user_id: String(userId) });
       toast.success('Option removed');
       const optionsRes = await api.getBreakfastOptions(editingBreakfast.id);
       setEditingBreakfast(prev => ({
@@ -349,24 +389,40 @@ function AdminBreakfasts() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!editingBreakfast.name || !editingBreakfast.price) {
-      toast.error('Name and price are required');
+
+    // Validate fields before constructing FormData
+    const errors = {
+      name: validateField('name', editingBreakfast.name),
+      price: validateField('price', editingBreakfast.price)
+    };
+    setFormErrors(errors);
+    if (errors.name || errors.price) {
+      toast.error('Please fix form errors before submitting');
       return;
     }
     if (editingBreakfast.category_id && isNaN(parseInt(editingBreakfast.category_id))) {
       toast.error('Invalid category selected');
       return;
     }
+
     try {
       setIsSubmitting(true);
       const formData = new FormData();
-      formData.append('user_id', userId);
-      formData.append('name', editingBreakfast.name);
+      formData.append('user_id', String(userId));
+      formData.append('name', editingBreakfast.name.trim());
       formData.append('description', editingBreakfast.description || '');
-      formData.append('price', editingBreakfast.price);
-      formData.append('availability', editingBreakfast.availability);
-      formData.append('category_id', editingBreakfast.category_id || '');
-      if (editingBreakfast.image) formData.append('image', editingBreakfast.image);
+      formData.append('price', editingBreakfast.price || '');
+      formData.append('availability', String(editingBreakfast.availability));
+      if (editingBreakfast.category_id) {
+        formData.append('category_id', String(editingBreakfast.category_id));
+      }
+      if (editingBreakfast.image) {
+        formData.append('image', editingBreakfast.image);
+      }
+
+      // Log FormData for debugging
+      console.log('FormData contents:', [...formData.entries()]);
+
       if (editingBreakfast.id) {
         await api.updateBreakfast(editingBreakfast.id, formData);
         toast.success('Breakfast updated');
@@ -375,6 +431,7 @@ function AdminBreakfasts() {
         toast.success('Breakfast added');
       }
       setEditingBreakfast(null);
+      setFormErrors({ name: '', price: '' });
       const breakfastRes = await api.getBreakfasts();
       const breakfastsWithDetails = await Promise.all(
         breakfastRes.data.map(async (breakfast) => {
@@ -394,6 +451,7 @@ function AdminBreakfasts() {
       );
       setBreakfasts(breakfastsWithDetails || []);
     } catch (error) {
+      console.error('API error:', error.response?.data || error.message);
       toast.error(error.response?.data?.error || 'Failed to save breakfast');
     } finally {
       setIsSubmitting(false);
@@ -404,7 +462,7 @@ function AdminBreakfasts() {
     if (!window.confirm('Delete this breakfast?')) return;
     try {
       setIsSubmitting(true);
-      await api.deleteBreakfast(id, { user_id: userId });
+      await api.deleteBreakfast(id, { user_id: String(userId) });
       toast.success('Breakfast deleted');
       const breakfastRes = await api.getBreakfasts();
       const breakfastsWithDetails = await Promise.all(
@@ -434,8 +492,9 @@ function AdminBreakfasts() {
   const handleCancel = () => {
     setEditingBreakfast(null);
     setNewOption({ group_id: '', option_type: '', option_name: '', additional_price: '' });
-    setNewOptionGroup({ title: '' });
+    setNewOptionGroup({ title: '', is_required: true, max_selections: '1' });
     setEditingOptionGroup(null);
+    setFormErrors({ name: '', price: '' });
   };
 
   if (isLoading) {
@@ -514,6 +573,9 @@ function AdminBreakfasts() {
                       required
                       className="admin-breakfasts__form-input"
                     />
+                    {formErrors.name && (
+                      <span className="admin-breakfasts__error">{formErrors.name}</span>
+                    )}
                   </div>
                   <div className="admin-breakfasts__form-group">
                     <label className="admin-breakfasts__form-label">
@@ -532,16 +594,17 @@ function AdminBreakfasts() {
                       Price *
                     </label>
                     <input
-                      type="number"
+                      type="text"
                       name="price"
-                      step="0.01"
-                      min="0.01"
                       value={editingBreakfast.price || ''}
                       onChange={handleInputChange}
-                      placeholder="0.00"
+                      placeholder="Enter price (e.g., 10$)"
                       required
                       className="admin-breakfasts__form-input"
                     />
+                    {formErrors.price && (
+                      <span className="admin-breakfasts__error">{formErrors.price}</span>
+                    )}
                   </div>
                   <div className="admin-breakfasts__form-group">
                     <label className="admin-breakfasts__form-label">
@@ -599,9 +662,29 @@ function AdminBreakfasts() {
                         <div className="admin-breakfasts__option-grid admin-breakfasts__option-grid--group">
                           <input
                             type="text"
+                            name="title"
                             value={newOptionGroup.title}
                             onChange={handleOptionGroupChange}
                             placeholder="Option Group Title (e.g., Beverage)"
+                            className="admin-breakfasts__form-input"
+                          />
+                          <div className="admin-breakfasts__checkbox-container">
+                            <input
+                              type="checkbox"
+                              name="is_required"
+                              checked={newOptionGroup.is_required}
+                              onChange={handleOptionGroupChange}
+                              className="admin-breakfasts__checkbox"
+                            />
+                            <label className="admin-breakfasts__form-label">Required</label>
+                          </div>
+                          <input
+                            type="number"
+                            name="max_selections"
+                            min="0"
+                            value={newOptionGroup.max_selections}
+                            onChange={handleOptionGroupChange}
+                            placeholder="Max Selections"
                             className="admin-breakfasts__form-input"
                           />
                           <button
@@ -620,8 +703,28 @@ function AdminBreakfasts() {
                               <>
                                 <input
                                   type="text"
+                                  name="title"
                                   value={editingOptionGroup.title}
                                   onChange={handleEditOptionGroupChange}
+                                  className="admin-breakfasts__form-input"
+                                />
+                                <div className="admin-breakfasts__checkbox-container">
+                                  <input
+                                    type="checkbox"
+                                    name="is_required"
+                                    checked={editingOptionGroup.is_required}
+                                    onChange={handleEditOptionGroupChange}
+                                    className="admin-breakfasts__checkbox"
+                                  />
+                                  <label className="admin-breakfasts__form-label">Required</label>
+                                </div>
+                                <input
+                                  type="number"
+                                  name="max_selections"
+                                  min="0"
+                                  value={editingOptionGroup.max_selections}
+                                  onChange={handleEditOptionGroupChange}
+                                  placeholder="Max Selections"
                                   className="admin-breakfasts__form-input"
                                 />
                                 <button
@@ -645,7 +748,7 @@ function AdminBreakfasts() {
                               </>
                             ) : (
                               <>
-                                <span>{group.title}</span>
+                                <span>{group.title} {group.is_required ? '(Required)' : '(Optional)'}, Max: {group.max_selections || 'Unlimited'}</span>
                                 <button
                                   type="button"
                                   onClick={() => handleEditOptionGroup(group)}
@@ -742,7 +845,7 @@ function AdminBreakfasts() {
                   <button
                     type="submit"
                     className="admin-breakfasts__primary-button"
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || formErrors.name || formErrors.price}
                   >
                     <Save fontSize="small" />
                     {isSubmitting ? 'Saving...' : editingBreakfast.id ? 'Update Breakfast' : 'Add Breakfast'}
@@ -774,7 +877,7 @@ function AdminBreakfasts() {
               )}
               <h3 className="admin-breakfasts__item-title">{breakfast.name}</h3>
               <div className="admin-breakfasts__price-container">
-                <span className="admin-breakfasts__sale-price">${(parseFloat(breakfast.price) || 0).toFixed(2)}</span>
+                <span className="admin-breakfasts__sale-price">{breakfast.price}</span>
               </div>
               <div className="admin-breakfasts__item-meta">
                 <span
@@ -798,7 +901,7 @@ function AdminBreakfasts() {
                   <strong>Option Groups:</strong>
                   {breakfast.optionGroups.map(group => (
                     <div key={group.id} className="admin-breakfasts__option-item-display">
-                      {group.title}
+                      {group.title} {group.is_required ? '(Required)' : '(Optional)'}, Max: {group.max_selections || 'Unlimited'}
                     </div>
                   ))}
                 </div>
