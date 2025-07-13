@@ -5,6 +5,7 @@ import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import StarIcon from '@mui/icons-material/Star';
 import StarOutlineIcon from '@mui/icons-material/StarOutline';
 import { debounce } from 'lodash';
+import { toast } from 'react-toastify';
 
 function MenuItemCard({ item, onAddToCart, onView, isManager }) {
   const [screenSize, setScreenSize] = useState({
@@ -75,15 +76,34 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
   }, [item?.image_url]);
 
   const handleOptionChange = useCallback((groupId, optionId) => {
-    setSelectedOptions((prev) => ({
-      ...prev,
-      [groupId]: optionId,
-    }));
+    setSelectedOptions((prev) => {
+      const currentSelections = prev[groupId] || [];
+      const group = supplements.optionGroups.find(g => g.id === groupId);
+      const maxSelections = group?.max_selections || 0;
+      let newSelections;
+
+      if (Array.isArray(currentSelections)) {
+        if (currentSelections.includes(optionId)) {
+          newSelections = currentSelections.filter(id => id !== optionId);
+        } else if (maxSelections === 0 || currentSelections.length < maxSelections) {
+          newSelections = [...currentSelections, optionId];
+        } else {
+          newSelections = [...currentSelections.slice(1), optionId];
+        }
+      } else {
+        newSelections = [optionId];
+      }
+
+      return {
+        ...prev,
+        [groupId]: newSelections,
+      };
+    });
     setValidationErrors((prev) => ({
       ...prev,
       [groupId]: false,
     }));
-  }, []);
+  }, [supplements.optionGroups]);
 
   const handleAddToCart = useCallback(
     (e) => {
@@ -92,13 +112,23 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       if (!item?.availability) return;
 
       if (item.type === 'breakfast' && supplements.optionGroups?.length > 0) {
-        const requiredGroups = supplements.optionGroups.map((g) => g.id);
-        const missingGroups = requiredGroups.filter((gId) => !selectedOptions[gId]);
-        if (missingGroups.length > 0) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            ...missingGroups.reduce((acc, gId) => ({ ...acc, [gId]: true }), {}),
-          }));
+        const errors = {};
+        let hasErrors = false;
+
+        supplements.optionGroups.forEach((group) => {
+          const selections = selectedOptions[group.id] || [];
+          if (group.is_required && selections.length === 0) {
+            errors[group.id] = true;
+            hasErrors = true;
+          }
+          if (group.max_selections > 0 && selections.length > group.max_selections) {
+            errors[group.id] = true;
+            hasErrors = true;
+          }
+        });
+
+        if (hasErrors) {
+          setValidationErrors(errors);
           setShowOptionPopup(true);
           return;
         }
@@ -140,7 +170,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
 
   const handleOptionSelection = useCallback(() => {
     if (item.type === 'breakfast') {
-      const selectedOptionIds = Object.values(selectedOptions).filter((id) => id);
+      const selectedOptionIds = Object.values(selectedOptions).flat().filter(id => id);
       const optionsPrice = supplements.options
         .filter((opt) => selectedOptionIds.includes(opt.id))
         .reduce((sum, opt) => sum + parseFloat(opt.additional_price || 0), 0);
@@ -190,7 +220,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       if (onView && item?.id) {
         onView(item.id, item?.type);
       } else {
-        console.warn('La propriété onView est manquante ou l\'ID de l\'article est invalide');
+        console.warn('La prop onView est manquante ou l\'ID de l\'article est invalide');
       }
     },
     [onView, item?.id, item?.type]
@@ -211,7 +241,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
 
   const regularPrice = parseFloat(item?.type === 'breakfast' ? item.price : item.regular_price) || 0;
   const salePrice = parseFloat(item?.type === 'breakfast' ? null : item.sale_price) || null;
-  const rating = parseFloat(item?.average_rating) || 0;
+  const ratingValue = parseFloat(item?.average_rating) || 0;
   const reviewCount = parseInt(item?.review_count) || 0;
 
   const discountPercentage = useMemo(() => {
@@ -222,7 +252,8 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
 
   const displayPrice = useMemo(() => {
     if (item.type === 'breakfast') {
-      const optionsPrice = (supplements.options || []).filter((opt) => Object.values(selectedOptions).includes(opt.id))
+      const optionsPrice = (supplements.options || [])
+        .filter((opt) => Object.values(selectedOptions).flat().includes(opt.id))
         .reduce((sum, opt) => sum + parseFloat(opt.additional_price || 0), 0);
       return (regularPrice + optionsPrice).toFixed(2);
     }
@@ -231,7 +262,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
 
   const renderStars = useMemo(() => {
     const stars = [];
-    const fullStars = Math.floor(rating);
+    const fullStars = Math.floor(ratingValue);
     for (let i = 0; i < 5; i++) {
       stars.push(
         i < fullStars ? (
@@ -254,7 +285,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       );
     }
     return stars;
-  }, [rating, isSmallMobile]);
+  }, [ratingValue, isSmallMobile]);
 
   const styles = useMemo(
     () => ({
@@ -506,27 +537,28 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         color: '#000000',
         cursor: 'pointer',
       },
-      radioInput: {
+      checkboxInput: {
         width: '16px',
         height: '16px',
         margin: '0',
         appearance: 'none',
         border: `2px solid #000000`,
-        borderRadius: '50%',
+        borderRadius: '4px',
         outline: 'none',
         cursor: 'pointer',
         position: 'relative',
         backgroundColor: 'var(--background-color)',
       },
-      'radioInput:checked': {
+      'checkboxInput:checked': {
         borderColor: 'var(--primary-color)',
+        backgroundColor: 'var(--primary-color)',
       },
-      'radioInput:checked::after': {
+      'checkboxInput:checked::after': {
         content: '""',
         width: '8px',
         height: '8px',
-        backgroundColor: 'var(--primary-color)',
-        borderRadius: '50%',
+        backgroundColor: 'var(--background-color)',
+        borderRadius: '2px',
         position: 'absolute',
         top: '50%',
         left: '50%',
@@ -729,15 +761,15 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             <div style={styles.unavailableBadge}>Indisponible</div>
           )}
 
-          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Petit-déjeuner' : 'Non classé')}</div>
+          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Petit-déjeuner' : 'Non catégorisé')}</div>
 
           <h3 style={styles.title}>{item.name || 'Article inconnu'}</h3>
 
-          {(rating > 0 || reviewCount > 0) && (
+          {(ratingValue > 0 || reviewCount > 0) && (
             <div style={styles.ratingContainer}>
               <div style={styles.ratingStars}>{renderStars}</div>
               <span style={styles.ratingText}>
-                {rating.toFixed(1)} ({reviewCount})
+                {ratingValue.toFixed(1)} ({reviewCount})
               </span>
             </div>
           )}
@@ -783,7 +815,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       onClick={handleViewProduct}
                       title="Voir les détails"
                     >
-                      <RemoveRedEyeIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
+                      <RemoveRedEyeIcon sx={ { fontSize: 14, color: 'var(--background-color)' }} />
                     </button>
                     <button
                       style={{
@@ -831,8 +863,9 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     }}
                   >
                     <div style={styles.groupTitle}>
-                      {group.title}
-                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> (Requis)</span>}
+                      {group.title} {group.is_required ? '(Requis)' : '(Facultatif)'}
+                      {group.max_selections > 0 && `, Max : ${group.max_selections}`}
+                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> (Veuillez sélectionner)</span>}
                     </div>
                     {supplements.options
                       .filter((opt) => opt.group_id === group.id)
@@ -843,17 +876,17 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                           onClick={(e) => e.stopPropagation()}
                         >
                           <input
-                            type="radio"
+                            type="checkbox"
                             name={`group-${item.id}-${group.id}`}
-                            checked={selectedOptions[group.id] === opt.id}
+                            checked={selectedOptions[group.id]?.includes(opt.id)}
                             onChange={() => handleOptionChange(group.id, opt.id)}
                             disabled={!item.availability}
-                            style={styles.radioInput}
+                            style={styles.checkboxInput}
                           />
                           <span
                             style={{
                               ...styles.optionText,
-                              ...(selectedOptions[group.id] === opt.id ? styles.optionSelected : {}),
+                              ...(selectedOptions[group.id]?.includes(opt.id) ? styles.optionSelected : {}),
                             }}
                           >
                             {opt.option_name}{' '}
@@ -890,7 +923,14 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                 style={{ ...styles.popupButton, ...styles.addButton }}
                 className="popup-btn add-btn"
                 onClick={() => handleOptionSelection()}
-                disabled={!item.availability || (item.type === 'breakfast' && supplements.optionGroups?.length > 0 && Object.keys(selectedOptions).length < supplements.optionGroups.length)}
+                disabled={
+                  !item.availability ||
+                  (item.type === 'breakfast' &&
+                    supplements.optionGroups?.length > 0 &&
+                    supplements.optionGroups
+                      .filter((g) => g.is_required)
+                      .some((g) => !selectedOptions[g.id] || selectedOptions[g.id].length === 0))
+                }
               >
                 Ajouter au panier
               </button>
