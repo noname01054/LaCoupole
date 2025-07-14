@@ -487,6 +487,7 @@ function BreakfastMenu({ addToCart }) {
 
                 <div 
                   className={`breakfast-menu__options-content ${isExpanded ? 'breakfast-menu__options-content--expanded' : ''}`}
+                  style={{ maxHeight: isExpanded ? '500px' : '0', overflowY: isExpanded ? 'auto' : 'hidden' }}
                 >
                   {Object.entries(optionsByGroup).map(([groupId, group]) => (
                     <div
@@ -500,7 +501,7 @@ function BreakfastMenu({ addToCart }) {
                           <span className="breakfast-menu__error-indicator">*</span>
                         )}
                       </div>
-                      <div className={`breakfast-menu__options-grid ${group.options.length > 7 ? 'breakfast-menu__options-grid--scrollable' : ''}`}>
+                      <div className="breakfast-menu__options-grid">
                         {group.options.map((opt) => {
                           const isSelected = selectedOptions[breakfast.id]?.[groupId]?.includes(opt.id);
                           return (
