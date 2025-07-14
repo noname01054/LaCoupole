@@ -46,6 +46,7 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [theme, setTheme] = useState(null);
+  const [isSocketReady, setIsSocketReady] = useState(false); // Added from localhosted version
 
   const defaultTheme = {
     primary_color: '#ff6b35',
@@ -117,6 +118,7 @@ function App() {
       );
       const socketInstance = getSocket();
       setSocket(socketInstance);
+      setIsSocketReady(true); // Set to true once socket is initialized
 
       // Monitor socket connection status with retry logic
       socketInstance.on('connect', () => {
@@ -468,7 +470,10 @@ function App() {
         <Route path="/staff/table-reservations" element={<StaffTableReservations />} />
         <Route path="/category/:id" element={<CategoryMenu addToCart={addToCart} />} />
         <Route path="/product/:id" element={<ProductDetails addToCart={addToCart} latestOrderId={latestOrderId} />} />
-        <Route path="/order-waiting/:orderId" element={<OrderWaiting sessionId={sessionId} socket={socket} />} />
+        <Route
+          path="/order-waiting/:orderId"
+          element={isSocketReady ? <OrderWaiting sessionId={sessionId} socket={socket} /> : <div>Loading socket...</div>}
+        />
         <Route path="/breakfast" element={<BreakfastMenu addToCart={addToCart} />} />
         <Route path="/breakfast/:id" element={<BreakfastMenu addToCart={addToCart} />} />
         <Route path="*" element={<div style={{ textAlign: 'center', color: '#666' }}>404 Not Found</div>} />
