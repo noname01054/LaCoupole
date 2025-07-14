@@ -441,6 +441,44 @@
   margin-top: 16px;
 }
 
+/* URL section - added for order tracking */
+.order-waiting-url-section {
+  margin-top: 20px;
+  text-align: center;
+  max-width: 600px;
+  width: 100%;
+}
+
+.order-waiting-url-text {
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text-color);
+}
+
+.order-waiting-url-value {
+  word-wrap: break-word;
+  max-width: 100%;
+  margin-bottom: 10px;
+  color: #4b5563;
+  font-size: 0.9em;
+  padding: 8px;
+  background-color: #f3f4f6;
+  border-radius: var(--border-radius-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 1px solid var(--border-color);
+}
+
+.order-waiting-instruction {
+  margin-bottom: 15px;
+  color: #6b7280;
+  font-size: 0.85em;
+  line-height: 1.5;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 /* Responsive design - tablet and desktop enhancements */
 @media (min-width: 480px) {
   .order-waiting-container {
@@ -463,6 +501,10 @@
   .order-waiting-item-image {
     width: 48px;
     height: 48px;
+  }
+  
+  .order-waiting-url-section {
+    margin-top: 24px;
   }
 }
 
@@ -510,6 +552,14 @@
     padding: 16px 32px;
     max-width: 400px;
   }
+  
+  .order-waiting-url-value {
+    font-size: 1em;
+  }
+  
+  .order-waiting-instruction {
+    font-size: 0.9em;
+  }
 }
 
 /* Performance optimizations for low-end devices */
@@ -540,6 +590,10 @@
   }
   
   .order-waiting-button {
+    border: 2px solid var(--text-color);
+  }
+  
+  .order-waiting-url-value {
     border: 2px solid var(--text-color);
   }
 }
