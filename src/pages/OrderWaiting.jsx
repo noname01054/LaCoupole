@@ -21,29 +21,28 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const hasPlayedSound = useRef(false);
   const hasInteracted = useRef(false);
 
-  // Prioritize sessionId from navigation state
+  // Prioriser l'identifiant de session depuis l'état de navigation
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
   const isMounted = useRef(false);
 
-  // Preload audio and validate
+  // Précharger l'audio et valider
   useEffect(() => {
     const audioPath = '/assets/notification1.mp3';
     audioRef.current = new Audio(audioPath);
     audioRef.current.preload = 'auto';
 
-    // Validate audio file existence
     fetch(audioPath, { method: 'HEAD' })
       .then((response) => {
         if (!response.ok) {
-          console.error(`Audio file not found at ${audioPath}`, { timestamp: new Date().toISOString() });
-          toast.error('Order approval sound file is missing.');
+          console.error(`Fichier audio introuvable à ${audioPath}`, { timestamp: new Date().toISOString() });
+          toast.error('Le fichier sonore de confirmation de commande est manquant.');
         } else {
-          console.log(`Audio file preloaded successfully: ${audioPath}`, { timestamp: new Date().toISOString() });
+          console.log(`Fichier audio préchargé avec succès : ${audioPath}`, { timestamp: new Date().toISOString() });
         }
       })
       .catch((err) => {
-        console.error('Error checking audio file:', err, { timestamp: new Date().toISOString() });
-        toast.error('Failed to load order approval sound.');
+        console.error('Erreur lors de la vérification du fichier audio :', err, { timestamp: new Date().toISOString() });
+        toast.error('Échec du chargement du son de confirmation de commande.');
       });
 
     return () => {
@@ -54,7 +53,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     };
   }, []);
 
-  // Debounced state update for orderDetails
+  // Mise à jour différée de l'état orderDetails
   const debouncedSetOrderDetails = useCallback(
     debounce((newDetails) => {
       setOrderDetails(newDetails);
@@ -64,16 +63,12 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   useEffect(() => {
     if (!state?.sessionId && !localStorage.getItem('sessionId')) {
-      console.warn('No sessionId found in state or localStorage, generated new:', sessionId, 'timestamp:', new Date().toISOString());
+      console.warn('Aucun identifiant de session trouvé dans l\'état ou le localStorage, nouveau généré :', sessionId, 'timestamp:', new Date().toISOString());
       localStorage.setItem('sessionId', sessionId);
       api.defaults.headers.common['X-Session-Id'] = sessionId;
     }
-    console.log('OrderWaiting initialized with sessionId:', sessionId, 'orderId:', orderId, 'timestamp:', new Date().toISOString());
+    console.log('OrderWaiting initialisé avec sessionId:', sessionId, 'orderId:', orderId, 'timestamp:', new Date().toISOString());
   }, [sessionId, orderId]);
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
 
   useEffect(() => {
     if (!isLoading && !errorMessage) {
@@ -84,31 +79,31 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const fetchOrder = useCallback(async () => {
     if (!orderId || isNaN(parseInt(orderId))) {
-      setErrorMessage('Invalid order ID.');
+      setErrorMessage('Identifiant de commande invalide.');
       setIsLoading(false);
       return;
     }
 
     try {
       const response = await api.getOrder(orderId, { headers: { 'Cache-Control': 'no-cache' } });
-      console.log('Fetched order details:', response.data, 'timestamp:', new Date().toISOString());
+      console.log('Détails de la commande récupérés :', response.data, 'timestamp:', new Date().toISOString());
       debouncedSetOrderDetails(response.data);
       setIsApproved(!!response.data.approved);
       setIsLoading(false);
     } catch (error) {
-      console.error('Fetch order error:', {
+      console.error('Erreur de récupération de la commande :', {
         status: error.response?.status,
         message: error.response?.data?.error || error.message,
         timestamp: new Date().toISOString(),
       });
       if (error.response?.status === 403) {
-        setErrorMessage('Access denied: You are not authorized to view this order.');
+        setErrorMessage('Accès refusé : Vous n\'êtes pas autorisé à voir cette commande.');
       } else if (error.response?.status === 404) {
-        setErrorMessage('Order not found.');
+        setErrorMessage('Commande introuvable.');
       } else if (error.response?.status === 500) {
-        setErrorMessage('Server error. Please try again later.');
+        setErrorMessage('Erreur serveur. Veuillez réessayer plus tard.');
       } else {
-        setErrorMessage('Failed to load order details. Check your connection.');
+        setErrorMessage('Échec du chargement des détails de la commande. Vérifiez votre connexion.');
       }
       setIsLoading(false);
     }
@@ -116,18 +111,17 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const playSound = async () => {
     if (!audioRef.current) {
-      console.warn('Audio not initialized', { timestamp: new Date().toISOString() });
+      console.warn('Audio non initialisé', { timestamp: new Date().toISOString() });
       return;
     }
     if (!hasInteracted.current) {
-      console.log('Waiting for user interaction to play sound', { timestamp: new Date().toISOString() });
-      // Retry after interaction
+      console.log('En attente d\'une interaction utilisateur pour jouer le son', { timestamp: new Date().toISOString() });
       const retrySound = () => {
         if (hasInteracted.current && !hasPlayedSound.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch((err) => {
-            console.error('Retry audio play error:', err, { timestamp: new Date().toISOString() });
-            toast.warn('Order approval sound blocked by browser.');
+            console.error('Erreur de relecture audio :', err, { timestamp: new Date().toISOString() });
+            toast.warn('Son de confirmation de commande bloqué par le navigateur.');
           });
           hasPlayedSound.current = true;
           window.removeEventListener('click', retrySound);
@@ -141,56 +135,54 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     try {
       audioRef.current.currentTime = 0;
       await audioRef.current.play();
-      console.log('Order approval sound played successfully', { timestamp: new Date().toISOString() });
+      console.log('Son de confirmation de commande joué avec succès', { timestamp: new Date().toISOString() });
       hasPlayedSound.current = true;
     } catch (err) {
-      console.error('Audio playback failed:', err, { timestamp: new Date().toISOString() });
-      toast.warn('Order approval sound blocked by browser.');
+      console.error('Échec de la lecture audio :', err, { timestamp: new Date().toISOString() });
+      toast.warn('Son de confirmation de commande bloqué par le navigateur.');
     }
   };
 
   const onOrderApproved = useCallback(
     (data) => {
-      console.log('OrderWaiting received orderApproved event:', {
+      console.log('OrderWaiting a reçu l\'événement orderApproved :', {
         data,
         expectedOrderId: orderId,
         sessionId,
         timestamp: new Date().toISOString(),
       });
       if (!data.orderId) {
-        console.warn('Invalid orderApproved event: missing orderId', data, 'timestamp:', new Date().toISOString());
-        toast.warn('Received invalid order approval data');
+        console.warn('Événement orderApproved invalide : orderId manquant', data, 'timestamp:', new Date().toISOString());
+        toast.warn('Données de confirmation de commande invalides reçues');
         return;
       }
       if (parseInt(data.orderId) === parseInt(orderId)) {
-        console.log('Processing order approval for orderId:', data.orderId, 'timestamp:', new Date().toISOString());
+        console.log('Traitement de la confirmation de commande pour orderId:', data.orderId, 'timestamp:', new Date().toISOString());
         setIsProcessingApproval(true);
         setIsApproved(true);
         if (!hasPlayedSound.current) {
           playSound();
         }
-        // Use orderDetails from event if available, otherwise fetch
         if (data.orderDetails && Object.keys(data.orderDetails).length > 0) {
           debouncedSetOrderDetails((prev) => {
             const updatedDetails = {
               ...prev,
               ...data.orderDetails,
               approved: 1,
-              status: data.orderDetails?.status || 'preparing',
+              status: data.orderDetails?.status || 'en préparation',
             };
-            console.log('Updated orderDetails from event:', updatedDetails, 'timestamp:', new Date().toISOString());
+            console.log('Détails de la commande mis à jour depuis l\'événement :', updatedDetails, 'timestamp:', new Date().toISOString());
             return updatedDetails;
           });
           setIsLoading(false);
           setIsProcessingApproval(false);
         } else {
-          // Fetch order details immediately to ensure data is available
           fetchOrder();
           setTimeout(() => setIsProcessingApproval(false), 500);
         }
-        toast.success(`Order #${orderId} has been approved!`, { autoClose: 3000 });
+        toast.success(`Commande #${orderId} a été approuvée !`, { autoClose: 3000 });
       } else {
-        console.log('orderApproved event ignored, orderId mismatch:', {
+        console.log('Événement orderApproved ignoré, mismatch orderId :', {
           received: data.orderId,
           expected: orderId,
           timestamp: new Date().toISOString(),
@@ -202,7 +194,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const onOrderUpdate = useCallback(
     (data) => {
-      console.log('OrderWaiting received orderUpdate event:', {
+      console.log('OrderWaiting a reçu l\'événement orderUpdate :', {
         data,
         expectedOrderId: orderId,
         sessionId,
@@ -213,33 +205,37 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           const updatedDetails = {
             ...prev,
             ...data.orderDetails,
-            status: data.status || prev?.status || 'received',
+            status: data.status || prev?.status || 'reçue',
           };
-          console.log('Updated orderDetails on orderUpdate:', updatedDetails, 'timestamp:', new Date().toISOString());
+          console.log('Détails de la commande mis à jour sur orderUpdate :', updatedDetails, 'timestamp:', new Date().toISOString());
           return updatedDetails;
         });
-        toast.info(`Order #${orderId} updated to ${data.status}`, { autoClose: 3000 });
+        toast.info(`Commande #${orderId} mise à jour à ${data.status}`, { autoClose: 3000 });
       }
     },
     [orderId, sessionId, debouncedSetOrderDetails]
   );
 
   useEffect(() => {
-    if (!sessionId || !socket || !socket.connected) {
-      console.error('Missing or disconnected socket:', {
-        sessionId,
-        socketConnected: socket?.connected,
-        timestamp: new Date().toISOString(),
-      });
-      setErrorMessage('Cannot connect to real-time updates. Please refresh the page.');
+    if (!sessionId) {
+      console.warn('Aucun identifiant de session fourni, génération d\'un nouveau', { timestamp: new Date().toISOString() });
+      const newSessionId = `guest-${uuidv4()}`;
+      setErrorMessage('Identifiant de session manquant. Veuillez réessayer.');
       setIsLoading(false);
+      localStorage.setItem('sessionId', newSessionId);
+      api.defaults.headers.common['X-Session-Id'] = newSessionId;
       return;
     }
 
-    // Track user interaction for audio playback
+    if (!socket) {
+      console.warn('Socket non encore fourni, en attente d\'initialisation', { sessionId, timestamp: new Date().toISOString() });
+      setIsLoading(true);
+      return;
+    }
+
     const handleInteraction = () => {
       hasInteracted.current = true;
-      console.log('User interaction detected, audio playback enabled', { timestamp: new Date().toISOString() });
+      console.log('Interaction utilisateur détectée, lecture audio activée', { timestamp: new Date().toISOString() });
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
     };
@@ -249,40 +245,65 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     if (isMounted.current) return;
     isMounted.current = true;
 
-    console.log('Joining socket room: guest-', sessionId, 'timestamp:', new Date().toISOString());
-    socket.emit('join-session', { sessionId: `guest-${sessionId}` });
+    const waitForSocketConnection = (callback, maxAttempts = 10, interval = 1000) => {
+      let attempts = 0;
+      const checkConnection = setInterval(() => {
+        if (socket.connected) {
+          console.log('Socket connecté dans OrderWaiting, rejoindre la salle : guest-', sessionId, { timestamp: new Date().toISOString() });
+          clearInterval(checkConnection);
+          callback();
+        } else if (attempts >= maxAttempts) {
+          console.error('Délai d\'attente de connexion socket dépassé', { sessionId, attempts, timestamp: new Date().toISOString() });
+          clearInterval(checkConnection);
+          setErrorMessage('Impossible de se connecter aux mises à jour en temps réel. Veuillez actualiser la page.');
+          setIsLoading(false);
+        }
+        attempts++;
+      }, interval);
+    };
 
-    socket.on('connect', () => {
-      console.log('Socket connected in OrderWaiting, joining room: guest-', sessionId, 'timestamp:', new Date().toISOString());
+    const initializeSocket = () => {
+      console.log('Rejoindre la salle socket : guest-', sessionId, { timestamp: new Date().toISOString() });
       socket.emit('join-session', { sessionId: `guest-${sessionId}` });
+
+      socket.on('connect', () => {
+        console.log('Socket connecté dans OrderWaiting, rejoindre la salle : guest-', sessionId, { timestamp: new Date().toISOString() });
+        socket.emit('join-session', { sessionId: `guest-${sessionId}` });
+        if (!isApproved) fetchOrder();
+      });
+
+      socket.on('join-confirmation', (data) => {
+        console.log('Confirmation de rejoindre reçue pour la salle : guest-', sessionId, data, { timestamp: new Date().toISOString() });
+      });
+
+      socket.on('orderApproved', onOrderApproved);
+      socket.on('orderUpdate', onOrderUpdate);
+      socket.on('connect_error', (error) => {
+        console.error('Erreur de connexion socket dans OrderWaiting :', error.message, { timestamp: new Date().toISOString() });
+        toast.warn('Connexion aux mises à jour en temps réel perdue. Nouvelle tentative...');
+      });
+
+      socket.on('reconnect', (attempt) => {
+        console.log('Socket reconnecté dans OrderWaiting après tentative :', attempt, { timestamp: new Date().toISOString() });
+        socket.emit('join-session', { sessionId: `guest-${sessionId}` });
+        if (!isApproved) fetchOrder();
+      });
+
       if (!isApproved) fetchOrder();
-    });
+    };
 
-    socket.on('join-confirmation', (data) => {
-      console.log('Received join-confirmation for room: guest-', sessionId, data, 'timestamp:', new Date().toISOString());
-    });
-
-    socket.on('orderApproved', onOrderApproved);
-    socket.on('orderUpdate', onOrderUpdate);
-    socket.on('connect_error', (error) => {
-      console.error('Socket connection error in OrderWaiting:', error.message, 'timestamp:', new Date().toISOString());
-      toast.warn('Connection to real-time updates lost. Retrying...');
-    });
-
-    socket.on('reconnect', (attempt) => {
-      console.log('Socket reconnected in OrderWaiting after attempt:', attempt, 'timestamp:', new Date().toISOString());
-      socket.emit('join-session', { sessionId: `guest-${sessionId}` });
-      if (!isApproved) fetchOrder();
-    });
-
-    fetchOrder();
+    if (socket.connected) {
+      initializeSocket();
+    } else {
+      waitForSocketConnection(initializeSocket);
+    }
 
     const pollInterval = setInterval(() => {
       if (!isApproved && !isProcessingApproval) {
-        console.log('Polling for order status:', orderId, 'sessionId:', sessionId, 'timestamp:', new Date().toISOString());
+        console.log('Sondage pour le statut de la commande :', orderId, 'sessionId:', sessionId, { timestamp: new Date().toISOString() });
         fetchOrder();
       } else {
-        console.log('Polling skipped: order is approved or processing approval', {
+        console.log('Sondage ignoré : la commande est approuvée ou en cours d\'approbation', {
           orderId,
           isApproved,
           isProcessingApproval,
@@ -302,7 +323,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       isMounted.current = false;
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
-      console.log('OrderWaiting cleanup complete for sessionId:', sessionId, 'timestamp:', new Date().toISOString());
+      console.log('Nettoyage OrderWaiting terminé pour sessionId:', sessionId, { timestamp: new Date().toISOString() });
     };
   }, [fetchOrder, sessionId, socket, onOrderApproved, onOrderUpdate, isApproved, orderId, isProcessingApproval]);
 
@@ -310,13 +331,13 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     const handleBeforeUnload = (e) => {
       if (!isApproved) {
         e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your order tracking will be interrupted.';
+        e.returnValue = 'Êtes-vous sûr de vouloir quitter ? Le suivi de votre commande sera interrompu.';
       }
     };
 
     const handlePopState = () => {
       if (!isApproved) {
-        toast.warn('Please wait for your order to be approved before navigating away.');
+        toast.warn('Veuillez attendre que votre commande soit approuvée avant de naviguer ailleurs.');
         navigate(`/order-waiting/${orderId}`, { replace: true, state: { sessionId } });
       } else {
         navigate('/');
@@ -335,6 +356,45 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const handleReturnHome = () => {
     setIsVisible(false);
     setTimeout(() => navigate('/'), 200);
+  };
+
+  const handleCopyUrl = () => {
+    const currentUrl = window.location.href;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(currentUrl)
+        .then(() => {
+          console.log('URL copiée dans le presse-papiers :', currentUrl, { timestamp: new Date().toISOString() });
+          toast.success('URL de la commande copiée dans le presse-papiers !', { autoClose: 3000 });
+        })
+        .catch((err) => {
+          console.error('Échec de la copie de l\'URL avec l\'API clipboard :', err, { timestamp: new Date().toISOString() });
+          fallbackCopy(currentUrl);
+        });
+    } else {
+      console.warn('API clipboard non disponible, utilisation de la méthode de secours', { timestamp: new Date().toISOString() });
+      fallbackCopy(currentUrl);
+    }
+  };
+
+  const fallbackCopy = (text) => {
+    const tempInput = document.createElement('textarea');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        console.log('URL copiée dans le presse-papiers avec la méthode de secours :', text, { timestamp: new Date().toISOString() });
+        toast.success('URL de la commande copiée dans le presse-papiers !', { autoClose: 3000 });
+      } else {
+        console.error('Échec de la copie de secours', { timestamp: new Date().toISOString() });
+        toast.error('Échec de la copie de l\'URL. Veuillez essayer manuellement.');
+      }
+    } catch (err) {
+      console.error('Erreur de copie de secours :', err, { timestamp: new Date().toISOString() });
+      toast.error('Échec de la copie de l\'URL. Veuillez essayer manuellement.');
+    }
+    document.body.removeChild(tempInput);
   };
 
   const groupedItems = (() => {
@@ -363,7 +423,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         acc[key] = {
           id: parseInt(id),
           type: 'menu',
-          name: itemNames[idx]?.trim() || 'Unknown Item',
+          name: itemNames[idx]?.trim() || 'Article inconnu',
           quantity: 0,
           unitPrice: unitPrices[idx],
           supplementName: supplementId ? supplementNames[idx]?.trim() : null,
@@ -393,7 +453,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         acc[key] = {
           id: parseInt(id),
           type: 'breakfast',
-          name: breakfastNames[idx]?.trim() || 'Unknown Breakfast',
+          name: breakfastNames[idx]?.trim() || 'Petit-déjeuner inconnu',
           quantity: 0,
           unitPrice: unitPricesBreakfast[idx],
           imageUrl: breakfastImages[idx]?.trim() || null,
@@ -409,7 +469,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         if (optionIds[i]) {
           acc[key].options.push({
             id: optionIds[i],
-            name: optionNames[i] || 'Unknown Option',
+            name: optionNames[i] || 'Option inconnue',
             price: optionPrices[i] || 0,
           });
         }
@@ -425,8 +485,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       <div className="order-waiting-container">
         <div className="order-waiting-loader">
           <div className="order-waiting-spinner"></div>
-          <h2 className="order-waiting-loader-text">Loading Order</h2>
-          <p className="order-waiting-loader-subtext">Please wait...</p>
+          <h2 className="order-waiting-loader-text">Chargement de la commande</h2>
+          <p className="order-waiting-loader-subtext">Veuillez patienter...</p>
         </div>
       </div>
     );
@@ -449,7 +509,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
             onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
           >
-            Return Home
+            Retour à l'accueil
           </button>
         </div>
       </div>
@@ -465,8 +525,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
               <div className="order-waiting-error-dot"></div>
             </div>
           </div>
-          <h2 className="order-waiting-error-title">Order details not available</h2>
-          <p className="order-waiting-error-subtext">Please try again later or contact support.</p>
+          <h2 className="order-waiting-error-title">Détails de la commande indisponibles</h2>
+          <p className="order-waiting-error-subtext">Veuillez réessayer plus tard ou contacter le support.</p>
           <button
             onClick={handleReturnHome}
             className="order-waiting-button"
@@ -474,7 +534,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
             onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
           >
-            Return Home
+            Retour à l'accueil
           </button>
         </div>
       </div>
@@ -483,28 +543,29 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const baseImageUrl = api.defaults.baseURL.replace('/api', '');
 
-  // Map order_type to display text
   const getOrderTypeDisplay = (orderType) => {
     switch (orderType) {
       case 'local':
-        return `Table ${orderDetails.table_number || 'N/A'}`;
+        return `Tableau ${orderDetails.table_number || 'N/A'}`;
       case 'delivery':
-        return 'Delivery';
+        return 'Livraison';
       case 'imported':
-        return 'Takeaway';
+        return 'À emporter';
       default:
-        return 'Unknown';
+        return 'Inconnu';
     }
   };
+
+  const currentUrl = window.location.href;
 
   return (
     <div className="order-waiting-container">
       <div className={`order-waiting-header ${isVisible ? 'visible' : ''} ${isApproved ? 'approved' : ''}`}>
         <h1 className="order-waiting-header-title">
-          {isApproved ? 'Order Confirmed!' : 'Waiting for Confirmation'}
+          {isApproved ? 'Commande confirmée !' : 'En attente de confirmation'}
         </h1>
         <p className="order-waiting-header-subtitle">
-          Order #{orderId} • {getOrderTypeDisplay(orderDetails.order_type)} • Status: {orderDetails.status || 'received'}
+          Commande #{orderId} • {getOrderTypeDisplay(orderDetails.order_type)} • Statut : {orderDetails.status || 'reçue'}
         </p>
       </div>
 
@@ -513,23 +574,23 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <div className={isApproved ? 'order-waiting-status-approved' : 'order-waiting-status-pending'}>
             <span className="order-waiting-status-text">
               {isProcessingApproval
-                ? 'Processing Approval...'
+                ? 'Traitement de l\'approbation...'
                 : isApproved
-                ? 'Order Approved'
-                : 'Pending Approval'}
+                ? 'Commande approuvée'
+                : 'En attente d\'approbation'}
             </span>
           </div>
           <p className="order-waiting-status-message">
             {isProcessingApproval
-              ? 'Your order is being confirmed.'
+              ? 'Votre commande est en cours de confirmation.'
               : isApproved
-              ? 'Your order has been confirmed and is being prepared.'
-              : 'Your order is being reviewed by our staff.'}
+              ? 'Votre commande a été confirmée et est en cours de préparation.'
+              : 'Votre commande est en cours d\'examen par notre personnel.'}
           </p>
         </div>
 
         <div className="order-waiting-items-section">
-          <h2 className="order-waiting-section-title">Your Order</h2>
+          <h2 className="order-waiting-section-title">Votre commande</h2>
           <div className="order-waiting-items">
             {groupedItems.map((item, index) => {
               const itemTotalPrice = item.unitPrice * item.quantity;
@@ -540,25 +601,25 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                   style={{ transitionDelay: `${index * 0.1}s` }}
                 >
                   <img
-                    src={item.imageUrl ? `${baseImageUrl}${item.imageUrl}` : 'https://via.placeholder.com/40?text=No+Image'}
+                    src={item.imageUrl ? `${baseImageUrl}${item.imageUrl}` : 'https://via.placeholder.com/40?text=Aucune+Image'}
                     alt={item.name}
                     className="order-waiting-item-image"
-                    onError={(e) => (e.target.src = 'https://via.placeholder.com/40?text=No+Image')}
+                    onError={(e) => (e.target.src = 'https://via.placeholder.com/40?text=Aucune+Image')}
                   />
                   <div className="order-waiting-item-details">
                     <span className="order-waiting-item-name">{item.name}</span>
                     {item.supplementName && (
                       <span className="order-waiting-item-option">
-                        + {item.supplementName} {item.supplementPrice > 0 && `(+$${item.supplementPrice.toFixed(2)})`}
+                        + {item.supplementName} {item.supplementPrice > 0 && `(+${item.supplementPrice.toFixed(2)} DT)`}
                       </span>
                     )}
                     {(item.options || []).map((opt, optIdx) => (
                       <span key={optIdx} className="order-waiting-item-option">
-                        + {opt.name} {opt.price > 0 && `(+$${opt.price.toFixed(2)})`}
+                        + {opt.name} {opt.price > 0 && `(+${opt.price.toFixed(2)} DT)`}
                       </span>
                     ))}
                     <span className="order-waiting-item-total">
-                      Total: ${itemTotalPrice.toFixed(2)}
+                      Total : {itemTotalPrice.toFixed(2)} DT
                     </span>
                   </div>
                   <span className="order-waiting-quantity-badge">{item.quantity}</span>
@@ -571,9 +632,26 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         <div className="order-waiting-total-section">
           <div className="order-waiting-total-row">
             <span className="order-waiting-total-label">Total</span>
-            <span className="order-waiting-total-value">${parseFloat(orderDetails.total_price).toFixed(2)}</span>
+            <span className="order-waiting-total-value">{parseFloat(orderDetails.total_price).toFixed(2)} DT</span>
           </div>
         </div>
+      </div>
+
+      <div className="order-waiting-url-section">
+        <p className="order-waiting-url-text">URL de la commande actuelle :</p>
+        <p className="order-waiting-url-value" title={currentUrl}>{currentUrl}</p>
+        <p className="order-waiting-instruction">
+          Veuillez enregistrer cette URL pour suivre l'état de votre commande ultérieurement, par exemple lors du paiement ou pour vérifier les mises à jour. Nous vous recommandons de la copier dans un endroit sécurisé pour votre commodité.
+        </p>
+        <center><button
+          onClick={handleCopyUrl}
+          className="order-waiting-button"
+          onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
+          onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
+          onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
+        >
+          Copier l'URL de la commande
+        </button></center>
       </div>
 
       <button
@@ -583,7 +661,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
         onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
       >
-        Return to Home
+        Retour à l'accueil
       </button>
     </div>
   );
