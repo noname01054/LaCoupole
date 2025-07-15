@@ -9,7 +9,7 @@ import {
   Restaurant,
   LocalShipping,
   Schedule,
-  CheckCircle,
+  Note,
 } from '@mui/icons-material';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
@@ -37,7 +37,7 @@ const getOrderStatus = (approved) => ({
   color: approved ? '#10b981' : '#f59e0b',
   bgColor: approved ? '#d1fae5' : '#fef3c7',
   icon: approved ? Check : AccessTime,
-  label: approved ? 'Approuvé' : 'En attente',
+  label: approved ? 'Approuvée' : 'En attente',
   urgency: approved ? 'none' : 'high'
 });
 
@@ -126,30 +126,30 @@ function OrderCard({
     const optionNames = order.breakfast_option_names?.split(',') || [];
     const optionPrices = order.breakfast_option_prices?.split(',') || [];
 
-    breakfastIds.forEach((id, idx) => {
-      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length || idx >= unitPricesBreakfast.length) return;
+    breakfastIds.forEach((id, index) => {
+      if (index >= breakfastQuantities.length || index >= breakfastNames.length || index >= unitPricesBreakfast.length) return;
       
       const key = id.trim();
-      const quantity = safeParseInt(breakfastQuantities[idx], 1);
-      const unitPrice = safeParseFloat(unitPricesBreakfast[idx], 0);
+      const quantity = safeParseInt(breakfastQuantities[index], 1);
+      const unitPrice = safeParseFloat(unitPricesBreakfast[index], 0);
 
       if (!acc[key]) {
         acc[key] = {
           id: safeParseInt(id, 0),
           type: 'breakfast',
-          name: breakfastNames[idx]?.trim() || 'Petit-déjeuner inconnu',
+          name: breakfastNames[index]?.trim() || 'Petit-déjeuner inconnu',
           quantity: 0,
           unitPrice: unitPrice,
-          imageUrl: breakfastImages[idx]?.trim() || null,
+          imageUrl: breakfastImages[index]?.trim() || null,
           options: [],
         };
       }
       acc[key].quantity += quantity;
 
       // Add options for breakfast items
-      const optionsPerItem = optionIds.length / (breakfastIds.length || 1);
-      const startIdx = Math.floor(idx * optionsPerItem);
-      const endIdx = Math.floor((idx + 1) * optionsPerItem);
+      const optionsPerItem = breakfastIds.length ? optionIds.length / breakfastIds.length : 0;
+      const startIdx = Math.floor(index * optionsPerItem);
+      const endIdx = Math.floor((index + 1) * optionsPerItem);
       for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
         if (optionIds[i]) {
           acc[key].options.push({
@@ -259,6 +259,17 @@ function OrderCard({
   const deliveryAlertStyle = order.delivery_address ? {
     backgroundColor: '#fef3c7',
     border: '1px solid #f59e0b',
+    borderRadius: '12px',
+    padding: '12px',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+  } : { display: 'none' };
+
+  const notesAlertStyle = order.notes ? {
+    backgroundColor: '#e6f3ff',
+    border: '1px solid #3b82f6',
     borderRadius: '12px',
     padding: '12px',
     marginBottom: '16px',
@@ -451,6 +462,21 @@ function OrderCard({
           </div>
         )}
 
+        {/* Notes Alert */}
+        {order.notes && (
+          <div style={notesAlertStyle}>
+            <Note sx={{ fontSize: 18, color: '#3b82f6' }} />
+            <div>
+              <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '2px' }}>
+                Instructions spéciales
+              </div>
+              <div style={{ fontSize: '13px', color: '#1e40af' }}>
+                {order.notes}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Expand Button */}
         <button style={expandButtonStyle} onClick={handleExpandToggle}>
           <Receipt sx={{ fontSize: 16 }} />
@@ -525,7 +551,7 @@ function OrderCard({
                   disabled={isApproving || order.approved}
                 >
                   <Check sx={{ fontSize: 18 }} />
-                  {isApproving ? 'Approbation en cours...' : 'Accepter la commande'}
+                  {isApproving ? 'Approbation de la commande...' : 'Accepter la commande'}
                 </button>
               </div>
             )}
