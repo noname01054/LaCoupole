@@ -30,6 +30,8 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
     return sum + (parseFloat(option?.additional_price) || 0);
   }, 0) || 0;
 
+  const totalItemPrice = (displayPrice + supplementPrice + breakfastOptionPrices) * (item.quantity || 1);
+
   return (
     <li className="cart-modal-item">
       <div className="cart-modal-item-header">
@@ -50,7 +52,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-details">
           <h4 className="cart-modal-item-name">{item.name || 'Article sans nom'}</h4>
           <div className="cart-modal-item-price">
-            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} DT
+            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} DT x {item.quantity || 1} = {totalItemPrice.toFixed(2)} DT
             {supplementPrice > 0 && (
               <span className="cart-modal-supplement-price">+{supplementPrice.toFixed(2)} DT (Supplément)</span>
             )}
@@ -137,6 +139,7 @@ function CartModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [notes, setNotes] = useState('');
   const modalRef = useRef(null);
   const contentRef = useRef(null);
   const touchStartY = useRef(null);
@@ -164,6 +167,7 @@ function CartModal({
       setItemSupplements({});
       setSupplementSelections({});
       setBreakfastOptions({});
+      setNotes('');
       return;
     }
 
@@ -230,7 +234,8 @@ function CartModal({
           const option = (breakfastOptions[item.breakfast_id] || []).find(o => o.id === optionId);
           return sum + (parseFloat(option?.additional_price) || 0);
         }, 0) || 0;
-        return sum + item.quantity * (basePrice + supplementPrice + breakfastOptionPrices);
+        const unitTotal = basePrice + supplementPrice + breakfastOptionPrices;
+        return sum + (unitTotal * (item.quantity || 1));
       }, 0)
       .toFixed(2);
   }, [aggregatedCart, supplementSelections, breakfastOptions]);
@@ -283,8 +288,8 @@ function CartModal({
   }, [cart, itemSupplements, updateQuantity]);
 
   const validateOrder = useCallback(() => {
-    if (!cart?.length) return 'Panier vide';
-    if (orderType === 'local' && !tableId) return 'Veuillez choisir une table';
+    if (!cart?.length) return 'Le panier est vide';
+    if (orderType === 'local' && !tableId) return 'Veuillez sélectionner une table';
     if (orderType === 'delivery' && !deliveryAddress?.trim()) return 'Veuillez entrer une adresse de livraison';
     // No tableId or deliveryAddress required for 'imported' orders
 
@@ -300,7 +305,7 @@ function CartModal({
         const groups = [...new Set(options.map(o => o.group_id).filter(id => id))];
         const selectedGroups = [...new Set(options.filter(o => item.option_ids.includes(o.id)).map(o => o.group_id))];
         if (groups.length && selectedGroups.length !== groups.length) {
-          return `Choisissez une option par groupe pour ${item.name || 'article'}`;
+          return `Sélectionnez une option pour chacun des ${groups.length} groupes pour ${item.name || 'article'}`;
         }
       }
     }
@@ -366,6 +371,7 @@ function CartModal({
         table_id: orderType === 'local' ? parseInt(tableId) : null,
         delivery_address: orderType === 'delivery' ? deliveryAddress.trim() : null,
         session_id: sessionId,
+        notes: notes.trim() || null,
       };
 
       const response = await api.submitOrder(orderData, {
@@ -378,7 +384,7 @@ function CartModal({
         ...orderData,
         created_at: new Date().toISOString(),
         approved: 0,
-        status: 'reçu',
+        status: 'reçue',
       });
 
       clearCart();
@@ -386,6 +392,7 @@ function CartModal({
       setTableId('');
       setTableSearch('');
       setDeliveryAddress('');
+      setNotes('');
       toast.success(`Commande passée avec succès ! ${orderType === 'imported' ? 'Veuillez procéder à la récupération.' : ''}`);
 
       navigate(`/order-waiting/${response.data.orderId}`, { state: { sessionId } });
@@ -394,7 +401,7 @@ function CartModal({
       if (error.response?.status === 429) {
         toast.error('Veuillez attendre avant de passer une autre commande.');
       } else if (message.includes('Price mismatch')) {
-        toast.error('Erreur de prix détectée. Veuillez actualiser et réessayer.');
+        toast.error('Incohérence de prix détectée. Veuillez actualiser et réessayer.');
       } else {
         toast.error(message);
       }
@@ -402,7 +409,7 @@ function CartModal({
       submissionLockRef.current = null;
       setIsSubmitting(false);
     }
-  }, [orderType, tableId, deliveryAddress, aggregatedCart, supplementSelections, total, clearCart, navigate, validateOrder, breakfastOptions, sessionId, socket]);
+  }, [orderType, tableId, deliveryAddress, aggregatedCart, supplementSelections, total, clearCart, navigate, validateOrder, breakfastOptions, sessionId, socket, notes]);
 
   const handleClose = useCallback(() => {
     setIsClosing(true);
@@ -410,6 +417,7 @@ function CartModal({
       setSupplementSelections({});
       setTableId('');
       setTableSearch('');
+      setNotes('');
       setDragOffset(0);
       setIsClosing(false);
       onClose();
@@ -483,7 +491,7 @@ function CartModal({
             <CloseIcon fontSize="small" />
           </button>
           <h3 className="cart-modal-title">Votre panier</h3>
-          <div className="cart-modal-badge">{itemCount} Articles</div>
+          <div className="cart-modal-badge">{itemCount} articles</div>
         </div>
 
         <div ref={contentRef} className="cart-modal-content">
@@ -491,7 +499,7 @@ function CartModal({
             <div className="cart-modal-empty-cart">
               <CoffeeIcon className="cart-modal-empty-cart-icon" />
               <p className="cart-modal-empty-cart-text">Votre panier est vide</p>
-              <p className="cart-modal-empty-cart-subtext">Ajoutez des articles délicieux pour commencer !</p>
+              <p className="cart-modal-empty-cart-subtext">Ajoutez quelques articles délicieux pour commencer !</p>
             </div>
           ) : (
             <>
@@ -523,9 +531,9 @@ function CartModal({
                     value={orderType}
                     className="cart-modal-select"
                   >
-                    <option value="local">Manger sur place</option>
-                    <option value="delivery">Livré chez toi</option>
-                    <option value="imported">Prendre à emporter</option>
+                    <option value="local">Sur place</option>
+                    <option value="delivery">Livraison</option>
+                    <option value="imported">À emporter</option>
                   </select>
                 </div>
 
@@ -542,7 +550,7 @@ function CartModal({
                           type="text"
                           value={tableSearch}
                           onChange={(e) => setTableSearch(e.target.value)}
-                          placeholder="Entrez le numéro de votre table"
+                          placeholder="Rechercher le numéro de table..."
                           className="cart-modal-table-search-input"
                         />
                       </div>
@@ -550,7 +558,7 @@ function CartModal({
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
                         <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
-                        Choisir une table
+                        Sélectionner une table
                       </label>
                       <div className="cart-modal-table-list-container">
                         {filteredTables.length > 0 ? (
@@ -587,6 +595,20 @@ function CartModal({
                     />
                   </div>
                 )}
+
+                <div className="cart-modal-form-group">
+                  <label className="cart-modal-label">
+                    <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
+                    Instructions spéciales
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Ajoutez des instructions spéciales (par exemple, 'mahouch 7arr Barsha')"
+                    className="cart-modal-textarea"
+                    rows="3"
+                  />
+                </div>
 
                 <button
                   onClick={handlePlaceOrder}
