@@ -4,7 +4,25 @@ import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 import { debounce } from 'lodash';
+import { LocationOn, Note } from '@mui/icons-material';
 import './css/OrderWaiting.css';
+
+// Helper function to safely parse numbers
+const safeParseFloat = (value, defaultValue = 0) => {
+  if (value === null || value === undefined || value === '' || value === 'NULL') {
+    return defaultValue;
+  }
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? defaultValue : parsed;
+};
+
+const safeParseInt = (value, defaultValue = 0) => {
+  if (value === null || value === undefined || value === '' || value === 'NULL') {
+    return defaultValue;
+  }
+  const parsed = parseInt(value, 10);
+  return isNaN(parsed) ? defaultValue : parsed;
+};
 
 function OrderWaiting({ sessionId: propSessionId, socket }) {
   const { orderId } = useParams();
@@ -21,11 +39,11 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const hasPlayedSound = useRef(false);
   const hasInteracted = useRef(false);
 
-  // Prioriser l'identifiant de session depuis l'état de navigation
+  // Prioritize session ID from navigation state
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
   const isMounted = useRef(false);
 
-  // Précharger l'audio et valider
+  // Preload audio and validate
   useEffect(() => {
     const audioPath = '/assets/notification1.mp3';
     audioRef.current = new Audio(audioPath);
@@ -35,7 +53,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       .then((response) => {
         if (!response.ok) {
           console.error(`Fichier audio introuvable à ${audioPath}`, { timestamp: new Date().toISOString() });
-          toast.error('Le fichier sonore de confirmation de commande est manquant.');
+          toast.error('Le fichier son de confirmation de commande est manquant.');
         } else {
           console.log(`Fichier audio préchargé avec succès : ${audioPath}`, { timestamp: new Date().toISOString() });
         }
@@ -53,7 +71,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     };
   }, []);
 
-  // Mise à jour différée de l'état orderDetails
+  // Debounced order details update
   const debouncedSetOrderDetails = useCallback(
     debounce((newDetails) => {
       setOrderDetails(newDetails);
@@ -63,11 +81,11 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   useEffect(() => {
     if (!state?.sessionId && !localStorage.getItem('sessionId')) {
-      console.warn('Aucun identifiant de session trouvé dans l\'état ou le localStorage, nouveau généré :', sessionId, 'timestamp:', new Date().toISOString());
+      console.warn('Aucun ID de session trouvé dans l\'état ou localStorage, généré un nouveau :', sessionId, 'timestamp :', new Date().toISOString());
       localStorage.setItem('sessionId', sessionId);
       api.defaults.headers.common['X-Session-Id'] = sessionId;
     }
-    console.log('OrderWaiting initialisé avec sessionId:', sessionId, 'orderId:', orderId, 'timestamp:', new Date().toISOString());
+    console.log('OrderWaiting initialisé avec sessionId :', sessionId, 'orderId :', orderId, 'timestamp :', new Date().toISOString());
   }, [sessionId, orderId]);
 
   useEffect(() => {
@@ -79,19 +97,19 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const fetchOrder = useCallback(async () => {
     if (!orderId || isNaN(parseInt(orderId))) {
-      setErrorMessage('Identifiant de commande invalide.');
+      setErrorMessage('ID de commande invalide.');
       setIsLoading(false);
       return;
     }
 
     try {
       const response = await api.getOrder(orderId, { headers: { 'Cache-Control': 'no-cache' } });
-      console.log('Détails de la commande récupérés :', response.data, 'timestamp:', new Date().toISOString());
+      console.log('Détails de la commande récupérés :', response.data, 'timestamp :', new Date().toISOString());
       debouncedSetOrderDetails(response.data);
       setIsApproved(!!response.data.approved);
       setIsLoading(false);
     } catch (error) {
-      console.error('Erreur de récupération de la commande :', {
+      console.error('Erreur lors de la récupération de la commande :', {
         status: error.response?.status,
         message: error.response?.data?.error || error.message,
         timestamp: new Date().toISOString(),
@@ -101,7 +119,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       } else if (error.response?.status === 404) {
         setErrorMessage('Commande introuvable.');
       } else if (error.response?.status === 500) {
-        setErrorMessage('Erreur serveur. Veuillez réessayer plus tard.');
+        setErrorMessage('Erreur du serveur. Veuillez réessayer plus tard.');
       } else {
         setErrorMessage('Échec du chargement des détails de la commande. Vérifiez votre connexion.');
       }
@@ -120,8 +138,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         if (hasInteracted.current && !hasPlayedSound.current) {
           audioRef.current.currentTime = 0;
           audioRef.current.play().catch((err) => {
-            console.error('Erreur de relecture audio :', err, { timestamp: new Date().toISOString() });
-            toast.warn('Son de confirmation de commande bloqué par le navigateur.');
+            console.error('Erreur de lecture audio :', err, { timestamp: new Date().toISOString() });
+            toast.warn('Le son de confirmation de commande est bloqué par le navigateur.');
           });
           hasPlayedSound.current = true;
           window.removeEventListener('click', retrySound);
@@ -139,7 +157,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       hasPlayedSound.current = true;
     } catch (err) {
       console.error('Échec de la lecture audio :', err, { timestamp: new Date().toISOString() });
-      toast.warn('Son de confirmation de commande bloqué par le navigateur.');
+      toast.warn('Le son de confirmation de commande est bloqué par le navigateur.');
     }
   };
 
@@ -152,12 +170,12 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         timestamp: new Date().toISOString(),
       });
       if (!data.orderId) {
-        console.warn('Événement orderApproved invalide : orderId manquant', data, 'timestamp:', new Date().toISOString());
+        console.warn('Événement orderApproved invalide : orderId manquant', data, 'timestamp :', new Date().toISOString());
         toast.warn('Données de confirmation de commande invalides reçues');
         return;
       }
       if (parseInt(data.orderId) === parseInt(orderId)) {
-        console.log('Traitement de la confirmation de commande pour orderId:', data.orderId, 'timestamp:', new Date().toISOString());
+        console.log('Traitement de la confirmation de commande pour orderId :', data.orderId, 'timestamp :', new Date().toISOString());
         setIsProcessingApproval(true);
         setIsApproved(true);
         if (!hasPlayedSound.current) {
@@ -171,7 +189,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
               approved: 1,
               status: data.orderDetails?.status || 'en préparation',
             };
-            console.log('Détails de la commande mis à jour depuis l\'événement :', updatedDetails, 'timestamp:', new Date().toISOString());
+            console.log('Détails de la commande mis à jour depuis l\'événement :', updatedDetails, 'timestamp :', new Date().toISOString());
             return updatedDetails;
           });
           setIsLoading(false);
@@ -207,7 +225,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             ...data.orderDetails,
             status: data.status || prev?.status || 'reçue',
           };
-          console.log('Détails de la commande mis à jour sur orderUpdate :', updatedDetails, 'timestamp:', new Date().toISOString());
+          console.log('Détails de la commande mis à jour sur orderUpdate :', updatedDetails, 'timestamp :', new Date().toISOString());
           return updatedDetails;
         });
         toast.info(`Commande #${orderId} mise à jour à ${data.status}`, { autoClose: 3000 });
@@ -218,9 +236,9 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   useEffect(() => {
     if (!sessionId) {
-      console.warn('Aucun identifiant de session fourni, génération d\'un nouveau', { timestamp: new Date().toISOString() });
+      console.warn('Aucun ID de session fourni, génération d\'un nouveau', { timestamp: new Date().toISOString() });
       const newSessionId = `guest-${uuidv4()}`;
-      setErrorMessage('Identifiant de session manquant. Veuillez réessayer.');
+      setErrorMessage('ID de session manquant. Veuillez réessayer.');
       setIsLoading(false);
       localStorage.setItem('sessionId', newSessionId);
       api.defaults.headers.common['X-Session-Id'] = newSessionId;
@@ -228,7 +246,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     }
 
     if (!socket) {
-      console.warn('Socket non encore fourni, en attente d\'initialisation', { sessionId, timestamp: new Date().toISOString() });
+      console.warn('Socket non fourni, en attente d\'initialisation', { sessionId, timestamp: new Date().toISOString() });
       setIsLoading(true);
       return;
     }
@@ -253,7 +271,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           clearInterval(checkConnection);
           callback();
         } else if (attempts >= maxAttempts) {
-          console.error('Délai d\'attente de connexion socket dépassé', { sessionId, attempts, timestamp: new Date().toISOString() });
+          console.error('Délai de connexion socket dépassé', { sessionId, attempts, timestamp: new Date().toISOString() });
           clearInterval(checkConnection);
           setErrorMessage('Impossible de se connecter aux mises à jour en temps réel. Veuillez actualiser la page.');
           setIsLoading(false);
@@ -300,7 +318,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
     const pollInterval = setInterval(() => {
       if (!isApproved && !isProcessingApproval) {
-        console.log('Sondage pour le statut de la commande :', orderId, 'sessionId:', sessionId, { timestamp: new Date().toISOString() });
+        console.log('Sondage pour l\'état de la commande :', orderId, 'sessionId :', sessionId, { timestamp: new Date().toISOString() });
         fetchOrder();
       } else {
         console.log('Sondage ignoré : la commande est approuvée ou en cours d\'approbation', {
@@ -323,7 +341,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       isMounted.current = false;
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
-      console.log('Nettoyage OrderWaiting terminé pour sessionId:', sessionId, { timestamp: new Date().toISOString() });
+      console.log('Nettoyage OrderWaiting terminé pour sessionId :', sessionId, { timestamp: new Date().toISOString() });
     };
   }, [fetchOrder, sessionId, socket, onOrderApproved, onOrderUpdate, isApproved, orderId, isProcessingApproval]);
 
@@ -337,7 +355,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
     const handlePopState = () => {
       if (!isApproved) {
-        toast.warn('Veuillez attendre que votre commande soit approuvée avant de naviguer ailleurs.');
+        toast.warn('Veuillez attendre l\'approbation de votre commande avant de naviguer ailleurs.');
         navigate(`/order-waiting/${orderId}`, { replace: true, state: { sessionId } });
       } else {
         navigate('/');
@@ -361,7 +379,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const handleCopyUrl = () => {
     const currentUrl = window.location.href;
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(currentUrl)
+      navigator.clipboard
+        .writeText(currentUrl)
         .then(() => {
           console.log('URL copiée dans le presse-papiers :', currentUrl, { timestamp: new Date().toISOString() });
           toast.success('URL de la commande copiée dans le presse-papiers !', { autoClose: 3000 });
@@ -371,7 +390,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           fallbackCopy(currentUrl);
         });
     } else {
-      console.warn('API clipboard non disponible, utilisation de la méthode de secours', { timestamp: new Date().toISOString() });
+      console.warn('API Clipboard indisponible, utilisation de la méthode de secours', { timestamp: new Date().toISOString() });
       fallbackCopy(currentUrl);
     }
   };
@@ -404,81 +423,116 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
     const acc = {};
 
-    const itemIds = orderDetails.item_ids?.split(',').filter(id => id.trim()) || [];
+    // Process menu items
+    const itemIds = orderDetails.item_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
     const itemNames = orderDetails.item_names?.split(',') || [];
-    const menuQuantities = orderDetails.menu_quantities?.split(',').filter(q => q !== 'NULL') || [];
-    const unitPrices = orderDetails.unit_prices?.split(',').map(price => parseFloat(price) || 0) || [];
+    const unitPrices = orderDetails.unit_prices?.split(',').map(price => safeParseFloat(price)) || [];
+    const menuQuantities = orderDetails.menu_quantities?.split(',').filter(q => q !== 'NULL' && q?.trim()).map(q => safeParseInt(q, 1)) || [];
     const supplementIds = orderDetails.supplement_ids?.split(',') || [];
     const supplementNames = orderDetails.supplement_names?.split(',') || [];
-    const supplementPrices = orderDetails.supplement_prices?.split(',').map(price => parseFloat(price) || 0) || [];
+    const supplementPrices = orderDetails.supplement_prices?.split(',').map(price => safeParseFloat(price)) || [];
     const imageUrls = orderDetails.image_urls?.split(',') || [];
 
     itemIds.forEach((id, idx) => {
-      if (idx >= menuQuantities.length || idx >= itemNames.length) return;
+      if (idx >= menuQuantities.length || idx >= itemNames.length || idx >= unitPrices.length) return;
+      
       const supplementId = supplementIds[idx]?.trim() || null;
       const key = `${id.trim()}_${supplementId || 'none'}`;
-      const quantity = parseInt(menuQuantities[idx], 10) || 1;
+      const quantity = menuQuantities[idx]; // Use the exact quantity from the order
+      const unitPrice = safeParseFloat(unitPrices[idx], 0);
 
       if (!acc[key]) {
         acc[key] = {
-          id: parseInt(id),
+          id: safeParseInt(id, 0),
           type: 'menu',
           name: itemNames[idx]?.trim() || 'Article inconnu',
           quantity: 0,
-          unitPrice: unitPrices[idx],
-          supplementName: supplementId ? supplementNames[idx]?.trim() : null,
-          supplementPrice: supplementId ? supplementPrices[idx] : 0,
+          unitPrice: unitPrice,
+          baseUnitPrice: unitPrice,
+          supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
+          supplementPrice: supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0,
           imageUrl: imageUrls[idx]?.trim() || null,
           options: [],
         };
       }
-      acc[key].quantity += quantity;
+      // Only add quantity if this is the first occurrence of the key with this quantity
+      if (acc[key].quantity === 0) {
+        acc[key].quantity = quantity;
+      }
+      console.log(`Traitement de l'article de menu : id=${id}, supplementId=${supplementId}, quantity=${quantity}, key=${key}`, { timestamp: new Date().toISOString() });
     });
 
-    const breakfastIds = orderDetails.breakfast_ids?.split(',').filter(id => id.trim()) || [];
+    // Process breakfast items
+    const breakfastIds = orderDetails.breakfast_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
     const breakfastNames = orderDetails.breakfast_names?.split(',') || [];
-    const breakfastQuantities = orderDetails.breakfast_quantities?.split(',').filter(q => q !== 'NULL') || [];
-    const unitPricesBreakfast = orderDetails.unit_prices?.split(',').map(price => parseFloat(price) || 0) || [];
+    const breakfastQuantities = orderDetails.breakfast_quantities?.split(',').filter(q => q !== 'NULL' && q?.trim()) || [];
+    const unitPricesBreakfast = orderDetails.unit_prices?.split(',').map(price => safeParseFloat(price)) || [];
     const breakfastImages = orderDetails.breakfast_images?.split(',') || [];
-    const optionIds = orderDetails.breakfast_option_ids?.split(',').filter(id => id.trim()) || [];
+    const optionIds = orderDetails.breakfast_option_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
     const optionNames = orderDetails.breakfast_option_names?.split(',') || [];
-    const optionPrices = orderDetails.breakfast_option_prices?.split(',').map(price => parseFloat(price) || 0) || [];
+    const optionPrices = orderDetails.breakfast_option_prices?.split(',').map(price => safeParseFloat(price)) || [];
 
     breakfastIds.forEach((id, idx) => {
-      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length) return;
+      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length || idx >= unitPricesBreakfast.length) return;
+      
       const key = id.trim();
-      const quantity = parseInt(breakfastQuantities[idx], 10) || 1;
+      const quantity = safeParseInt(breakfastQuantities[idx], 1);
+      const unitPrice = safeParseFloat(unitPricesBreakfast[idx], 0);
 
       if (!acc[key]) {
         acc[key] = {
-          id: parseInt(id),
+          id: safeParseInt(id, 0),
           type: 'breakfast',
           name: breakfastNames[idx]?.trim() || 'Petit-déjeuner inconnu',
           quantity: 0,
-          unitPrice: unitPricesBreakfast[idx],
+          unitPrice: unitPrice,
+          baseUnitPrice: unitPrice,
           imageUrl: breakfastImages[idx]?.trim() || null,
           options: [],
         };
       }
       acc[key].quantity += quantity;
 
+      // Add options for breakfast items
       const optionsPerItem = optionIds.length / (breakfastIds.length || 1);
-      const startIdx = idx * optionsPerItem;
-      const endIdx = (idx + 1) * optionsPerItem;
+      const startIdx = Math.floor(idx * optionsPerItem);
+      const endIdx = Math.floor((idx + 1) * optionsPerItem);
       for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
         if (optionIds[i]) {
           acc[key].options.push({
-            id: optionIds[i],
-            name: optionNames[i] || 'Option inconnue',
-            price: optionPrices[i] || 0,
+            name: optionNames[i]?.trim() || 'Option inconnue',
+            price: safeParseFloat(optionPrices[i], 0),
           });
         }
       }
+      // Remove duplicates
       acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
     });
 
-    return Object.values(acc);
+    return Object.values(acc).filter(item => item.quantity > 0);
   })();
+
+  const deliveryAlertStyle = orderDetails?.delivery_address ? {
+    backgroundColor: '#fef3c7',
+    border: '1px solid #f59e0b',
+    borderRadius: '12px',
+    padding: '12px',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+  } : { display: 'none' };
+
+  const notesAlertStyle = orderDetails?.notes ? {
+    backgroundColor: '#e6f3ff',
+    border: '1px solid #3b82f6',
+    borderRadius: '12px',
+    padding: '12px',
+    marginBottom: '16px',
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: '8px',
+  } : { display: 'none' };
 
   if (isLoading) {
     return (
@@ -584,16 +638,48 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             {isProcessingApproval
               ? 'Votre commande est en cours de confirmation.'
               : isApproved
-              ? 'Votre commande a été confirmée et est en cours de préparation.'
+              ? 'Votre commande a été confirmée et est en préparation.'
               : 'Votre commande est en cours d\'examen par notre personnel.'}
           </p>
         </div>
+
+        {orderDetails.delivery_address && (
+          <div style={deliveryAlertStyle}>
+            <LocationOn sx={{ fontSize: 18, color: '#f59e0b' }} />
+            <div>
+              <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '2px' }}>
+                Commande de livraison
+              </div>
+              <div style={{ fontSize: '13px', color: '#92400e' }}>
+                {orderDetails.delivery_address}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {orderDetails.notes && (
+          <div style={notesAlertStyle}>
+            <Note sx={{ fontSize: 18, color: '#3b82f6' }} />
+            <div>
+              <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '2px' }}>
+                Instructions spéciales
+              </div>
+              <div style={{ fontSize: '13px', color: '#1e40af' }}>
+                {orderDetails.notes}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="order-waiting-items-section">
           <h2 className="order-waiting-section-title">Votre commande</h2>
           <div className="order-waiting-items">
             {groupedItems.map((item, index) => {
-              const itemTotalPrice = item.unitPrice * item.quantity;
+              const imageUrl = item.imageUrl
+                ? `${baseImageUrl}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
+                : 'https://via.placeholder.com/40?text=Aucune+Image';
+              const itemTotalPrice = safeParseFloat(item.baseUnitPrice, 0) * safeParseInt(item.quantity, 1);
+
               return (
                 <div
                   key={`${item.type}-${item.id}-${index}`}
@@ -601,7 +687,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                   style={{ transitionDelay: `${index * 0.1}s` }}
                 >
                   <img
-                    src={item.imageUrl ? `${baseImageUrl}${item.imageUrl}` : 'https://via.placeholder.com/40?text=Aucune+Image'}
+                    src={imageUrl}
                     alt={item.name}
                     className="order-waiting-item-image"
                     onError={(e) => (e.target.src = 'https://via.placeholder.com/40?text=Aucune+Image')}
@@ -610,17 +696,15 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                     <span className="order-waiting-item-name">{item.name}</span>
                     {item.supplementName && (
                       <span className="order-waiting-item-option">
-                        + {item.supplementName} {item.supplementPrice > 0 && `(+${item.supplementPrice.toFixed(2)} DT)`}
+                        + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+${safeParseFloat(item.supplementPrice, 0).toFixed(2)} DT)`}
                       </span>
                     )}
                     {(item.options || []).map((opt, optIdx) => (
                       <span key={optIdx} className="order-waiting-item-option">
-                        + {opt.name} {opt.price > 0 && `(+${opt.price.toFixed(2)} DT)`}
+                        + {opt.name} (+${safeParseFloat(opt.price, 0).toFixed(2)} DT)
                       </span>
                     ))}
-                    <span className="order-waiting-item-total">
-                      Total : {itemTotalPrice.toFixed(2)} DT
-                    </span>
+                    <span className="order-waiting-item-total">{itemTotalPrice.toFixed(2)} DT</span>
                   </div>
                   <span className="order-waiting-quantity-badge">{item.quantity}</span>
                 </div>
@@ -632,7 +716,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         <div className="order-waiting-total-section">
           <div className="order-waiting-total-row">
             <span className="order-waiting-total-label">Total</span>
-            <span className="order-waiting-total-value">{parseFloat(orderDetails.total_price).toFixed(2)} DT</span>
+            <span className="order-waiting-total-value">{safeParseFloat(orderDetails.total_price).toFixed(2)} DT</span>
           </div>
         </div>
       </div>
@@ -641,17 +725,19 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         <p className="order-waiting-url-text">URL de la commande actuelle :</p>
         <p className="order-waiting-url-value" title={currentUrl}>{currentUrl}</p>
         <p className="order-waiting-instruction">
-          Veuillez enregistrer cette URL pour suivre l'état de votre commande ultérieurement, par exemple lors du paiement ou pour vérifier les mises à jour. Nous vous recommandons de la copier dans un endroit sécurisé pour votre commodité.
+          Veuillez sauvegarder cette URL pour suivre l'état de votre commande ultérieurement, par exemple, lors du paiement ou pour vérifier les mises à jour. Nous vous recommandons de la copier dans un endroit sécurisé pour votre commodité.
         </p>
-        <center><button
-          onClick={handleCopyUrl}
-          className="order-waiting-button"
-          onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
-          onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-          onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
-        >
-          Copier l'URL de la commande
-        </button></center>
+        <center>
+          <button
+            onClick={handleCopyUrl}
+            className="order-waiting-button"
+            onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
+            onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
+            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
+          >
+            Copier l'URL de la commande
+          </button>
+        </center>
       </div>
 
       <button
