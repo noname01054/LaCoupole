@@ -171,6 +171,10 @@ api.updateBreakfastOptionGroup = (breakfastId, groupId, data) => api.put(`/break
 api.deleteBreakfastOptionGroup = (breakfastId, groupId, data) => api.delete(`/breakfasts/${breakfastId}/option-groups/${groupId}`, { data });
 api.updateBreakfastOption = (breakfastId, optionId, data) => api.put(`/breakfasts/${breakfastId}/options/${optionId}`, data);
 api.getRelatedBreakfastProducts = (id) => api.get(`/breakfasts/${id}/related`);
+api.getReusableOptionGroups = () => api.get('/option-groups/reusable');
+api.createReusableOptionGroup = (data) => api.post('/option-groups/reusable', data);
+api.updateReusableOptionGroup = (id, data) => api.put(`/option-groups/reusable/${id}`, data);
+api.deleteReusableOptionGroup = (id, data) => api.delete(`/option-groups/reusable/${id}`, { data });
 
 // Theme API methods
 api.getTheme = () => api.get('/theme');
