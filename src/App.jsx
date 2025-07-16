@@ -27,6 +27,7 @@ import BannerManagement from './pages/BannerManagement';
 import AdminBreakfasts from './pages/AdminBreakfasts';
 import BreakfastMenu from './pages/BreakfastMenu';
 import ThemeManagement from './pages/ThemeManagement';
+import ReusableOptionGroups from './pages/ReusableOptionGroups';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartModal from './components/CartModal';
@@ -39,6 +40,7 @@ function App() {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [promotionId, setPromotionId] = useState('');
   const [promotions, setPromotions] = useState([]);
+  const [reusableOptionGroups, setReusableOptionGroups] = useState([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [error, setError] = useState(null);
   const [latestOrderId, setLatestOrderId] = useState(null);
@@ -46,7 +48,7 @@ function App() {
   const [sessionId, setSessionId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [theme, setTheme] = useState(null);
-  const [isSocketReady, setIsSocketReady] = useState(false); // Added from localhosted version
+  const [isSocketReady, setIsSocketReady] = useState(false);
 
   const defaultTheme = {
     primary_color: '#ff6b35',
@@ -66,14 +68,12 @@ function App() {
     toast.info(notification.message, { autoClose: 5000 });
   };
 
-  // Apply theme to CSS custom properties and update favicon and title
   const applyTheme = (themeData) => {
     document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
     document.documentElement.style.setProperty('--secondary-color', themeData.secondary_color);
     document.documentElement.style.setProperty('--background-color', themeData.background_color);
     document.documentElement.style.setProperty('--text-color', themeData.text_color);
 
-    // Update favicon with full URL and cache-busting
     let favicon = document.querySelector("link[rel*='icon']");
     if (!favicon) {
       favicon = document.createElement('link');
@@ -86,7 +86,6 @@ function App() {
       : defaultTheme.favicon_url;
     favicon.href = faviconUrl;
 
-    // Update document title
     document.title = themeData.site_title || defaultTheme.site_title;
   };
 
@@ -101,26 +100,25 @@ function App() {
       api.defaults.headers.common['X-Session-Id'] = fallbackSessionId;
 
       const socketCleanup = initSocket(
-        () => {}, // onNewOrder
-        () => {}, // onOrderUpdate
-        () => {}, // onTableStatusUpdate
-        () => {}, // onReservationUpdate
-        () => {}, // onRatingUpdate
+        () => {},
+        () => {},
+        () => {},
+        () => {},
+        () => {},
         (data) => {
           if (socket && socket.connected) {
             console.log('Broadcasting orderApproved event:', data, { timestamp: new Date().toISOString() });
-            socket.emit('orderApproved', data); // Broadcast to all clients
+            socket.emit('orderApproved', data);
           } else {
             console.warn('Socket not connected, cannot broadcast orderApproved:', data, { timestamp: new Date().toISOString() });
           }
-        }, // onOrderApproved
+        },
         handleNewNotification
       );
       const socketInstance = getSocket();
       setSocket(socketInstance);
-      setIsSocketReady(true); // Set to true once socket is initialized
+      setIsSocketReady(true);
 
-      // Monitor socket connection status with retry logic
       socketInstance.on('connect', () => {
         console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, timestamp: new Date().toISOString() });
       });
@@ -172,6 +170,17 @@ function App() {
         }
       };
 
+      const fetchReusableOptionGroups = async () => {
+        try {
+          const response = await api.get('/option-groups/reusable');
+          setReusableOptionGroups(response.data || []);
+        } catch (error) {
+          console.error('Error fetching reusable option groups:', error.response?.data || error.message, { timestamp: new Date().toISOString() });
+          toast.error(error.response?.data?.error || 'Failed to load reusable option groups');
+          setReusableOptionGroups([]);
+        }
+      };
+
       const fetchTheme = async () => {
         try {
           const response = await api.getTheme();
@@ -185,8 +194,7 @@ function App() {
         }
       };
 
-      // Parallelize initialization for performance
-      await Promise.all([checkAuth(), fetchPromotions(), fetchTheme()]).catch((err) => {
+      await Promise.all([checkAuth(), fetchPromotions(), fetchReusableOptionGroups(), fetchTheme()]).catch((err) => {
         console.error('Initialization error:', err, { timestamp: new Date().toISOString() });
         toast.error('Failed to initialize app');
       });
@@ -464,7 +472,8 @@ function App() {
         <Route path="/admin/users" element={<UserManagement />} />
         <Route path="/admin/promotions" element={<PromotionManagement />} />
         <Route path="/admin/banners" element={<BannerManagement />} />
-        <Route path="/admin/breakfasts" element={<AdminBreakfasts />} />
+        <Route path="/admin/breakfasts" element={<AdminBreakfasts reusableOptionGroups={reusableOptionGroups} />} />
+        <Route path="/admin/reusable-option-groups" element={<ReusableOptionGroups />} />
         <Route path="/admin/table-reservations" element={<AdminTableReservations />} />
         <Route path="/admin/theme" element={<ThemeManagement />} />
         <Route path="/staff/table-reservations" element={<StaffTableReservations />} />
@@ -474,8 +483,8 @@ function App() {
           path="/order-waiting/:orderId"
           element={isSocketReady ? <OrderWaiting sessionId={sessionId} socket={socket} /> : <div>Loading socket...</div>}
         />
-        <Route path="/breakfast" element={<BreakfastMenu addToCart={addToCart} />} />
-        <Route path="/breakfast/:id" element={<BreakfastMenu addToCart={addToCart} />} />
+        <Route path="/breakfast" element={<BreakfastMenu addToCart={addToCart} reusableOptionGroups={reusableOptionGroups} />} />
+        <Route path="/breakfast/:id" element={<BreakfastMenu addToCart={addToCart} reusableOptionGroups={reusableOptionGroups} />} />
         <Route path="*" element={<div style={{ textAlign: 'center', color: '#666' }}>404 Not Found</div>} />
       </Routes>
       <CartModal
