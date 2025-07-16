@@ -18,6 +18,7 @@ import './css/AdminBreakfasts.css';
 function AdminBreakfasts() {
   const [breakfasts, setBreakfasts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [reusableOptionGroups, setReusableOptionGroups] = useState([]);
   const [editingBreakfast, setEditingBreakfast] = useState(null);
   const [newOption, setNewOption] = useState({ group_id: '', option_type: '', option_name: '', additional_price: '' });
   const [newOptionGroup, setNewOptionGroup] = useState({ title: '', is_required: true, max_selections: '1' });
@@ -30,6 +31,24 @@ function AdminBreakfasts() {
 
   const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
 
+  const fetchBreakfastDetails = async (breakfast) => {
+    const [optionsRes, groupsRes] = await Promise.all([
+      api.getBreakfastOptions(breakfast.id),
+      api.getBreakfastOptionGroups(breakfast.id)
+    ]);
+    return {
+      ...breakfast,
+      options: (optionsRes.data || []).map(opt => ({
+        ...opt,
+        additional_price: parseFloat(opt.additional_price) || 0
+      })),
+      optionGroups: (groupsRes.data || []).filter(g => g.breakfast_id === breakfast.id),
+      reusable_option_groups: Array.isArray(groupsRes.data) 
+        ? (groupsRes.data || []).filter(g => !g.breakfast_id).map(g => g.id)
+        : []
+    };
+  };
+
   useEffect(() => {
     const initializeData = async () => {
       try {
@@ -41,28 +60,17 @@ function AdminBreakfasts() {
           return;
         }
         setUserId(authRes.data.id);
-        const [breakfastRes, categoriesRes] = await Promise.all([
+        const [breakfastRes, categoriesRes, reusableGroupsRes] = await Promise.all([
           api.getBreakfasts(),
-          api.get('/categories')
+          api.get('/categories'),
+          api.getReusableOptionGroups()
         ]);
         const breakfastsWithDetails = await Promise.all(
-          breakfastRes.data.map(async (breakfast) => {
-            const [optionsRes, groupsRes] = await Promise.all([
-              api.getBreakfastOptions(breakfast.id),
-              api.getBreakfastOptionGroups(breakfast.id)
-            ]);
-            return {
-              ...breakfast,
-              options: (optionsRes.data || []).map(opt => ({
-                ...opt,
-                additional_price: parseFloat(opt.additional_price) || 0
-              })),
-              optionGroups: groupsRes.data || []
-            };
-          })
+          breakfastRes.data.map(breakfast => fetchBreakfastDetails(breakfast))
         );
-        setBreakfasts(breakfastsWithDetails || []);
+        setBreakfasts(breakfastsWithDetails);
         setCategories(categoriesRes.data || []);
+        setReusableOptionGroups(reusableGroupsRes.data || []);
       } catch (error) {
         toast.error('Failed to load data');
         navigate('/login');
@@ -87,24 +95,50 @@ function AdminBreakfasts() {
         ...opt,
         additional_price: parseFloat(opt.additional_price) || 0
       })),
-      optionGroups: breakfast.optionGroups || []
+      optionGroups: breakfast.optionGroups || [],
+      reusable_option_groups: Array.isArray(breakfast.reusable_option_groups) 
+        ? breakfast.reusable_option_groups 
+        : []
     });
     setFormErrors({ name: '', price: '' });
   };
 
   const handleInputChange = (e) => {
     const { name, value, type, checked, files } = e.target;
-    setEditingBreakfast(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked :
-              type === 'file' ? files[0] :
-              type === 'number' && name === 'category_id' ? (value === '' ? '' : parseInt(value)) :
-              value
-    }));
-    setFormErrors(prev => ({
-      ...prev,
-      [name]: validateField(name, value)
-    }));
+    if (name === 'reusable_option_groups') {
+      const groupId = Number(value);
+      setEditingBreakfast(prev => {
+        const currentGroups = Array.isArray(prev.reusable_option_groups) 
+          ? [...prev.reusable_option_groups] 
+          : [];
+        if (checked) {
+          if (!currentGroups.includes(groupId)) {
+            return {
+              ...prev,
+              reusable_option_groups: [...currentGroups, groupId]
+            };
+          }
+        } else {
+          return {
+            ...prev,
+            reusable_option_groups: currentGroups.filter(id => id !== groupId)
+          };
+        }
+        return prev;
+      });
+    } else {
+      setEditingBreakfast(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked :
+                type === 'file' ? files[0] :
+                type === 'number' && name === 'category_id' ? (value === '' ? '' : parseInt(value)) :
+                value
+      }));
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: validateField(name, value)
+      }));
+    }
   };
 
   const validateField = (name, value) => {
@@ -112,7 +146,7 @@ function AdminBreakfasts() {
       return value && value.trim() ? '' : 'Name is required';
     }
     if (name === 'price') {
-      return value && value.trim() ? '' : 'Price is required';
+      return value && !isNaN(parseFloat(value)) && parseFloat(value) > 0 ? '' : 'Valid price is required';
     }
     return '';
   };
@@ -131,7 +165,7 @@ function AdminBreakfasts() {
     setNewOptionGroup(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked :
-              name === 'max_selections' ? (value === '' ? '' : parseInt(value)) : value
+              name === 'max_selections' ? (value === '' ? '1' : parseInt(value)) : value
     }));
   };
 
@@ -140,7 +174,7 @@ function AdminBreakfasts() {
     setEditingOptionGroup(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked :
-              name === 'max_selections' ? (value === '' ? '' : parseInt(value)) : value
+              name === 'max_selections' ? (value === '' ? '1' : parseInt(value)) : value
     }));
   };
 
@@ -149,18 +183,20 @@ function AdminBreakfasts() {
       toast.error('Option group title is required');
       return;
     }
-    if (newOptionGroup.max_selections === '' || parseInt(newOptionGroup.max_selections) < 0) {
+    const maxSelections = parseInt(newOptionGroup.max_selections) || 1;
+    if (maxSelections < 0) {
       toast.error('Max selections must be a non-negative number');
       return;
     }
     try {
       setIsSubmitting(true);
-      await api.addBreakfastOptionGroup(editingBreakfast.id, {
+      const payload = {
         user_id: String(userId),
-        title: newOptionGroup.title,
-        is_required: String(newOptionGroup.is_required),
-        max_selections: String(newOptionGroup.max_selections)
-      });
+        title: newOptionGroup.title.trim(),
+        is_required: newOptionGroup.is_required,
+        max_selections: String(maxSelections)
+      };
+      await api.addBreakfastOptionGroup(editingBreakfast.id, payload);
       toast.success('Option group added');
       setNewOptionGroup({ title: '', is_required: true, max_selections: '1' });
       const groupsRes = await api.getBreakfastOptionGroups(editingBreakfast.id);
@@ -168,24 +204,7 @@ function AdminBreakfasts() {
         ...prev,
         optionGroups: groupsRes.data || []
       }));
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to add option group');
     } finally {
@@ -207,18 +226,20 @@ function AdminBreakfasts() {
       toast.error('Option group title is required');
       return;
     }
-    if (editingOptionGroup.max_selections === '' || parseInt(editingOptionGroup.max_selections) < 0) {
+    const maxSelections = parseInt(editingOptionGroup.max_selections) || 1;
+    if (maxSelections < 0) {
       toast.error('Max selections must be a non-negative number');
       return;
     }
     try {
       setIsSubmitting(true);
-      await api.updateBreakfastOptionGroup(editingBreakfast.id, groupId, {
+      const payload = {
         user_id: String(userId),
-        title: editingOptionGroup.title,
-        is_required: String(editingOptionGroup.is_required),
-        max_selections: String(editingOptionGroup.max_selections)
-      });
+        title: editingOptionGroup.title.trim(),
+        is_required: editingOptionGroup.is_required,
+        max_selections: String(maxSelections)
+      };
+      await api.updateBreakfastOptionGroup(editingBreakfast.id, groupId, payload);
       toast.success('Option group updated');
       setEditingOptionGroup(null);
       const groupsRes = await api.getBreakfastOptionGroups(editingBreakfast.id);
@@ -226,24 +247,7 @@ function AdminBreakfasts() {
         ...prev,
         optionGroups: groupsRes.data || []
       }));
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to update option group');
     } finally {
@@ -263,30 +267,16 @@ function AdminBreakfasts() {
       ]);
       setEditingBreakfast(prev => ({
         ...prev,
-        optionGroups: groupsRes.data || [],
+        optionGroups: (groupsRes.data || []).filter(g => g.breakfast_id === editingBreakfast.id),
         options: (optionsRes.data || []).map(opt => ({
           ...opt,
           additional_price: parseFloat(opt.additional_price) || 0
-        }))
+        })),
+        reusable_option_groups: Array.isArray(groupsRes.data) 
+          ? (groupsRes.data || []).filter(g => !g.breakfast_id).map(g => g.id)
+          : []
       }));
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to remove option group');
     } finally {
@@ -294,9 +284,37 @@ function AdminBreakfasts() {
     }
   };
 
+  const handleRemoveReusableOptionGroup = async (groupId) => {
+    if (!window.confirm('Remove this reusable option group from this breakfast?')) return;
+    try {
+      setIsSubmitting(true);
+      await api.deleteBreakfastOptionGroup(editingBreakfast.id, groupId, { user_id: String(userId) });
+      toast.success('Reusable option group removed from breakfast');
+      setEditingBreakfast(prev => ({
+        ...prev,
+        reusable_option_groups: Array.isArray(prev.reusable_option_groups) 
+          ? prev.reusable_option_groups.filter(id => id !== groupId)
+          : []
+      }));
+      const groupsRes = await api.getBreakfastOptionGroups(editingBreakfast.id);
+      setEditingBreakfast(prev => ({
+        ...prev,
+        optionGroups: (groupsRes.data || []).filter(g => g.breakfast_id === editingBreakfast.id),
+        reusable_option_groups: Array.isArray(groupsRes.data) 
+          ? (groupsRes.data || []).filter(g => !g.breakfast_id).map(g => g.id)
+          : []
+      }));
+      await refreshBreakfasts();
+    } catch (error) {
+      toast.error(error.response?.data?.error || 'Failed to remove reusable option group');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAddOption = async () => {
-    if (!newOption.group_id || !newOption.option_type || !newOption.option_name || newOption.additional_price === '') {
-      toast.error('All option fields, including option group, are required');
+    if (!newOption.group_id || !newOption.option_type.trim() || !newOption.option_name.trim() || newOption.additional_price === '') {
+      toast.error('All option fields are required');
       return;
     }
     if (!editingBreakfast.optionGroups.length) {
@@ -305,13 +323,14 @@ function AdminBreakfasts() {
     }
     try {
       setIsSubmitting(true);
-      await api.addBreakfastOption(editingBreakfast.id, {
+      const payload = {
         user_id: String(userId),
         group_id: newOption.group_id,
-        option_type: newOption.option_type,
-        option_name: newOption.option_name,
+        option_type: newOption.option_type.trim(),
+        option_name: newOption.option_name.trim(),
         additional_price: newOption.additional_price
-      });
+      };
+      await api.addBreakfastOption(editingBreakfast.id, payload);
       toast.success('Option added');
       setNewOption({ group_id: '', option_type: '', option_name: '', additional_price: '' });
       const optionsRes = await api.getBreakfastOptions(editingBreakfast.id);
@@ -322,24 +341,7 @@ function AdminBreakfasts() {
           additional_price: parseFloat(opt.additional_price) || 0
         }))
       }));
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to add option');
     } finally {
@@ -361,24 +363,7 @@ function AdminBreakfasts() {
           additional_price: parseFloat(opt.additional_price) || 0
         }))
       }));
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to remove option');
     } finally {
@@ -389,8 +374,6 @@ function AdminBreakfasts() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (isSubmitting) return;
-
-    // Validate fields before constructing FormData
     const errors = {
       name: validateField('name', editingBreakfast.name),
       price: validateField('price', editingBreakfast.price)
@@ -404,7 +387,6 @@ function AdminBreakfasts() {
       toast.error('Invalid category selected');
       return;
     }
-
     try {
       setIsSubmitting(true);
       const formData = new FormData();
@@ -419,10 +401,8 @@ function AdminBreakfasts() {
       if (editingBreakfast.image) {
         formData.append('image', editingBreakfast.image);
       }
-
-      // Log FormData for debugging
-      console.log('FormData contents:', [...formData.entries()]);
-
+      formData.append('option_groups', JSON.stringify(editingBreakfast.optionGroups));
+      formData.append('reusable_option_groups', JSON.stringify(Array.isArray(editingBreakfast.reusable_option_groups) ? editingBreakfast.reusable_option_groups : []));
       if (editingBreakfast.id) {
         await api.updateBreakfast(editingBreakfast.id, formData);
         toast.success('Breakfast updated');
@@ -432,26 +412,8 @@ function AdminBreakfasts() {
       }
       setEditingBreakfast(null);
       setFormErrors({ name: '', price: '' });
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
-      console.error('API error:', error.response?.data || error.message);
       toast.error(error.response?.data?.error || 'Failed to save breakfast');
     } finally {
       setIsSubmitting(false);
@@ -464,29 +426,20 @@ function AdminBreakfasts() {
       setIsSubmitting(true);
       await api.deleteBreakfast(id, { user_id: String(userId) });
       toast.success('Breakfast deleted');
-      const breakfastRes = await api.getBreakfasts();
-      const breakfastsWithDetails = await Promise.all(
-        breakfastRes.data.map(async (breakfast) => {
-          const [optionsRes, groupsRes] = await Promise.all([
-            api.getBreakfastOptions(breakfast.id),
-            api.getBreakfastOptionGroups(breakfast.id)
-          ]);
-          return {
-            ...breakfast,
-            options: (optionsRes.data || []).map(opt => ({
-              ...opt,
-              additional_price: parseFloat(opt.additional_price) || 0
-            })),
-            optionGroups: groupsRes.data || []
-          };
-        })
-      );
-      setBreakfasts(breakfastsWithDetails || []);
+      await refreshBreakfasts();
     } catch (error) {
       toast.error(error.response?.data?.error || 'Failed to delete breakfast');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const refreshBreakfasts = async () => {
+    const breakfastRes = await api.getBreakfasts();
+    const breakfastsWithDetails = await Promise.all(
+      breakfastRes.data.map(breakfast => fetchBreakfastDetails(breakfast))
+    );
+    setBreakfasts(breakfastsWithDetails);
   };
 
   const handleCancel = () => {
@@ -540,13 +493,368 @@ function AdminBreakfasts() {
             image_url: null,
             category_id: '',
             options: [],
-            optionGroups: []
+            optionGroups: [],
+            reusable_option_groups: []
           })}
         >
           <AddCircleOutline />
           Add New Breakfast
         </button>
+        <button
+          className="admin-breakfasts__primary-button"
+          onClick={() => navigate('/admin/reusable-option-groups')}
+        >
+          <AddCircleOutline />
+          Manage Reusable Option Groups
+        </button>
       </div>
+
+      {editingBreakfast && (
+        <div className="admin-breakfasts__item-card-editing">
+          <form onSubmit={handleUpdate}>
+            <div className="admin-breakfasts__form-section">
+              <div className="admin-breakfasts__form-group">
+                <label className="admin-breakfasts__form-label">
+                  Breakfast Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={editingBreakfast.name || ''}
+                  onChange={handleInputChange}
+                  placeholder="Enter breakfast name"
+                  required
+                  className="admin-breakfasts__form-input"
+                />
+                {formErrors.name && (
+                  <span className="admin-breakfasts__error">{formErrors.name}</span>
+                )}
+              </div>
+              <div className="admin-breakfasts__form-group">
+                <label className="admin-breakfasts__form-label">
+                  Description
+                </label>
+                <textarea
+                  name="description"
+                  value={editingBreakfast.description || ''}
+                  onChange={handleInputChange}
+                  placeholder="Enter description"
+                  className="admin-breakfasts__form-textarea"
+                />
+              </div>
+              <div className="admin-breakfasts__form-group">
+                <label className="admin-breakfasts__form-label">
+                  Price *
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  name="price"
+                  value={editingBreakfast.price || ''}
+                  onChange={handleInputChange}
+                  placeholder="Enter price (e.g., 10.00)"
+                  required
+                  className="admin-breakfasts__form-input"
+                />
+                {formErrors.price && (
+                  <span className="admin-breakfasts__error">{formErrors.price}</span>
+                )}
+              </div>
+              <div className="admin-breakfasts__form-group">
+                <label className="admin-breakfasts__form-label">
+                  <CategoryIcon fontSize="small" />
+                  Category
+                </label>
+                <select
+                  name="category_id"
+                  value={editingBreakfast.category_id || ''}
+                  onChange={handleInputChange}
+                  className="admin-breakfasts__form-select"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="admin-breakfasts__form-group">
+                <label className="admin-breakfasts__form-label">Image Upload</label>
+                <input
+                  type="file"
+                  name="image"
+                  accept="image/jpeg,image/png"
+                  onChange={handleInputChange}
+                  className="admin-breakfasts__form-input"
+                />
+                {editingBreakfast.image_url && (
+                  <img
+                    src={`${API_BASE_URL}${editingBreakfast.image_url}`}
+                    alt={editingBreakfast.name}
+                    className="admin-breakfasts__item-image"
+                  />
+                )}
+                <div className="admin-breakfasts__no-image" style={{ display: editingBreakfast.image_url ? 'none' : 'flex' }}>
+                  No Image Available
+                </div>
+              </div>
+              <div className="admin-breakfasts__form-group">
+                <div className="admin-breakfasts__checkbox-container">
+                  <input
+                    type="checkbox"
+                    name="availability"
+                    checked={editingBreakfast.availability}
+                    onChange={handleInputChange}
+                    className="admin-breakfasts__checkbox"
+                  />
+                  <label className="admin-breakfasts__form-label">Available</label>
+                </div>
+              </div>
+              {editingBreakfast.id && (
+                <>
+                  <div className="admin-breakfasts__form-group">
+                    <label className="admin-breakfasts__form-label">Reusable Option Groups</label>
+                    <div className="admin-breakfasts__reusable-groups-container">
+                      {reusableOptionGroups.length > 0 ? (
+                        reusableOptionGroups.map(group => (
+                          <div key={group.id} className="admin-breakfasts__reusable-group-item">
+                            <div className="admin-breakfasts__checkbox-container">
+                              <input
+                                type="checkbox"
+                                name="reusable_option_groups"
+                                value={group.id}
+                                checked={Array.isArray(editingBreakfast.reusable_option_groups) && editingBreakfast.reusable_option_groups.includes(group.id)}
+                                onChange={handleInputChange}
+                                className="admin-breakfasts__checkbox"
+                              />
+                              <label className="admin-breakfasts__form-label">
+                                {group.title} {group.is_required ? '(Required)' : '(Optional)'}, Max: {group.max_selections || 'Unlimited'}
+                              </label>
+                            </div>
+                            {Array.isArray(editingBreakfast.reusable_option_groups) && editingBreakfast.reusable_option_groups.includes(group.id) && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveReusableOptionGroup(group.id)}
+                                className="admin-breakfasts__danger-button"
+                                disabled={isSubmitting}
+                              >
+                                <DeleteOutline fontSize="small" />
+                                Remove
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div>No reusable option groups available</div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="admin-breakfasts__option-section">
+                    <label className="admin-breakfasts__form-label">Option Groups</label>
+                    <div className="admin-breakfasts__option-grid admin-breakfasts__option-grid--group">
+                      <input
+                        type="text"
+                        name="title"
+                        value={newOptionGroup.title}
+                        onChange={handleOptionGroupChange}
+                        placeholder="Option Group Title (e.g., Beverage)"
+                        className="admin-breakfasts__form-input"
+                      />
+                      <div className="admin-breakfasts__checkbox-container">
+                        <input
+                          type="checkbox"
+                          name="is_required"
+                          checked={newOptionGroup.is_required}
+                          onChange={handleOptionGroupChange}
+                          className="admin-breakfasts__checkbox"
+                        />
+                        <label className="admin-breakfasts__form-label">Required</label>
+                      </div>
+                      <input
+                        type="number"
+                        name="max_selections"
+                        min="0"
+                        value={newOptionGroup.max_selections}
+                        onChange={handleOptionGroupChange}
+                        placeholder="Max Selections"
+                        className="admin-breakfasts__form-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddOptionGroup}
+                        className="admin-breakfasts__primary-button"
+                        disabled={isSubmitting}
+                      >
+                        <AddCircleOutline fontSize="small" />
+                        Add Group
+                      </button>
+                    </div>
+                    {editingBreakfast.optionGroups.map(group => (
+                      <div key={group.id} className="admin-breakfasts__option-item">
+                        {editingOptionGroup?.id === group.id ? (
+                          <>
+                            <input
+                              type="text"
+                              name="title"
+                              value={editingOptionGroup.title}
+                              onChange={handleEditOptionGroupChange}
+                              className="admin-breakfasts__form-input"
+                            />
+                            <div className="admin-breakfasts__checkbox-container">
+                              <input
+                                type="checkbox"
+                                name="is_required"
+                                checked={editingOptionGroup.is_required}
+                                onChange={handleEditOptionGroupChange}
+                                className="admin-breakfasts__checkbox"
+                              />
+                              <label className="admin-breakfasts__form-label">Required</label>
+                            </div>
+                            <input
+                              type="number"
+                              name="max_selections"
+                              min="0"
+                              value={editingOptionGroup.max_selections}
+                              onChange={handleEditOptionGroupChange}
+                              placeholder="Max Selections"
+                              className="admin-breakfasts__form-input"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateOptionGroup(group.id)}
+                              className="admin-breakfasts__primary-button"
+                              disabled={isSubmitting}
+                            >
+                              <Save fontSize="small" />
+                              Save
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingOptionGroup(null)}
+                              className="admin-breakfasts__secondary-button"
+                              disabled={isSubmitting}
+                            >
+                              <Cancel fontSize="small" />
+                              Cancel
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <span>{group.title} {group.is_required ? '(Required)' : '(Optional)'}, Max: {group.max_selections || 'Unlimited'}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleEditOptionGroup(group)}
+                              className="admin-breakfasts__secondary-button"
+                              disabled={isSubmitting}
+                            >
+                              <Edit fontSize="small" />
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveOptionGroup(group.id)}
+                              className="admin-breakfasts__danger-button"
+                              disabled={isSubmitting}
+                            >
+                              <DeleteOutline fontSize="small" />
+                              Remove
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="admin-breakfasts__option-section">
+                    <label className="admin-breakfasts__form-label">Options</label>
+                    <div className="admin-breakfasts__option-grid">
+                      <select
+                        name="group_id"
+                        value={newOption.group_id || ''}
+                        onChange={handleOptionChange}
+                        className="admin-breakfasts__form-select"
+                      >
+                        <option value="">Select Option Group</option>
+                        {editingBreakfast.optionGroups.map(group => (
+                          <option key={group.id} value={group.id}>{group.title}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        name="option_type"
+                        value={newOption.option_type}
+                        onChange={handleOptionChange}
+                        placeholder="Option Type (e.g., Coffee)"
+                        className="admin-breakfasts__form-input"
+                      />
+                      <input
+                        type="text"
+                        name="option_name"
+                        value={newOption.option_name}
+                        onChange={handleOptionChange}
+                        placeholder="Option Name (e.g., Espresso)"
+                        className="admin-breakfasts__form-input"
+                      />
+                      <input
+                        type="number"
+                        name="additional_price"
+                        step="0.01"
+                        min="0"
+                        value={newOption.additional_price}
+                        onChange={handleOptionChange}
+                        placeholder="Additional Price"
+                        className="admin-breakfasts__form-input"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddOption}
+                        className="admin-breakfasts__primary-button"
+                        disabled={isSubmitting}
+                      >
+                        <AddCircleOutline fontSize="small" />
+                        Add Option
+                      </button>
+                    </div>
+                    {editingBreakfast.options.map(opt => (
+                      <div key={opt.id} className="admin-breakfasts__option-item">
+                        <span>{opt.group_title}: {opt.option_type}: {opt.option_name}</span>
+                        <span>${(parseFloat(opt.additional_price) || 0).toFixed(2)}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveOption(opt.id)}
+                          className="admin-breakfasts__danger-button"
+                          disabled={isSubmitting}
+                        >
+                          <DeleteOutline fontSize="small" />
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="admin-breakfasts__button-group">
+              <button
+                type="submit"
+                className="admin-breakfasts__primary-button"
+                disabled={isSubmitting || formErrors.name || formErrors.price}
+              >
+                <Save fontSize="small" />
+                {isSubmitting ? 'Saving...' : editingBreakfast.id ? 'Update Breakfast' : 'Add Breakfast'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="admin-breakfasts__secondary-button"
+                disabled={isSubmitting}
+              >
+                <Cancel fontSize="small" />
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {breakfasts.length === 0 && !editingBreakfast ? (
         <div className="admin-breakfasts__empty-state">
@@ -556,314 +864,6 @@ function AdminBreakfasts() {
         </div>
       ) : (
         <div className="admin-breakfasts__items-grid">
-          {editingBreakfast && (
-            <div className="admin-breakfasts__item-card-editing">
-              <form onSubmit={handleUpdate}>
-                <div className="admin-breakfasts__form-section">
-                  <div className="admin-breakfasts__form-group">
-                    <label className="admin-breakfasts__form-label">
-                      Breakfast Name *
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={editingBreakfast.name || ''}
-                      onChange={handleInputChange}
-                      placeholder="Enter breakfast name"
-                      required
-                      className="admin-breakfasts__form-input"
-                    />
-                    {formErrors.name && (
-                      <span className="admin-breakfasts__error">{formErrors.name}</span>
-                    )}
-                  </div>
-                  <div className="admin-breakfasts__form-group">
-                    <label className="admin-breakfasts__form-label">
-                      Description
-                    </label>
-                    <textarea
-                      name="description"
-                      value={editingBreakfast.description || ''}
-                      onChange={handleInputChange}
-                      placeholder="Enter description"
-                      className="admin-breakfasts__form-textarea"
-                    />
-                  </div>
-                  <div className="admin-breakfasts__form-group">
-                    <label className="admin-breakfasts__form-label">
-                      Price *
-                    </label>
-                    <input
-                      type="text"
-                      name="price"
-                      value={editingBreakfast.price || ''}
-                      onChange={handleInputChange}
-                      placeholder="Enter price (e.g., 10$)"
-                      required
-                      className="admin-breakfasts__form-input"
-                    />
-                    {formErrors.price && (
-                      <span className="admin-breakfasts__error">{formErrors.price}</span>
-                    )}
-                  </div>
-                  <div className="admin-breakfasts__form-group">
-                    <label className="admin-breakfasts__form-label">
-                      <CategoryIcon fontSize="small" />
-                      Category
-                    </label>
-                    <select
-                      name="category_id"
-                      value={editingBreakfast.category_id || ''}
-                      onChange={handleInputChange}
-                      className="admin-breakfasts__form-select"
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="admin-breakfasts__form-group">
-                    <label className="admin-breakfasts__form-label">Image Upload</label>
-                    <input
-                      type="file"
-                      name="image"
-                      accept="image/jpeg,image/png"
-                      onChange={handleInputChange}
-                      className="admin-breakfasts__form-input"
-                    />
-                    {editingBreakfast.image_url && (
-                      <img
-                        src={`${API_BASE_URL}${editingBreakfast.image_url}`}
-                        alt={editingBreakfast.name}
-                        className="admin-breakfasts__item-image"
-                      />
-                    )}
-                    <div className="admin-breakfasts__no-image" style={{ display: editingBreakfast.image_url ? 'none' : 'flex' }}>
-                      No Image Available
-                    </div>
-                  </div>
-                  <div className="admin-breakfasts__form-group">
-                    <div className="admin-breakfasts__checkbox-container">
-                      <input
-                        type="checkbox"
-                        name="availability"
-                        checked={editingBreakfast.availability}
-                        onChange={handleInputChange}
-                        className="admin-breakfasts__checkbox"
-                      />
-                      <label className="admin-breakfasts__form-label">Available</label>
-                    </div>
-                  </div>
-                  {editingBreakfast.id && (
-                    <>
-                      <div className="admin-breakfasts__option-section">
-                        <label className="admin-breakfasts__form-label">Option Groups</label>
-                        <div className="admin-breakfasts__option-grid admin-breakfasts__option-grid--group">
-                          <input
-                            type="text"
-                            name="title"
-                            value={newOptionGroup.title}
-                            onChange={handleOptionGroupChange}
-                            placeholder="Option Group Title (e.g., Beverage)"
-                            className="admin-breakfasts__form-input"
-                          />
-                          <div className="admin-breakfasts__checkbox-container">
-                            <input
-                              type="checkbox"
-                              name="is_required"
-                              checked={newOptionGroup.is_required}
-                              onChange={handleOptionGroupChange}
-                              className="admin-breakfasts__checkbox"
-                            />
-                            <label className="admin-breakfasts__form-label">Required</label>
-                          </div>
-                          <input
-                            type="number"
-                            name="max_selections"
-                            min="0"
-                            value={newOptionGroup.max_selections}
-                            onChange={handleOptionGroupChange}
-                            placeholder="Max Selections"
-                            className="admin-breakfasts__form-input"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddOptionGroup}
-                            className="admin-breakfasts__primary-button"
-                            disabled={isSubmitting}
-                          >
-                            <AddCircleOutline fontSize="small" />
-                            Add Group
-                          </button>
-                        </div>
-                        {editingBreakfast.optionGroups.map(group => (
-                          <div key={group.id} className="admin-breakfasts__option-item">
-                            {editingOptionGroup?.id === group.id ? (
-                              <>
-                                <input
-                                  type="text"
-                                  name="title"
-                                  value={editingOptionGroup.title}
-                                  onChange={handleEditOptionGroupChange}
-                                  className="admin-breakfasts__form-input"
-                                />
-                                <div className="admin-breakfasts__checkbox-container">
-                                  <input
-                                    type="checkbox"
-                                    name="is_required"
-                                    checked={editingOptionGroup.is_required}
-                                    onChange={handleEditOptionGroupChange}
-                                    className="admin-breakfasts__checkbox"
-                                  />
-                                  <label className="admin-breakfasts__form-label">Required</label>
-                                </div>
-                                <input
-                                  type="number"
-                                  name="max_selections"
-                                  min="0"
-                                  value={editingOptionGroup.max_selections}
-                                  onChange={handleEditOptionGroupChange}
-                                  placeholder="Max Selections"
-                                  className="admin-breakfasts__form-input"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateOptionGroup(group.id)}
-                                  className="admin-breakfasts__primary-button"
-                                  disabled={isSubmitting}
-                                >
-                                  <Save fontSize="small" />
-                                  Save
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingOptionGroup(null)}
-                                  className="admin-breakfasts__secondary-button"
-                                  disabled={isSubmitting}
-                                >
-                                  <Cancel fontSize="small" />
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <span>{group.title} {group.is_required ? '(Required)' : '(Optional)'}, Max: {group.max_selections || 'Unlimited'}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleEditOptionGroup(group)}
-                                  className="admin-breakfasts__secondary-button"
-                                  disabled={isSubmitting}
-                                >
-                                  <Edit fontSize="small" />
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOptionGroup(group.id)}
-                                  className="admin-breakfasts__danger-button"
-                                  disabled={isSubmitting}
-                                >
-                                  <DeleteOutline fontSize="small" />
-                                  Remove
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                      <div className="admin-breakfasts__option-section">
-                        <label className="admin-breakfasts__form-label">Options</label>
-                        <div className="admin-breakfasts__option-grid">
-                          <select
-                            name="group_id"
-                            value={newOption.group_id || ''}
-                            onChange={handleOptionChange}
-                            className="admin-breakfasts__form-select"
-                          >
-                            <option value="">Select Option Group</option>
-                            {editingBreakfast.optionGroups.map(group => (
-                              <option key={group.id} value={group.id}>{group.title}</option>
-                            ))}
-                          </select>
-                          <input
-                            type="text"
-                            name="option_type"
-                            value={newOption.option_type}
-                            onChange={handleOptionChange}
-                            placeholder="Option Type (e.g., Coffee)"
-                            className="admin-breakfasts__form-input"
-                          />
-                          <input
-                            type="text"
-                            name="option_name"
-                            value={newOption.option_name}
-                            onChange={handleOptionChange}
-                            placeholder="Option Name (e.g., Espresso)"
-                            className="admin-breakfasts__form-input"
-                          />
-                          <input
-                            type="number"
-                            name="additional_price"
-                            step="0.01"
-                            min="0"
-                            value={newOption.additional_price}
-                            onChange={handleOptionChange}
-                            placeholder="Additional Price"
-                            className="admin-breakfasts__form-input"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleAddOption}
-                            className="admin-breakfasts__primary-button"
-                            disabled={isSubmitting}
-                          >
-                            <AddCircleOutline fontSize="small" />
-                            Add Option
-                          </button>
-                        </div>
-                        {editingBreakfast.options.map(opt => (
-                          <div key={opt.id} className="admin-breakfasts__option-item">
-                            <span>{opt.group_title}: {opt.option_type}: {opt.option_name}</span>
-                            <span>${(parseFloat(opt.additional_price) || 0).toFixed(2)}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveOption(opt.id)}
-                              className="admin-breakfasts__danger-button"
-                              disabled={isSubmitting}
-                            >
-                              <DeleteOutline fontSize="small" />
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div className="admin-breakfasts__button-group">
-                  <button
-                    type="submit"
-                    className="admin-breakfasts__primary-button"
-                    disabled={isSubmitting || formErrors.name || formErrors.price}
-                  >
-                    <Save fontSize="small" />
-                    {isSubmitting ? 'Saving...' : editingBreakfast.id ? 'Update Breakfast' : 'Add Breakfast'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    className="admin-breakfasts__secondary-button"
-                    disabled={isSubmitting}
-                  >
-                    <Cancel fontSize="small" />
-                    Cancel
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
           {breakfasts.map(breakfast => (
             <div key={breakfast.id} className="admin-breakfasts__item-card">
               {breakfast.image_url ? (
@@ -877,7 +877,7 @@ function AdminBreakfasts() {
               )}
               <h3 className="admin-breakfasts__item-title">{breakfast.name}</h3>
               <div className="admin-breakfasts__price-container">
-                <span className="admin-breakfasts__sale-price">{breakfast.price}</span>
+                <span className="admin-breakfasts__sale-price">${parseFloat(breakfast.price).toFixed(2)}</span>
               </div>
               <div className="admin-breakfasts__item-meta">
                 <span
@@ -914,6 +914,30 @@ function AdminBreakfasts() {
                       {opt.group_title}: {opt.option_type}: {opt.option_name} (+${(parseFloat(opt.additional_price) || 0).toFixed(2)})
                     </div>
                   ))}
+                </div>
+              )}
+              {Array.isArray(breakfast.reusable_option_groups) && breakfast.reusable_option_groups.length > 0 && (
+                <div className="admin-breakfasts__options-list">
+                  <strong>Reusable Option Groups:</strong>
+                  {breakfast.reusable_option_groups.map(groupId => {
+                    const group = reusableOptionGroups.find(g => g.id === groupId);
+                    return group ? (
+                      <div key={groupId} className="admin-breakfasts__option-item-display">
+                        {group.title} {group.is_required ? '(Required)' : '(Optional)'}, Max: {group.max_selections || 'Unlimited'}
+                        {editingBreakfast?.id === breakfast.id && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveReusableOptionGroup(group.id)}
+                            className="admin-breakfasts__danger-button"
+                            disabled={isSubmitting}
+                          >
+                            <DeleteOutline fontSize="small" />
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ) : null;
+                  })}
                 </div>
               )}
               <div className="admin-breakfasts__button-group">
