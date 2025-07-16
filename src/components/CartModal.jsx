@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import React from 'react';
 import './css/CartModal.css';
 
-const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, supplementSelections, handleQuantityChange, handleSupplementChange, api }) => {
+const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, supplementSelections, handleQuantityChange, handleSupplementChange, handleOptionChange, api }) => {
   const imageSrc = useMemo(() => {
     let src = '/placeholder.jpg';
     if (item.image_url && item.image_url !== '/Uploads/undefined' && item.image_url !== 'null') {
@@ -87,6 +87,32 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
             </option>
           ))}
         </select>
+      )}
+
+      {item.breakfast_id && breakfastOptions?.length > 0 && (
+        <div className="cart-modal-breakfast-options-select">
+          {[...new Set(breakfastOptions.map(o => o.group_id))].map(groupId => {
+            const groupOptions = breakfastOptions.filter(o => o.group_id === groupId);
+            const group = groupOptions[0]?.group_title ? { title: groupOptions[0].group_title, is_required: groupOptions[0].is_required } : { title: 'Options', is_required: false };
+            return (
+              <div key={groupId} className="cart-modal-option-group">
+                <label className="cart-modal-option-group-label">{group.title} {group.is_required && <span>(Requis)</span>}</label>
+                <select
+                  multiple={groupOptions[0]?.max_selections > 1}
+                  value={item.option_ids?.filter(id => groupOptions.some(o => o.id === id)) || []}
+                  onChange={(e) => handleOptionChange(item.cartItemId, groupId, Array.from(e.target.selectedOptions).map(opt => parseInt(opt.value)))}
+                  className="cart-modal-option-select"
+                >
+                  {groupOptions.map(option => (
+                    <option key={option.id} value={option.id}>
+                      {option.option_name} (+{parseFloat(option.additional_price || 0).toFixed(2)} DT)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <div className="cart-modal-quantity-controls">
@@ -185,6 +211,19 @@ function CartModal({
           } else if (itemType === 'breakfast') {
             const res = await api.getBreakfastOptions(itemId);
             optionsData[itemId] = res.data?.filter(o => o.id && o.option_name) || [];
+            // Validate existing option_ids in cart
+            const validOptionIds = res.data.map(o => o.id);
+            cart.forEach((item, index) => {
+              if (item.breakfast_id === itemId && item.option_ids) {
+                const invalidOptions = item.option_ids.filter(id => !validOptionIds.includes(id));
+                if (invalidOptions.length > 0) {
+                  console.warn(`Invalid option IDs for breakfast ${itemId}:`, invalidOptions);
+                  updateQuantity(item.cartItemId, item.quantity, {
+                    option_ids: item.option_ids.filter(id => validOptionIds.includes(id))
+                  });
+                }
+              }
+            });
           }
         } catch (error) {
           console.error(`Échec du chargement des données pour l'article ${itemId}:`, error);
@@ -197,7 +236,7 @@ function CartModal({
     };
 
     fetchSupplementsAndOptions();
-  }, [cart, isOpen]);
+  }, [cart, isOpen, updateQuantity]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -287,11 +326,28 @@ function CartModal({
     });
   }, [cart, itemSupplements, updateQuantity]);
 
+  const handleOptionChange = useCallback((cartItemId, groupId, selectedOptionIds) => {
+    const item = cart.find((i) => i.cartItemId === cartItemId);
+    if (!item || !item.breakfast_id) return;
+
+    const groupOptions = (breakfastOptions[item.breakfast_id] || []).filter(o => o.group_id === groupId);
+    const maxSelections = groupOptions[0]?.max_selections || 1;
+    const validOptionIds = selectedOptionIds.slice(0, maxSelections).filter(id => groupOptions.some(o => o.id === id));
+
+    const otherOptionIds = (item.option_ids || []).filter(id => {
+      const option = (breakfastOptions[item.breakfast_id] || []).find(o => o.id === id);
+      return option && option.group_id !== groupId;
+    });
+
+    updateQuantity(cartItemId, item.quantity, {
+      option_ids: [...otherOptionIds, ...validOptionIds]
+    });
+  }, [cart, breakfastOptions, updateQuantity]);
+
   const validateOrder = useCallback(() => {
     if (!cart?.length) return 'Le panier est vide';
     if (orderType === 'local' && !tableId) return 'Veuillez sélectionner une table';
     if (orderType === 'delivery' && !deliveryAddress?.trim()) return 'Veuillez entrer une adresse de livraison';
-    // No tableId or deliveryAddress required for 'imported' orders
 
     for (const item of cart) {
       const id = item.item_id || item.breakfast_id;
@@ -300,12 +356,18 @@ function CartModal({
       const basePrice = parseFloat(item.sale_price || item.unit_price || item.regular_price) || 0;
       if (basePrice <= 0) return `Prix invalide pour ${item.name || 'article'}`;
       if (item.supplement_id && !item.supplement_name) return `Supplément invalide pour ${item.name || 'article'}`;
-      if (item.breakfast_id && item.option_ids?.length) {
+      if (item.breakfast_id) {
         const options = breakfastOptions[item.breakfast_id] || [];
         const groups = [...new Set(options.map(o => o.group_id).filter(id => id))];
-        const selectedGroups = [...new Set(options.filter(o => item.option_ids.includes(o.id)).map(o => o.group_id))];
-        if (groups.length && selectedGroups.length !== groups.length) {
-          return `Sélectionnez une option pour chacun des ${groups.length} groupes pour ${item.name || 'article'}`;
+        const requiredGroups = options.filter(o => o.is_required).map(o => o.group_id);
+        const selectedGroups = [...new Set(options.filter(o => item.option_ids?.includes(o.id)).map(o => o.group_id))];
+        const invalidOptions = item.option_ids?.filter(id => !options.some(o => o.id === id)) || [];
+        if (invalidOptions.length > 0) {
+          return `Options invalides pour ${item.name || 'article'}: [${invalidOptions.join(', ')}]`;
+        }
+        if (requiredGroups.length && selectedGroups.length !== requiredGroups.length) {
+          const missingGroups = requiredGroups.filter(g => !selectedGroups.includes(g));
+          return `Sélectionnez une option pour chacun des ${requiredGroups.length} groupes requis pour ${item.name || 'article'}. Groupes manquants: [${missingGroups.join(', ')}]`;
         }
       }
     }
@@ -513,6 +575,7 @@ function CartModal({
                     supplementSelections={supplementSelections}
                     handleQuantityChange={handleQuantityChange}
                     handleSupplementChange={handleSupplementChange}
+                    handleOptionChange={handleOptionChange}
                     api={api}
                   />
                 ))}
