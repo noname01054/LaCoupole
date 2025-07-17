@@ -15,6 +15,7 @@ export const initSocket = (
   onReservationUpdate = () => {},
   onRatingUpdate = () => {},
   onOrderApproved = () => {},
+  onOrderCancelled = () => {},
   onNewNotification = () => {}
 ) => {
   if (initialized) {
@@ -135,6 +136,16 @@ export const initSocket = (
     onOrderApproved(data);
   });
 
+  socket.on('orderCancelled', (data) => {
+    console.log('Received orderCancelled:', data);
+    if (!data?.orderId) {
+      console.error('Invalid orderCancelled data:', data);
+      toast.warn('Received invalid order cancellation data');
+      return;
+    }
+    onOrderCancelled(data);
+  });
+
   socket.on('newNotification', (data) => {
     console.log('Received newNotification:', data);
     if (!data?.id) {
@@ -181,6 +192,7 @@ export const initSocket = (
     socket.off('reservationUpdate');
     socket.off('ratingUpdate');
     socket.off('orderApproved');
+    socket.off('orderCancelled');
     socket.off('newNotification');
     socket.off('disconnect');
     socket.off('reconnect');
