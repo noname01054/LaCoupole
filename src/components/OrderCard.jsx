@@ -10,6 +10,7 @@ import {
   LocalShipping,
   Schedule,
   Note,
+  Cancel,
 } from '@mui/icons-material';
 
 const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
@@ -32,14 +33,25 @@ const safeParseInt = (value, defaultValue = 0) => {
   return isNaN(parsed) ? defaultValue : parsed;
 };
 
-// Simple status for pending/approved orders
-const getOrderStatus = (approved) => ({
-  color: approved ? '#10b981' : '#f59e0b',
-  bgColor: approved ? '#d1fae5' : '#fef3c7',
-  icon: approved ? Check : AccessTime,
-  label: approved ? 'Approuvée' : 'En attente',
-  urgency: approved ? 'none' : 'high'
-});
+// Simple status for pending/approved/cancelled orders
+const getOrderStatus = (approved, status) => {
+  if (status === 'cancelled') {
+    return {
+      color: '#ef4444',
+      bgColor: '#fee2e2',
+      icon: Cancel,
+      label: 'Annulée',
+      urgency: 'high'
+    };
+  }
+  return {
+    color: approved ? '#10b981' : '#f59e0b',
+    bgColor: approved ? '#d1fae5' : '#fef3c7',
+    icon: approved ? Check : AccessTime,
+    label: approved ? 'Approuvée' : 'En attente',
+    urgency: approved ? 'none' : 'high'
+  };
+};
 
 // Map order_type to display text and icon
 const getOrderTypeDisplay = (orderType, tableNumber) => {
@@ -70,11 +82,13 @@ const getOrderTypeDisplay = (orderType, tableNumber) => {
 function OrderCard({ 
   order, 
   onApproveOrder, 
+  onCancelOrder, 
   timeAgo, 
   isExpanded: initialExpanded = false 
 }) {
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [isApproving, setIsApproving] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const cardRef = useRef(null);
 
   // Memoize expensive calculations
@@ -165,7 +179,7 @@ function OrderCard({
     return Object.values(acc).filter(item => item.quantity > 0);
   }, [order]);
 
-  const statusConfig = getOrderStatus(order.approved);
+  const statusConfig = getOrderStatus(order.approved, order.status);
   const IconComponent = statusConfig.icon;
   const OrderTypeIcon = getOrderTypeDisplay(order.order_type, order.table_number).icon;
 
@@ -176,6 +190,15 @@ function OrderCard({
       await onApproveOrder?.(order.id);
     } finally {
       setTimeout(() => setIsApproving(false), 500);
+    }
+  };
+
+  const handleCancelOrder = async () => {
+    setIsCancelling(true);
+    try {
+      await onCancelOrder?.(order.id);
+    } finally {
+      setTimeout(() => setIsCancelling(false), 500);
     }
   };
 
@@ -381,26 +404,48 @@ function OrderCard({
 
   const actionSectionStyle = {
     marginTop: '16px',
+    display: 'flex',
+    gap: '12px',
   };
 
   const approveButtonStyle = {
-    width: '100%',
+    flex: 1,
     padding: '16px 20px',
-    backgroundColor: order.approved ? '#10b981' : '#059669',
+    backgroundColor: order.approved && order.status !== 'cancelled' ? '#10b981' : '#059669',
     color: 'white',
     border: 'none',
     borderRadius: '12px',
     fontSize: '16px',
     fontWeight: '700',
-    cursor: order.approved ? 'default' : 'pointer',
+    cursor: (order.approved && order.status !== 'cancelled') ? 'default' : 'pointer',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: '8px',
-    opacity: order.approved ? 0.7 : 1,
+    opacity: (order.approved && order.status !== 'cancelled') ? 0.7 : 1,
     transform: isApproving ? 'scale(0.98)' : 'scale(1)',
     transition: 'all 0.1s ease',
-    boxShadow: order.approved ? 'none' : '0 4px 12px rgba(5, 150, 105, 0.3)',
+    boxShadow: (order.approved && order.status !== 'cancelled') ? 'none' : '0 4px 12px rgba(5, 150, 105, 0.3)',
+  };
+
+  const cancelButtonStyle = {
+    flex: 1,
+    padding: '16px 20px',
+    backgroundColor: order.status === 'cancelled' ? '#ef4444' : '#dc2626',
+    color: 'white',
+    border: 'none',
+    borderRadius: '12px',
+    fontSize: '16px',
+    fontWeight: '700',
+    cursor: order.status === 'cancelled' ? 'default' : 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    opacity: order.status === 'cancelled' ? 0.7 : 1,
+    transform: isCancelling ? 'scale(0.98)' : 'scale(1)',
+    transition: 'all 0.1s ease',
+    boxShadow: order.status === 'cancelled' ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.3)',
   };
 
   return (
@@ -543,18 +588,24 @@ function OrderCard({
             </div>
 
             {/* Action Section */}
-            {!order.approved && (
-              <div style={actionSectionStyle}>
-                <button
-                  style={approveButtonStyle}
-                  onClick={handleApproveOrder}
-                  disabled={isApproving || order.approved}
-                >
-                  <Check sx={{ fontSize: 18 }} />
-                  {isApproving ? 'Approbation de la commande...' : 'Accepter la commande'}
-                </button>
-              </div>
-            )}
+            <div style={actionSectionStyle}>
+              <button
+                style={approveButtonStyle}
+                onClick={handleApproveOrder}
+                disabled={isApproving || (order.approved && order.status !== 'cancelled')}
+              >
+                <Check sx={{ fontSize: 18 }} />
+                {isApproving ? 'Approbation de la commande...' : 'Accepter la commande'}
+              </button>
+              <button
+                style={cancelButtonStyle}
+                onClick={handleCancelOrder}
+                disabled={isCancelling || order.status === 'cancelled'}
+              >
+                <Cancel sx={{ fontSize: 18 }} />
+                {isCancelling ? 'Annulation de la commande...' : 'Annuler la commande'}
+              </button>
+            </div>
           </>
         )}
       </div>
