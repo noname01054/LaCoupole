@@ -30,6 +30,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const navigate = useNavigate();
   const [orderDetails, setOrderDetails] = useState(null);
   const [isApproved, setIsApproved] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingApproval, setIsProcessingApproval] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
@@ -107,9 +108,10 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       console.log('Détails de la commande récupérés :', response.data, 'timestamp :', new Date().toISOString());
       debouncedSetOrderDetails(response.data);
       setIsApproved(!!response.data.approved);
+      setIsCancelled(response.data.status === 'cancelled');
       setIsLoading(false);
     } catch (error) {
-      console.error('Erreur lors de la récupération de la commande :', {
+      console.error('Error fetching order:', {
         status: error.response?.status,
         message: error.response?.data?.error || error.message,
         timestamp: new Date().toISOString(),
@@ -234,6 +236,49 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     [orderId, sessionId, debouncedSetOrderDetails]
   );
 
+  const onOrderCancelled = useCallback(
+    (data) => {
+      console.log('OrderWaiting a reçu l\'événement orderCancelled :', {
+        data,
+        expectedOrderId: orderId,
+        sessionId,
+        timestamp: new Date().toISOString(),
+      });
+      if (!data.orderId) {
+        console.warn('Événement orderCancelled invalide : orderId manquant', data, 'timestamp :', new Date().toISOString());
+        toast.warn('Données d\'annulation de commande invalides reçues');
+        return;
+      }
+      if (parseInt(data.orderId) === parseInt(orderId)) {
+        console.log('Traitement de l\'annulation de commande pour orderId :', data.orderId, 'timestamp :', new Date().toISOString());
+        setIsCancelled(true);
+        setIsApproved(false);
+        if (data.orderDetails && Object.keys(data.orderDetails).length > 0) {
+          debouncedSetOrderDetails((prev) => {
+            const updatedDetails = {
+              ...prev,
+              ...data.orderDetails,
+              approved: 0,
+              status: data.orderDetails?.status || 'cancelled',
+            };
+            console.log('Détails de la commande mis à jour depuis l\'événement orderCancelled :', updatedDetails, 'timestamp :', new Date().toISOString());
+            return updatedDetails;
+          });
+        } else {
+          fetchOrder();
+        }
+        toast.error(`Commande #${orderId} a été annulée.`, { autoClose: 3000 });
+      } else {
+        console.log('Événement orderCancelled ignoré, mismatch orderId :', {
+          received: data.orderId,
+          expected: orderId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    },
+    [orderId, sessionId, debouncedSetOrderDetails, fetchOrder]
+  );
+
   useEffect(() => {
     if (!sessionId) {
       console.warn('Aucun ID de session fourni, génération d\'un nouveau', { timestamp: new Date().toISOString() });
@@ -287,7 +332,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       socket.on('connect', () => {
         console.log('Socket connecté dans OrderWaiting, rejoindre la salle : guest-', sessionId, { timestamp: new Date().toISOString() });
         socket.emit('join-session', { sessionId: `guest-${sessionId}` });
-        if (!isApproved) fetchOrder();
+        if (!isApproved && !isCancelled) fetchOrder();
       });
 
       socket.on('join-confirmation', (data) => {
@@ -296,6 +341,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
       socket.on('orderApproved', onOrderApproved);
       socket.on('orderUpdate', onOrderUpdate);
+      socket.on('orderCancelled', onOrderCancelled);
       socket.on('connect_error', (error) => {
         console.error('Erreur de connexion socket dans OrderWaiting :', error.message, { timestamp: new Date().toISOString() });
         toast.warn('Connexion aux mises à jour en temps réel perdue. Nouvelle tentative...');
@@ -304,10 +350,10 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       socket.on('reconnect', (attempt) => {
         console.log('Socket reconnecté dans OrderWaiting après tentative :', attempt, { timestamp: new Date().toISOString() });
         socket.emit('join-session', { sessionId: `guest-${sessionId}` });
-        if (!isApproved) fetchOrder();
+        if (!isApproved && !isCancelled) fetchOrder();
       });
 
-      if (!isApproved) fetchOrder();
+      if (!isApproved && !isCancelled) fetchOrder();
     };
 
     if (socket.connected) {
@@ -317,13 +363,14 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     }
 
     const pollInterval = setInterval(() => {
-      if (!isApproved && !isProcessingApproval) {
+      if (!isApproved && !isCancelled && !isProcessingApproval) {
         console.log('Sondage pour l\'état de la commande :', orderId, 'sessionId :', sessionId, { timestamp: new Date().toISOString() });
         fetchOrder();
       } else {
-        console.log('Sondage ignoré : la commande est approuvée ou en cours d\'approbation', {
+        console.log('Sondage ignoré : la commande est approuvée, annulée ou en cours d\'approbation', {
           orderId,
           isApproved,
+          isCancelled,
           isProcessingApproval,
           timestamp: new Date().toISOString(),
         });
@@ -335,6 +382,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       socket.off('join-confirmation');
       socket.off('orderApproved', onOrderApproved);
       socket.off('orderUpdate', onOrderUpdate);
+      socket.off('orderCancelled', onOrderCancelled);
       socket.off('connect_error');
       socket.off('reconnect');
       clearInterval(pollInterval);
@@ -343,19 +391,19 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       window.removeEventListener('keydown', handleInteraction);
       console.log('Nettoyage OrderWaiting terminé pour sessionId :', sessionId, { timestamp: new Date().toISOString() });
     };
-  }, [fetchOrder, sessionId, socket, onOrderApproved, onOrderUpdate, isApproved, orderId, isProcessingApproval]);
+  }, [fetchOrder, sessionId, socket, onOrderApproved, onOrderUpdate, onOrderCancelled, isApproved, isCancelled, orderId, isProcessingApproval]);
 
   useEffect(() => {
     const handleBeforeUnload = (e) => {
-      if (!isApproved) {
+      if (!isApproved && !isCancelled) {
         e.preventDefault();
         e.returnValue = 'Êtes-vous sûr de vouloir quitter ? Le suivi de votre commande sera interrompu.';
       }
     };
 
     const handlePopState = () => {
-      if (!isApproved) {
-        toast.warn('Veuillez attendre l\'approbation de votre commande avant de naviguer ailleurs.');
+      if (!isApproved && !isCancelled) {
+        toast.warn('Veuillez attendre l\'approbation ou l\'annulation de votre commande avant de naviguer ailleurs.');
         navigate(`/order-waiting/${orderId}`, { replace: true, state: { sessionId } });
       } else {
         navigate('/');
@@ -369,7 +417,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [isApproved, navigate, orderId, sessionId]);
+  }, [isApproved, isCancelled, navigate, orderId, sessionId]);
 
   const handleReturnHome = () => {
     setIsVisible(false);
@@ -435,10 +483,10 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
     itemIds.forEach((id, idx) => {
       if (idx >= menuQuantities.length || idx >= itemNames.length || idx >= unitPrices.length) return;
-      
+
       const supplementId = supplementIds[idx]?.trim() || null;
       const key = `${id.trim()}_${supplementId || 'none'}`;
-      const quantity = menuQuantities[idx]; // Use the exact quantity from the order
+      const quantity = menuQuantities[idx];
       const unitPrice = safeParseFloat(unitPrices[idx], 0);
 
       if (!acc[key]) {
@@ -455,7 +503,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           options: [],
         };
       }
-      // Only add quantity if this is the first occurrence of the key with this quantity
       if (acc[key].quantity === 0) {
         acc[key].quantity = quantity;
       }
@@ -474,7 +521,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
     breakfastIds.forEach((id, idx) => {
       if (idx >= breakfastQuantities.length || idx >= breakfastNames.length || idx >= unitPricesBreakfast.length) return;
-      
+
       const key = id.trim();
       const quantity = safeParseInt(breakfastQuantities[idx], 1);
       const unitPrice = safeParseFloat(unitPricesBreakfast[idx], 0);
@@ -493,7 +540,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       }
       acc[key].quantity += quantity;
 
-      // Add options for breakfast items
       const optionsPerItem = optionIds.length / (breakfastIds.length || 1);
       const startIdx = Math.floor(idx * optionsPerItem);
       const endIdx = Math.floor((idx + 1) * optionsPerItem);
@@ -505,7 +551,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           });
         }
       }
-      // Remove duplicates
       acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
     });
 
@@ -561,7 +606,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             className="order-waiting-button"
             onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
             onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
+            onMouseLeave={(e) => (e.target.style.transform = 'scale( છ)')}
           >
             Retour à l'accueil
           </button>
@@ -614,9 +659,9 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   return (
     <div className="order-waiting-container">
-      <div className={`order-waiting-header ${isVisible ? 'visible' : ''} ${isApproved ? 'approved' : ''}`}>
+      <div className={`order-waiting-header ${isVisible ? 'visible' : ''} ${isApproved ? 'approved' : isCancelled ? 'cancelled' : ''}`}>
         <h1 className="order-waiting-header-title">
-          {isApproved ? 'Commande confirmée !' : 'En attente de confirmation'}
+          {isCancelled ? 'Commande annulée' : isApproved ? 'Commande confirmée !' : 'En attente de confirmation'}
         </h1>
         <p className="order-waiting-header-subtitle">
           Commande #{orderId} • {getOrderTypeDisplay(orderDetails.order_type)} • Statut : {orderDetails.status || 'reçue'}
@@ -625,10 +670,12 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
       <div className={`order-waiting-card ${isVisible ? 'visible' : ''}`}>
         <div className="order-waiting-status-section">
-          <div className={isApproved ? 'order-waiting-status-approved' : 'order-waiting-status-pending'}>
+          <div className={isCancelled ? 'order-waiting-status-cancelled' : isApproved ? 'order-waiting-status-approved' : 'order-waiting-status-pending'}>
             <span className="order-waiting-status-text">
               {isProcessingApproval
                 ? 'Traitement de l\'approbation...'
+                : isCancelled
+                ? 'Commande annulée'
                 : isApproved
                 ? 'Commande approuvée'
                 : 'En attente d\'approbation'}
@@ -637,6 +684,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <p className="order-waiting-status-message">
             {isProcessingApproval
               ? 'Votre commande est en cours de confirmation.'
+              : isCancelled
+              ? 'Votre commande a été annulée. Veuillez contacter le support pour plus d\'informations.'
               : isApproved
               ? 'Votre commande a été confirmée et est en préparation.'
               : 'Votre commande est en cours d\'examen par notre personnel.'}
