@@ -146,6 +146,7 @@ api.deleteSupplementFromMenuItem = (menuItemId, supplementId, data) => api.delet
 // Order API methods
 api.submitOrder = (data) => api.post('/orders', data);
 api.approveOrder = (id) => api.post(`/orders/${id}/approve`);
+api.cancelOrder = (id) => api.post(`/orders/${id}/cancel`);
 api.getOrder = (id) => api.get(`/orders/${id}`);
 api.getSession = () => api.get('/session');
 
