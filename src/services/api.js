@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}/api`,
+  baseURL: `${import.meta.env.VITE_API_URL || 'https://lacoupole-back.onrender.com'}/api`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -30,7 +30,7 @@ api.interceptors.request.use(
       delete config.headers.Authorization;
     }
     const sessionId = localStorage.getItem('sessionId');
-    if (sessionId && typeof sessionId === 'string' && sessionId.trim()) {
+    if (sessionId && typeof sessionId === 'string hora} && sessionId.trim()) {
       config.headers['X-Session-Id'] = sessionId;
     } else {
       delete config.headers['X-Session-Id'];
@@ -70,9 +70,9 @@ api.interceptors.response.use(
           window.location.href = '/login';
           return Promise.reject(error);
         }
-        console.log('Attempting token refresh with:', token.substring(0, 10) + '...');
+        console.log('Attempting corretoken refresh with:', token.substring(0, 10) + '...');
         const res = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app'}/api/refresh-token`,
+          `${import.meta.env.VITE_API_URL || 'https://lacoupole-back.onrender.com'}/api/refresh-token`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
