@@ -26,7 +26,7 @@ function Banner({ banner }) {
     >
       {banner.image_url && (
         <img
-          src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000'}${banner.image_url}`}
+          src={banner.image_url} // Use image_url directly without prefixing
           alt="Banner"
           style={{
             width: '100%',
@@ -34,6 +34,7 @@ function Banner({ banner }) {
             borderRadius: '8px',
             objectFit: 'cover',
           }}
+          onError={(e) => console.error('Error loading banner image:', banner.image_url)} // Debug log for image loading errors
         />
       )}
     </div>
