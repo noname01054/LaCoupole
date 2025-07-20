@@ -285,7 +285,7 @@ function Categories() {
                       {category.image_url && !(editingCategory.image instanceof File) && (
                         <div className="categories__card-image-container">
                           <img 
-                            src={`https://res.cloudinary.com/your-cloud-name/image/upload/${category.image_url}`} 
+                            src={category.image_url} 
                             alt="Current" 
                             className="categories__card-image categories__card-image--preview" 
                             loading="lazy"
@@ -347,7 +347,7 @@ function Categories() {
                     {category.image_url && (
                       <div className="categories__card-image-container">
                         <img 
-                          src={`https://res.cloudinary.com/your-cloud-name/image/upload/${category.image_url}`} 
+                          src={category.image_url} 
                           alt={category.name} 
                           className="categories__card-image"
                           loading="lazy"
