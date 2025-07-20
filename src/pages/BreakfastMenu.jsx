@@ -39,10 +39,7 @@ function BreakfastMenu({ addToCart }) {
   const containerRef = useRef(null);
 
   const getImageUrl = (imageUrl) => {
-    if (!imageUrl || imageUrl === '/Uploads/undefined' || imageUrl === 'null') {
-      return '/placeholder.jpg';
-    }
-    return `${api.defaults.baseURL.replace('/api', '')}${imageUrl}`;
+    return imageUrl && imageUrl !== 'null' ? imageUrl : '/placeholder.jpg';
   };
 
   useEffect(() => {
@@ -432,7 +429,10 @@ function BreakfastMenu({ addToCart }) {
                 alt={breakfast.name || 'Petit-déjeuner'}
                 className="breakfast-menu__product-image"
                 loading="lazy"
-                onError={(e) => { e.target.src = '/placeholder.jpg'; }}
+                onError={(e) => {
+                  console.error('Erreur lors du chargement de l\'image du petit-déjeuner:', breakfast.image_url);
+                  e.target.src = '/placeholder.jpg';
+                }}
               />
               <div className="breakfast-menu__image-overlay">
                 <div className={`breakfast-menu__availability-badge ${breakfast.availability ? 'breakfast-menu__available-badge' : 'breakfast-menu__unavailable-badge'}`}>
