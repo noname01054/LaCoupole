@@ -20,6 +20,7 @@ import {
   VisibilityOff,
   Star
 } from '@mui/icons-material';
+import { Coffee } from 'lucide-react';
 import { createFormData } from '../utils/formDataHelper';
 import './css/ManageMenuItems.css';
 
@@ -47,8 +48,6 @@ function ManageMenuItems() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const navigate = useNavigate();
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
     const initializeData = async () => {
@@ -704,13 +703,28 @@ function ManageMenuItems() {
                 onChange={handleInputChange}
                 disabled={isSubmitting}
               />
-              {editingItem.image_url && (
-                <img
-                  src={`${API_BASE_URL}${editingItem.image_url}`}
-                  alt="Current"
-                  className="preview-image"
-                />
+              {editingItem.image_url && !(editingItem.image instanceof File) && (
+                <div className="menu-item-image-container">
+                  <img
+                    src={editingItem.image_url}
+                    alt="Current"
+                    className="preview-image"
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      console.error('Error loading menu item image:', editingItem.image_url);
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="menu-item-placeholder-image" style={{ display: 'none' }}>
+                    <Coffee size={40} color="#ff8c42" />
+                  </div>
+                </div>
               )}
+              <div className="menu-item-no-image" style={{ display: editingItem.image_url ? 'none' : 'flex' }}>
+                No Image Available
+              </div>
             </div>
             <div className="form-group">
               <label>Assign Supplements</label>
@@ -806,12 +820,27 @@ function ManageMenuItems() {
             </div>
             <div className="card-content">
               {item.image_url && (
-                <img
-                  src={`${API_BASE_URL}${item.image_url}`}
-                  alt={item.name}
-                  className="menu-item-image"
-                />
+                <div className="menu-item-image-container">
+                  <img
+                    src={item.image_url}
+                    alt={item.name}
+                    className="menu-item-image"
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      console.error('Error loading menu item image:', item.image_url);
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="menu-item-placeholder-image" style={{ display: 'none' }}>
+                    <Coffee size={40} color="#ff8c42" />
+                  </div>
+                </div>
               )}
+              <div className="menu-item-no-image" style={{ display: item.image_url ? 'none' : 'flex' }}>
+                No Image Available
+              </div>
               <p><strong>Category:</strong> {item.category_name || 'N/A'}</p>
               <p><strong>Regular Price:</strong> ${parseFloat(item.regular_price).toFixed(2)}</p>
               {item.sale_price !== null && (
