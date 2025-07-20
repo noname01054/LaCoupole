@@ -25,6 +25,9 @@ function CategoryMenu({ addToCart }) {
   const [touchCurrentX, setTouchCurrentX] = useState(null);
   const [isSwiping, setIsSwiping] = useState(false);
 
+  // Fallback image URL (replace with your actual placeholder image URL)
+  const FALLBACK_IMAGE = 'https://res.cloudinary.com/dbvbbtekw/image/upload/v1630000000/Uploads/placeholder.jpg';
+
   const debouncedSearch = debounce((query) => {
     if (query.trim() === '') {
       setFilteredItems(menuItems);
@@ -72,7 +75,13 @@ function CategoryMenu({ addToCart }) {
         setMenuItems(combinedItems);
         setFilteredItems(combinedItems);
         setCategoryName(categoryData?.name || 'Catégorie');
-        setCategoryImage(categoryData?.image_url || null);
+        // Normalize Cloudinary image URL
+        const imageUrl = categoryData?.image_url 
+          ? categoryData.image_url.startsWith('http') 
+            ? categoryData.image_url 
+            : `${import.meta.env.VITE_API_URL || 'https://lacoupole-back.onrender.com'}${categoryData.image_url}`
+          : null;
+        setCategoryImage(imageUrl);
         setCategories(categoriesData);
         
         setTimeout(() => setIsVisible(true), 100);
@@ -136,9 +145,6 @@ function CategoryMenu({ addToCart }) {
       if (containerRef.current) {
         containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
-      } else {
-        // If containerRef is null, exit early
-        return;
       }
     },
     [isSwiping, touchStartX, touchCurrentX]
@@ -153,11 +159,6 @@ function CategoryMenu({ addToCart }) {
     if (containerRef.current) {
       containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
-    } else {
-      // If containerRef is null, reset touch states and exit
-      setTouchStartX(null);
-      setTouchCurrentX(null);
-      return;
     }
 
     if (categories.length > 0) {
@@ -183,6 +184,11 @@ function CategoryMenu({ addToCart }) {
     setTouchStartX(null);
     setTouchCurrentX(null);
   }, [isSwiping, touchCurrentX, touchStartX, navigate, categories, id]);
+
+  // Handle image load error
+  const handleImageError = (e) => {
+    e.target.src = FALLBACK_IMAGE;
+  };
 
   useEffect(() => {
     if (containerRef.current) {
@@ -240,10 +246,18 @@ function CategoryMenu({ addToCart }) {
       <div className="category-menu-header">
         <div className="category-menu-header-background">
           {categoryImage ? (
-            <div 
+            <img 
               className="category-menu-header-image"
+              src={categoryImage}
+              alt={categoryName}
+              onError={handleImageError}
               style={{
-                backgroundImage: `url(${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${categoryImage})`
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                position: 'absolute',
+                top: 0,
+                left: 0,
               }}
             />
           ) : (
