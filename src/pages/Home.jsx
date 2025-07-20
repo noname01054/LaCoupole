@@ -20,6 +20,7 @@ function Home({ addToCart }) {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredItems, setFilteredItems] = useState([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const navigate = useNavigate();
   const bannerContainerRef = useRef(null);
   const isMounted = useRef(true);
