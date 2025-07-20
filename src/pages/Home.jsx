@@ -186,6 +186,9 @@ function Home({ addToCart }) {
           const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
           containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
           containerRef.current.style.transition = 'none';
+        } else {
+          // If containerRef is null, exit early
+          return;
         }
       });
     },
@@ -201,6 +204,14 @@ function Home({ addToCart }) {
     if (containerRef.current) {
       containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
+    } else {
+      // If containerRef is null, reset touch states and exit
+      setTouchStartX(null);
+      setTouchCurrentX(null);
+      setTouchStartY(null);
+      setTouchCurrentY(null);
+      setSwipeEnabled(true);
+      return;
     }
 
     if (swipeEnabled && Math.abs(deltaX) > swipeThreshold) {
