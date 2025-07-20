@@ -61,7 +61,7 @@ function CategoryMenu({ addToCart }) {
           .map(breakfast => ({
             ...breakfast,
             type: 'breakfast',
-            category_name: categoryData?.name || 'Breakfast',
+            category_name: categoryData?.name || 'Petit-déjeuner',
           }));
 
         const combinedItems = [
@@ -71,18 +71,18 @@ function CategoryMenu({ addToCart }) {
 
         setMenuItems(combinedItems);
         setFilteredItems(combinedItems);
-        setCategoryName(categoryData?.name || 'Category');
+        setCategoryName(categoryData?.name || 'Catégorie');
         setCategoryImage(categoryData?.image_url || null);
         setCategories(categoriesData);
         
         setTimeout(() => setIsVisible(true), 100);
       } catch (error) {
-        console.error('Error fetching category data:', error);
-        toast.error(error.response?.data?.error || 'Failed to load menu or category');
-        setError('Failed to load category or menu items.');
+        console.error('Erreur lors du chargement des données de catégorie :', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement du menu ou de la catégorie');
+        setError('Échec du chargement de la catégorie ou des éléments du menu.');
         setMenuItems([]);
         setFilteredItems([]);
-        setCategoryName('Category');
+        setCategoryName('Catégorie');
         setCategories([]);
         setTimeout(() => setIsVisible(true), 100);
       } finally {
@@ -93,7 +93,7 @@ function CategoryMenu({ addToCart }) {
     if (id) {
       fetchData();
     } else {
-      setError('Invalid category ID.');
+      setError('ID de catégorie invalide.');
       setLoading(false);
       setTimeout(() => setIsVisible(true), 100);
     }
@@ -132,10 +132,13 @@ function CategoryMenu({ addToCart }) {
       if (!isSwiping || window.innerWidth > 768) return;
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limit swipe distance
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
       if (containerRef.current) {
         containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
+      } else {
+        // If containerRef is null, exit early
+        return;
       }
     },
     [isSwiping, touchStartX, touchCurrentX]
@@ -150,6 +153,11 @@ function CategoryMenu({ addToCart }) {
     if (containerRef.current) {
       containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
       containerRef.current.style.transform = 'translateX(0)';
+    } else {
+      // If containerRef is null, reset touch states and exit
+      setTouchStartX(null);
+      setTouchCurrentX(null);
+      return;
     }
 
     if (categories.length > 0) {
@@ -199,7 +207,7 @@ function CategoryMenu({ addToCart }) {
           <Coffee size={64} color="#ff6b35" className="category-menu-error-icon" />
           <p className="category-menu-error-text">{error}</p>
           <button className="category-menu-retry-button" onClick={() => window.location.reload()}>
-            Try Again
+            Réessayer
           </button>
         </div>
       </div>
@@ -216,7 +224,7 @@ function CategoryMenu({ addToCart }) {
         onTouchEnd={handleTouchEnd}
       >
         <div className="category-menu-loading-spinner"></div>
-        <p className="category-menu-loading-text">Chargement du délicieux menu...</p>
+        <p className="category-menu-loading-text">Chargement du menu...</p>
       </div>
     );
   }
@@ -235,7 +243,7 @@ function CategoryMenu({ addToCart }) {
             <div 
               className="category-menu-header-image"
               style={{
-                backgroundImage: `url(${categoryImage})`
+                backgroundImage: `url(${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${categoryImage})`
               }}
             />
           ) : (
@@ -255,7 +263,7 @@ function CategoryMenu({ addToCart }) {
             <div className="category-menu-header-title">
               <h1 className="category-menu-category-title">{categoryName}</h1>
               <p className="category-menu-category-subtitle">
-                {filteredItems.length} Article Délicieux Disponible!
+                {filteredItems.length} article{filteredItems.length !== 1 ? 's' : ''} délicieux disponible{filteredItems.length !== 1 ? 's' : ''}
               </p>
             </div>
           </div>
@@ -283,8 +291,8 @@ function CategoryMenu({ addToCart }) {
           <div className="category-menu-search-results">
             <p className="category-menu-search-results-text">
               {filteredItems.length > 0 
-                ? `Found ${filteredItems.length} item${filteredItems.length !== 1 ? 's' : ''} for "${searchQuery}"`
-                : `No items found for "${searchQuery}"`
+                ? `${filteredItems.length} article${filteredItems.length !== 1 ? 's' : ''} trouvé${filteredItems.length !== 1 ? 's' : ''} pour "${searchQuery}"`
+                : `Aucun article trouvé pour "${searchQuery}"`
               }
             </p>
           </div>
@@ -296,12 +304,12 @@ function CategoryMenu({ addToCart }) {
               <Coffee size={64} color="#8e8e93" />
             </div>
             <h3 className="category-menu-empty-state-title">
-              {searchQuery ? 'No items found' : 'Aucun élément de menu disponible'}
+              {searchQuery ? 'Aucun article trouvé' : 'Aucun élément de menu disponible'}
             </h3>
             <p className="category-menu-empty-state-text">
               {searchQuery 
-                ? 'ajuster vos termes de recherche ou parcourez tous les éléments.'
-                : 'Cette catégorie est actuellement vide. Revenez bientôt pour découvrir de nouveaux articles !'
+                ? 'Ajustez vos termes de recherche ou parcourez tous les éléments.'
+                : 'Cette catégorie est actuellement vide. Revenez bientôt pour découvrir de nouveaux articles !'
               }
             </p>
             {searchQuery && (
