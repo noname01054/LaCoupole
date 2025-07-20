@@ -46,7 +46,7 @@ const Footer = memo(() => {
             color: 'var(--text-color)',
           }}
         >
-          © 2025 Meals. All rights reserved.
+          © 2025 La Coupole. All rights reserved.
         </Typography>
         <Typography
           variant="caption"
