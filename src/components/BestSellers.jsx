@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -22,6 +22,7 @@ function BestSellers({ addToCart }) {
   const autoScrollIntervalRef = useRef(null);
   const userInteractionRef = useRef(false);
   const lastUserInteractionRef = useRef(Date.now());
+  const lastScrollTime = useRef(0);
 
   useEffect(() => {
     const fetchBestSellersAndTheme = async () => {
@@ -47,10 +48,10 @@ function BestSellers({ addToCart }) {
 
   const applyTheme = useCallback((themeData) => {
     const root = document.documentElement;
-    root.style.setProperty('--primary-color', themeData.primary_color);
-    root.style.setProperty('--secondary-color', themeData.secondary_color);
-    root.style.setProperty('--background-color', themeData.background_color);
-    root.style.setProperty('--text-color', themeData.text_color);
+    root.style.setProperty('--primary-color', themeData.primary_color || '#ff6b35');
+    root.style.setProperty('--secondary-color', themeData.secondary_color || '#ff8c42');
+    root.style.setProperty('--background-color', themeData.background_color || '#faf8f5');
+    root.style.setProperty('--text-color', themeData.text_color || '#1f2937');
   }, []);
 
   const updateCenterItem = useCallback(() => {
@@ -80,25 +81,31 @@ function BestSellers({ addToCart }) {
   }, [bestSellers.length]);
 
   const handleScroll = useCallback(() => {
+    const now = performance.now();
+    if (now - lastScrollTime.current < 16) return; // Throttle to ~60fps
+    lastScrollTime.current = now;
+
     if (!isScrollingRef.current) {
       isScrollingRef.current = true;
     }
 
     userInteractionRef.current = true;
-    lastUserInteractionRef.current = Date.now();
+    lastUserInteractionRef.current = now;
 
-    updateCenterItem();
+    requestAnimationFrame(() => {
+      updateCenterItem();
 
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
 
-    scrollTimeoutRef.current = setTimeout(() => {
-      isScrollingRef.current = false;
-      setTimeout(() => {
-        userInteractionRef.current = false;
-      }, 2000);
-    }, 150);
+      scrollTimeoutRef.current = setTimeout(() => {
+        isScrollingRef.current = false;
+        setTimeout(() => {
+          userInteractionRef.current = false;
+        }, 2000);
+      }, 100);
+    });
   }, [updateCenterItem]);
 
   const startAutoScroll = useCallback(() => {
@@ -117,9 +124,11 @@ function BestSellers({ addToCart }) {
           const elementRect = targetElement.getBoundingClientRect();
           const scrollLeft = elementRect.left - containerRect.left + container.scrollLeft - (containerRect.width - elementRect.width) / 2;
 
-          container.scrollTo({
-            left: scrollLeft,
-            behavior: 'smooth',
+          requestAnimationFrame(() => {
+            container.scrollTo({
+              left: scrollLeft,
+              behavior: 'auto', // Changed to auto for performance
+            });
           });
         }
       }
@@ -190,13 +199,88 @@ function BestSellers({ addToCart }) {
     navigate(`/product/${itemId}`);
   }, [navigate, handleUserInteraction]);
 
-  const getBaseUrl = useCallback(() => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000', []);
+  const bestSellerItems = useMemo(() => {
+    return bestSellers.map((item, index) => (
+      <div
+        key={item.id}
+        ref={(el) => (itemRefs.current[index] = el)}
+        style={{
+          ...styles.bestSellerItem,
+          transform: centerIndex === index ? 'scale(1.15)' : 'scale(1)',
+          zIndex: centerIndex === index ? 10 : 1,
+        }}
+        className="best-sellers-item"
+        onClick={() => handleItemClick(item.id)}
+      >
+        <div 
+          style={{
+            ...styles.bestSellerCard,
+            ...(centerIndex === index ? { ...styles.centerItemCard, borderColor: theme.primary_color || '#ff6b35' } : {}),
+            backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5',
+          }}
+        >
+          <div 
+            style={{
+              ...styles.bestSellerImageContainer,
+              ...(centerIndex === index ? styles.centerItemImageContainer : {}),
+              backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5',
+            }}
+          >
+            {item.image_url ? (
+              <img
+                src={item.image_url}
+                alt={item.name}
+                style={styles.bestSellerImage}
+                loading="lazy"
+                decoding="async"
+                onError={(e) => {
+                  console.error('Error loading best seller image:', item.image_url);
+                  e.target.src = '/placeholder.jpg';
+                }}
+              />
+            ) : (
+              <div style={{ ...styles.bestSellerPlaceholder, backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5' }}>
+                <Coffee size={centerIndex === index ? 36 : 32} color={theme.primary_color || '#ff6b35'} />
+              </div>
+            )}
+            {centerIndex === index && (
+              <div style={{ ...styles.highlightBadge, borderColor: theme.secondary_color || '#ff8c42' }}>
+                <Star size={12} fill={theme.secondary_color || '#ff8c42'} color={theme.secondary_color || '#ff8c42'} />
+              </div>
+            )}
+          </div>
+          
+          <div style={styles.itemInfo}>
+            <h3 
+              style={{
+                ...styles.bestSellerName,
+                ...(centerIndex === index ? { ...styles.centerItemName, color: (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937' } : { color: (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937' }),
+              }}
+            >
+              {item.name}
+            </h3>
+            <div
+              style={{
+                ...styles.priceContainer,
+                ...(centerIndex === index ? { ...styles.centerItemPriceContainer, backgroundColor: theme.primary_color || '#ff6b35' } : { backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5' }),
+              }}
+            >
+              <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}>$</span>
+              <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}>
+                {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    ));
+  }, [bestSellers, centerIndex, theme, handleItemClick]);
 
   if (loading) {
     return (
-      <div style={{ ...styles.loadingContainer, backgroundColor: theme.background_color }}>
-        <div style={{ ...styles.loadingSpinner, borderTopColor: theme.primary_color }}></div>
-        <p style={{ ...styles.loadingText, color: theme.text_color }}>Chargement des meilleures ventes...</p>
+      <div style={{ ...styles.loadingContainer, backgroundColor: theme.background_color || '#faf8f5' }}>
+        <div style={{ ...styles.loadingSpinner, borderTopColor: theme.primary_color || '#ff6b35' }}></div>
+        <p style={{ ...styles.loadingText, color: theme.text_color || '#1f2937' }}>Loading best sellers...</p>
       </div>
     );
   }
@@ -208,11 +292,11 @@ function BestSellers({ addToCart }) {
   return (
     <>
       <style>{cssStyles(theme)}</style>
-      <div style={{ ...styles.bestSellersSection, backgroundColor: theme.background_color }}>
+      <div style={{ ...styles.bestSellersSection, backgroundColor: theme.background_color || '#faf8f5' }}>
         <div style={styles.bestSellersHeader}>
           <div style={styles.titleContainer}>
-            <Star size={20} style={{ ...styles.starIcon, color: theme.primary_color }} />
-            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color }}>Meilleures ventes</h2>
+            <Star size={20} style={{ ...styles.starIcon, color: theme.primary_color || '#ff6b35' }} />
+            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color || '#ff6b35' }}>Best Sellers</h2>
           </div>
           <div style={styles.indicatorContainer}>
             {bestSellers.map((_, index) => (
@@ -220,7 +304,7 @@ function BestSellers({ addToCart }) {
                 key={index}
                 style={{
                   ...styles.indicator,
-                  ...(centerIndex === index ? { ...styles.activeIndicator, backgroundColor: theme.primary_color } : {}),
+                  ...(centerIndex === index ? { ...styles.activeIndicator, backgroundColor: theme.primary_color || '#ff6b35' } : {}),
                 }}
               />
             ))}
@@ -233,76 +317,7 @@ function BestSellers({ addToCart }) {
           className="best-sellers-scroll"
         >
           <div style={styles.bestSellersGrid}>
-            {bestSellers.map((item, index) => (
-              <div
-                key={item.id}
-                ref={(el) => (itemRefs.current[index] = el)}
-                style={{
-                  ...styles.bestSellerItem,
-                  transform: centerIndex === index ? 'scale(1.15)' : 'scale(1)',
-                  zIndex: centerIndex === index ? 10 : 1,
-                }}
-                className="best-sellers-item"
-                onClick={() => handleItemClick(item.id)}
-              >
-                <div 
-                  style={{
-                    ...styles.bestSellerCard,
-                    ...(centerIndex === index ? { ...styles.centerItemCard, borderColor: theme.primary_color } : {}),
-                    backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color,
-                  }}
-                >
-                  <div 
-                    style={{
-                      ...styles.bestSellerImageContainer,
-                      ...(centerIndex === index ? styles.centerItemImageContainer : {}),
-                      backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color,
-                    }}
-                  >
-                    {item.image_url ? (
-                      <img
-                        src={`${getBaseUrl()}${item.image_url}`}
-                        alt={item.name}
-                        style={styles.bestSellerImage}
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    ) : (
-                      <div style={{ ...styles.bestSellerPlaceholder, backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color }}>
-                        <Coffee size={centerIndex === index ? 36 : 32} color={theme.primary_color} />
-                      </div>
-                    )}
-                    {centerIndex === index && (
-                      <div style={{ ...styles.highlightBadge, borderColor: theme.secondary_color }}>
-                        <Star size={12} fill={theme.secondary_color} color={theme.secondary_color} />
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div style={styles.itemInfo}>
-                    <h3 
-                      style={{
-                        ...styles.bestSellerName,
-                        ...(centerIndex === index ? { ...styles.centerItemName, color: theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color } : { color: theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color }),
-                      }}
-                    >
-                      {item.name}
-                    </h3>
-                    <div
-                      style={{
-                        ...styles.priceContainer,
-                        ...(centerIndex === index ? { ...styles.centerItemPriceContainer, backgroundColor: theme.primary_color } : { backgroundColor: theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color }),
-                      }}
-                    >
-                      <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}>
-                        {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
-                        <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) }}> DT</span>
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+            {bestSellerItems}
           </div>
         </div>
       </div>
@@ -351,7 +366,7 @@ const styles = {
     height: '6px',
     borderRadius: '50%',
     backgroundColor: '#D1D5DB',
-    transition: 'background-color 0.2s ease',
+    transition: 'background-color 0.15s ease',
   },
   activeIndicator: {
     transform: 'scale(1.2)',
@@ -385,7 +400,7 @@ const styles = {
     minWidth: '100px',
     maxWidth: '120px',
     flex: '0 0 auto',
-    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
     scrollSnapAlign: 'center',
     willChange: 'transform',
   },
@@ -394,11 +409,12 @@ const styles = {
     borderRadius: '12px',
     padding: '8px',
     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     position: 'relative',
+    opacity: 1,
   },
   centerItemCard: {
     boxShadow: '0 3px 8px rgba(0, 0, 0, 0.08)',
@@ -413,7 +429,7 @@ const styles = {
     justifyContent: 'center',
     marginBottom: '8px',
     overflow: 'hidden',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease',
     flexShrink: 0,
     position: 'relative',
   },
@@ -466,7 +482,7 @@ const styles = {
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    transition: 'color 0.2s ease',
+    transition: 'color 0.15s ease',
     width: '100%',
     maxWidth: '90px',
   },
@@ -481,7 +497,7 @@ const styles = {
     justifyContent: 'center',
     borderRadius: '6px',
     padding: '3px 6px',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease',
     minWidth: '40px',
   },
   centerItemPriceContainer: {
@@ -491,12 +507,12 @@ const styles = {
   currency: {
     fontSize: '10px',
     fontWeight: '600',
-    transition: 'color 0.2s ease',
+    transition: 'color 0.15s ease',
   },
   price: {
     fontSize: '13px',
     fontWeight: '600',
-    transition: 'color 0.2s ease',
+    transition: 'color 0.15s ease',
   },
   loadingContainer: {
     padding: '24px 12px',
@@ -507,14 +523,14 @@ const styles = {
     borderRadius: '12px',
     margin: '0 12px',
     boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
+    opacity: 1,
   },
   loadingSpinner: {
     width: '20px',
     height: '20px',
     border: '2px solid rgba(0, 0, 0, 0.2)',
     borderRadius: '50%',
-    animation: 'spin 0.9s linear infinite',
-    marginBottom: '10px',
+    animation: 'spin 0.8s linear infinite',
   },
   loadingText: {
     fontSize: '13px',
@@ -533,7 +549,7 @@ const cssStyles = (theme) => `
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
     overscroll-behavior-x: contain;
   }
 
@@ -541,6 +557,7 @@ const cssStyles = (theme) => `
     will-change: transform;
     transform-style: preserve-3d;
     backface-visibility: hidden;
+    opacity: 1;
   }
 
   .best-sellers-item:active {
@@ -592,7 +609,7 @@ const cssStyles = (theme) => `
 
   @media (prefers-reduced-motion: reduce) {
     .best-sellers-item,
-    .best-sellers-card,
+    .best-seller-card,
     .best-sellers-price-container {
       transition: none !important;
     }
