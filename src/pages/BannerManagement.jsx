@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
+import {
+  Box,
+  Button,
+  Checkbox,
+  FormControlLabel,
+  TextField,
+  Typography,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  CircularProgress,
+} from '@mui/material';
 
 function BannerManagement() {
   const [banners, setBanners] = useState([]);
@@ -9,12 +24,20 @@ function BannerManagement() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '';
+    // If image_url is a full Cloudinary URL, use it directly; otherwise, prepend the API base URL
+    return imageUrl.startsWith('http')
+      ? `${imageUrl}?v=${Date.now()}`
+      : `${import.meta.env.VITE_API_URL || 'https://lacoupole-back.onrender.com'}${imageUrl}?v=${Date.now()}`;
+  };
+
   useEffect(() => {
     const fetchUserAndBanners = async () => {
       try {
         const response = await api.get('/check-auth');
         const currentUser = response.data;
-        console.log('Session response:', currentUser); // Debug log
+        console.log('Session validation:', currentUser); // Debug log
         if (!currentUser || !currentUser.id) {
           toast.error('User not authenticated. Please log in again.');
           return;
@@ -27,15 +50,25 @@ function BannerManagement() {
         setIsAdmin(true);
 
         const bannersResponse = await api.getBanners({ user_id: currentUser.id });
-        console.log('Banners response:', bannersResponse.data); // Debug log
+        console.log('Banners data:', bannersResponse.data); // Debug log
         setBanners(bannersResponse.data || []);
       } catch (error) {
-        console.error('Error fetching session or banners:', error);
+        console.error('Error validating session or fetching banners:', error);
         toast.error(error.response?.data?.error || 'Failed to load banners');
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchUserAndBanners();
+
+    // Periodically validate session and refresh banners to ensure admin access and data consistency
+    const sessionValidationInterval = setInterval(() => {
+      fetchUserAndBanners();
+    }, 600000); // 600,000 ms = 10 minutes
+
+    // Clean up interval on component unmount
+    return () => clearInterval(sessionValidationInterval);
   }, []);
 
   const handleInputChange = (e) => {
@@ -137,167 +170,189 @@ function BannerManagement() {
     }
   };
 
+  if (!isAdmin) {
+    return (
+      <Box sx={{ padding: '20px', textAlign: 'center' }}>
+        <Typography variant="h6" sx={{ color: 'red' }}>
+          Admin access required
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>Banner Management</h2>
-      {!isAdmin && <p style={{ color: 'red' }}>You need admin access to manage banners.</p>}
-      <form onSubmit={handleSubmit} style={{ marginBottom: '20px' }}>
-        <div style={{ marginBottom: '10px' }}>
-          <label>
-            Banner Link:
-            <input
-              type="text"
-              name="link"
-              value={form.link}
-              onChange={handleInputChange}
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-              required
-              disabled={!isAdmin}
-            />
-          </label>
-        </div>
-        <div style={{ marginBottom: '10px' }}>
-          <label>
-            Image:
+    <Box sx={{ padding: '24px', maxWidth: '800px', margin: 'auto' }}>
+      <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, color: 'var(--text-color)' }}>
+        Banner Management
+      </Typography>
+      <Paper sx={{ p: 3, mb: 3, borderRadius: '12px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 500, color: 'var(--text-color)' }}>
+          {form.id ? 'Edit Banner' : 'Add Banner'}
+        </Typography>
+        <form onSubmit={handleSubmit}>
+          <TextField
+            label="Banner Link"
+            name="link"
+            value={form.link}
+            onChange={handleInputChange}
+            fullWidth
+            sx={{ mb: 2 }}
+            required
+            disabled={loading || !isAdmin}
+          />
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body1" sx={{ mb: 1, color: 'var(--text-color)' }}>
+              Banner Image
+            </Typography>
             <input
               type="file"
               name="image"
               accept="image/jpeg,image/png"
               onChange={handleInputChange}
-              style={{ marginTop: '5px' }}
-              required={!form.id}
-              disabled={!isAdmin}
+              disabled={loading || !isAdmin}
             />
-          </label>
-        </div>
-        <div style={{ marginBottom: '10px' }}>
-          <label>
-            Enabled:
-            <input
-              type="checkbox"
-              name="is_enabled"
-              checked={form.is_enabled}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, is_enabled: e.target.checked }))
-              }
-              style={{ marginLeft: '10px' }}
-              disabled={!isAdmin}
-            />
-          </label>
-        </div>
-        <button
-          type="submit"
-          disabled={loading || !isAdmin}
-          style={{
-            padding: '10px 20px',
-            background: '#4CAF50',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: (loading || !isAdmin) ? 'not-allowed' : 'pointer',
-          }}
-        >
-          {form.id ? 'Update Banner' : 'Add Banner'}
-        </button>
-        {form.id && (
-          <button
-            type="button"
-            onClick={() => setForm({ id: null, link: '', is_enabled: true, image: null })}
-            style={{
-              padding: '10px 20px',
-              background: '#ccc',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              marginLeft: '10px',
-            }}
-            disabled={!isAdmin}
-          >
-            Cancel Edit
-          </button>
+            {form.id && banners.find((b) => b.id === form.id)?.image_url && (
+              <Box sx={{ mt: 1 }}>
+                <img
+                  src={getImageUrl(banners.find((b) => b.id === form.id).image_url)}
+                  alt="Current Banner"
+                  style={{ maxWidth: '150px', height: 'auto', borderRadius: '8px', objectFit: 'cover' }}
+                />
+              </Box>
+            )}
+          </Box>
+          <FormControlLabel
+            control={
+              <Checkbox
+                name="is_enabled"
+                checked={form.is_enabled}
+                onChange={(e) => setForm((prev) => ({ ...prev, is_enabled: e.target.checked }))}
+                disabled={loading || !isAdmin}
+              />
+            }
+            label="Enabled"
+            sx={{ mb: 2 }}
+          />
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading || !isAdmin}
+              sx={{
+                background: 'var(--primary-color)',
+                color: '#fff',
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontWeight: 500,
+                '&:hover': { background: 'var(--secondary-color)' },
+              }}
+            >
+              {loading ? <CircularProgress size={24} color="inherit" /> : form.id ? 'Update Banner' : 'Add Banner'}
+            </Button>
+            {form.id && (
+              <Button
+                variant="outlined"
+                onClick={() => setForm({ id: null, link: '', is_enabled: true, image: null })}
+                disabled={loading || !isAdmin}
+                sx={{
+                  borderColor: 'var(--text-color)',
+                  color: 'var(--text-color)',
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                }}
+              >
+                Cancel Edit
+              </Button>
+            )}
+          </Box>
+        </form>
+      </Paper>
+      <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
+        <Typography variant="h6" sx={{ mb: 2, fontWeight: 500, color: 'var(--text-color)' }}>
+          Banners
+        </Typography>
+        {banners.length === 0 ? (
+          <Typography>No banners available.</Typography>
+        ) : (
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 600 }}>ID</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Image</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Link</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Enabled</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {banners.map((banner) => (
+                <TableRow key={banner.id}>
+                  <TableCell>{banner.id}</TableCell>
+                  <TableCell>
+                    {banner.image_url ? (
+                      <img
+                        src={getImageUrl(banner.image_url)}
+                        alt="Banner"
+                        style={{ maxWidth: '100px', height: 'auto', borderRadius: '8px', objectFit: 'cover' }}
+                        onError={() => toast.error(`Failed to load image for banner ${banner.id}`)}
+                      />
+                    ) : (
+                      <Typography color="textSecondary">No image</Typography>
+                    )}
+                  </TableCell>
+                  <TableCell>{banner.link}</TableCell>
+                  <TableCell>{banner.is_enabled ? 'Yes' : 'No'}</TableCell>
+                  <TableCell>
+                    <Button
+                      onClick={() => handleEdit(banner)}
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        mr: 1,
+                        background: '#2196F3',
+                        '&:hover': { background: '#1976D2' },
+                        textTransform: 'none',
+                      }}
+                      disabled={!isAdmin}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      onClick={() => handleDelete(banner.id)}
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        mr: 1,
+                        background: '#d32f2f',
+                        '&:hover': { background: '#b71c1c' },
+                        textTransform: 'none',
+                      }}
+                      disabled={!isAdmin}
+                    >
+                      Delete
+                    </Button>
+                    <Button
+                      onClick={() => toggleEnable(banner)}
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        background: banner.is_enabled ? '#FF9800' : '#4CAF50',
+                        '&:hover': { background: banner.is_enabled ? '#F57C00' : '#388E3C' },
+                        textTransform: 'none',
+                      }}
+                      disabled={!isAdmin}
+                    >
+                      {banner.is_enabled ? 'Disable' : 'Enable'}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         )}
-      </form>
-
-      <h3>Banners</h3>
-      {banners.length === 0 ? (
-        <p>No banners available.</p>
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr>
-              <th style={{ border: '1px solid #ddd', padding: '8px' }}>ID</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Image</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Link</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Enabled</th>
-              <th style={{ border: '1px solid #ddd', padding: '8px' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {banners.map((banner) => (
-              <tr key={banner.id}>
-                <td style={{ border: '1px solid #ddd', padding: '8px' }}>{banner.id}</td>
-                <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                  {banner.image_url && (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000'}${banner.image_url}`}
-                      alt="Banner"
-                      style={{ width: '100px', height: 'auto' }}
-                    />
-                  )}
-                </td>
-                <td style={{ border: '1px solid #ddd', padding: '8px' }}>{banner.link}</td>
-                <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                  {banner.is_enabled ? 'Yes' : 'No'}
-                </td>
-                <td style={{ border: '1px solid #ddd', padding: '8px' }}>
-                  <button
-                    onClick={() => handleEdit(banner)}
-                    style={{
-                      padding: '5px 10px',
-                      background: '#2196F3',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      marginRight: '5px',
-                    }}
-                    disabled={!isAdmin}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(banner.id)}
-                    style={{
-                      padding: '5px 10px',
-                      background: '#d32f2f',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '4px',
-                      marginRight: '5px',
-                    }}
-                    disabled={!isAdmin}
-                  >
-                    Delete
-                  </button>
-                  <button
-                    onClick={() => toggleEnable(banner)}
-                    style={{
-                      padding: '5px 10px',
-                      background: banner.is_enabled ? '#FF9800' : '#4CAF50',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '4px',
-                    }}
-                    disabled={!isAdmin}
-                  >
-                    {banner.is_enabled ? 'Disable' : 'Enable'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+      </Paper>
+    </Box>
   );
 }
 
