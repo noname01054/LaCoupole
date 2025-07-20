@@ -56,41 +56,41 @@ import './css/Header.css';
 const NotificationBell = lazy(() => import('./NotificationBell'));
 
 const Header = memo(
-  ({ cartItems, setIsCartOpen, user, handleLogout, theme: customTheme }) => {
+  ({ cart, setIsCartOpen, user, handleLogout, theme: customTheme }) => {
     const theme = useTheme();
     const navigate = useNavigate();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
     const [categories, setCategories] = useState([]);
     const [notifications, setNotifications] = useState([]);
-    const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [searchQuery, setSearchTerm] = useState('');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [expandedSection, setExpandedSection] = useState('');
     const socket = getSocket();
 
     const adminLinks = [
-      { to: '/admin', label: 'Tableau de bord', icon: <AdminPanelSettingsIcon />, primary: true },
-      { to: '/admin/add-menu-item', label: 'Ajouter un article au menu', icon: <AddCircleOutlineIcon /> },
-      { to: '/admin/manage-menu-items', label: 'Articles du menu', icon: <RestaurantIcon /> },
-      { to: '/admin/supplements', label: 'Gérer les suppléments', icon: <RestaurantIcon /> },
-      { to: '/admin/breakfasts', label: 'Petits-déjeuners', icon: <RestaurantIcon /> },
+      { to: '/admin', label: 'Dashboard', icon: <AdminPanelSettingsIcon />, primary: true },
+      { to: '/admin/add-menu-item', label: 'Add Menu Item', icon: <AddCircleOutlineIcon /> },
+      { to: '/admin/manage-menu-items', label: 'Menu Items', icon: <RestaurantIcon /> },
+      { to: '/admin/supplements', label: 'Manage Supplements', icon: <RestaurantIcon /> },
+      { to: '/admin/breakfasts', label: 'Breakfasts', icon: <RestaurantIcon /> },
       { to: '/admin/promotions', label: 'Promotions', icon: <PromotionIcon /> },
-      { to: '/admin/users', label: 'Gestion du personnel', icon: <GroupIcon /> },
-      { to: '/admin/tables', label: 'Gestion des tables', icon: <TableIcon /> },
-      { to: '/admin/orders', label: 'Gestion des commandes', icon: <OrderIcon /> },
-      { to: '/admin/categories', label: 'Catégories', icon: <CategoryIcon /> },
-      { to: '/admin/table-reservations', label: 'Réservations de tables', icon: <TableIcon /> },
-      { to: '/admin/banners', label: 'Gestion des bannières', icon: <ImageIcon /> },
-      { to: '/admin/theme', label: 'Gestion du thème', icon: <PaletteIcon /> },
+      { to: '/admin/users', label: 'Staff Management', icon: <GroupIcon /> },
+      { to: '/admin/tables', label: 'Table Management', icon: <TableIcon /> },
+      { to: '/admin/orders', label: 'Order Management', icon: <OrderIcon /> },
+      { to: '/admin/categories', label: 'Categories', icon: <CategoryIcon /> },
+      { to: '/admin/table-reservations', label: 'Table Reservations', icon: <TableIcon /> },
+      { to: '/admin/banners', label: 'Banner Management', icon: <ImageIcon /> },
+      { to: '/admin/theme', label: 'Theme Management', icon: <PaletteIcon /> },
     ];
 
     const staffLinks = [
-      { to: '/staff', label: 'Tableau de bord du personnel', icon: <WorkIcon />, primary: true },
-      { to: '/staff/table-reservations', label: 'Réservations de tables', icon: <TableIcon /> },
+      { to: '/staff', label: 'Staff Dashboard', icon: <WorkIcon />, primary: true },
+      { to: '/staff/table-reservations', label: 'Table Reservations', icon: <TableIcon /> },
     ];
 
     const publicLinks = [
-      { to: '/', label: 'Tous les produits', icon: <HomeIcon />, primary: true },
+      { to: '/', label: 'All Products', icon: <HomeIcon />, primary: true },
       ...categories.map((category) => ({
         to: `/category/${category.id}`,
         label: category.name,
@@ -109,8 +109,8 @@ const Header = memo(
           }))
         );
       } catch (err) {
-        console.error('Erreur lors du chargement des notifications:', err);
-        toast.error('Échec du chargement des notifications');
+        console.error('Error fetching notifications:', err);
+        toast.error('Failed to load notifications');
       }
     };
 
@@ -121,7 +121,7 @@ const Header = memo(
           return;
         }
         if (!notification.id) {
-          console.warn('Notification invalide reçue:', notification);
+          console.warn('Invalid notification received:', notification);
           return;
         }
         setNotifications((prev) => {
@@ -146,7 +146,7 @@ const Header = memo(
                 ...prev,
               ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
           if (!notification.is_read) {
-            console.log('Nouvelle notification non lue ajoutée:', notification);
+            console.log('New unread notification added:', notification);
             toast.info(notification.message, { autoClose: 3000 });
           }
           return updated;
@@ -159,8 +159,8 @@ const Header = memo(
       debounce((query) => {
         if (query.trim()) {
           navigate(`/search?q=${encodeURIComponent(query)}`);
-          setSearchTerm('');
-          setMobileMenuOpen(false);
+          setSearchQuery('');
+          setIsMobileMenuOpen(false);
         }
       }, 300),
       [navigate]
@@ -180,7 +180,7 @@ const Header = memo(
           if (mounted) setCategories(res.data || []);
         } catch (error) {
           if (mounted) {
-            toast.error(error.response?.data?.error || 'Échec du chargement des catégories');
+            toast.error(error.response?.data?.error || 'Failed to fetch categories');
             setCategories([]);
           }
         }
@@ -231,7 +231,7 @@ const Header = memo(
             {title}
           </ListSubheader>
           {links.map((link) => (
-            <NavItem key={link.to} link={link} isPrimary={isPrimary} onClick={() => setMobileMenuOpen(false)} />
+            <NavItem key={link.to} link={link} isPrimary={isPrimary} onClick={() => setIsMobileMenuOpen(false)} />
           ))}
         </Box>
       ),
@@ -249,9 +249,9 @@ const Header = memo(
               <TextField
                 fullWidth
                 size="small"
-                placeholder="Rechercher des produits..."
+                placeholder="Search products..."
                 value={searchQuery}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch(e)}
                 InputProps={{
                   startAdornment: (
@@ -276,7 +276,7 @@ const Header = memo(
           <Box className="header-menu-container" sx={{ paddingBottom: '80px' }}>
             {isAdmin ? (
               <>
-                {renderMenuSection('Panneau administratif', adminLinks.filter((link) => link.primary))}
+                {renderMenuSection('Administrative Panel', adminLinks.filter((link) => link.primary))}
                 <ListItemButton
                   onClick={() => setExpandedSection(expandedSection === 'management' ? '' : 'management')}
                   sx={{ margin: '2px 12px', borderRadius: '8px' }}
@@ -285,19 +285,19 @@ const Header = memo(
                     <CategoryIcon />
                   </ListItemIcon>
                   <ListItemText
-                    primary="Outils de gestion"
+                    primary="Management Tools"
                     primaryTypographyProps={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-color)' }}
                   />
                   {expandedSection === 'management' ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 <Collapse in={expandedSection === 'management'} timeout={100}>
                   <Box sx={{ paddingLeft: '12px' }}>
-                    {renderMenuSection('Outils', adminLinks.filter((link) => !link.primary))}
+                    {renderMenuSection('Tools', adminLinks.filter((link) => !link.primary))}
                   </Box>
                 </Collapse>
               </>
             ) : isStaff ? (
-              renderMenuSection('Portail du personnel', staffLinks)
+              renderMenuSection('Staff Portal', staffLinks)
             ) : (
               renderMenuSection('Menu', publicLinks)
             )}
@@ -314,10 +314,10 @@ const Header = memo(
                     variant="subtitle1"
                     sx={{ fontWeight: 600, color: 'var(--text-color)', marginBottom: '4px' }}
                   >
-                    {user.name || 'Utilisateur'}
+                    {user.name || 'User'}
                   </Typography>
                   <Chip
-                    label={`Compte ${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`}
+                    label={`${user.role.charAt(0).toUpperCase() + user.role.slice(1)} Account`}
                     size="small"
                     sx={{ backgroundColor: 'var(--secondary-color)', color: 'var(--primary-color)', fontSize: '11px', fontWeight: 500 }}
                   />
@@ -339,7 +339,7 @@ const Header = memo(
                   '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.06)' },
                 }}
               >
-                Se déconnecter
+                Sign Out
               </Button>
             ) : (
               <Button
@@ -348,7 +348,7 @@ const Header = memo(
                 startIcon={<PersonIcon />}
                 onClick={() => {
                   navigate('/login');
-                  setMobileMenuOpen(false);
+                  setIsMobileMenuOpen(false);
                 }}
                 sx={{
                   borderRadius: '8px',
@@ -358,7 +358,7 @@ const Header = memo(
                   '&:hover': { backgroundColor: 'var(--secondary-color)' },
                 }}
               >
-                Connexion du personnel
+                Staff Login
               </Button>
             )}
           </Box>
@@ -382,7 +382,7 @@ const Header = memo(
           <Toolbar sx={{ minHeight: { xs: '64px', md: '56px' }, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <IconButton
               edge="start"
-              onClick={() => setMobileMenuOpen(true)}
+              onClick={() => setIsMobileMenuOpen(true)}
               sx={{ width: { xs: '44px', md: '40px' }, height: { xs: '44px', md: '40px' }, borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
             >
               <MenuIcon />
@@ -406,9 +406,13 @@ const Header = memo(
             >
               {customTheme?.logo_url ? (
                 <img
-                  src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${customTheme.logo_url}`}
-                  alt="Logo du Café"
+                  src={customTheme.logo_url}
+                  alt="Café Logo"
                   style={{ maxHeight: '40px', maxWidth: '100px' }}
+                  onError={(e) => {
+                    console.error('Error loading logo image:', customTheme.logo_url);
+                    e.target.src = '/placeholder.jpg';
+                  }}
                 />
               ) : (
                 <>
@@ -440,7 +444,7 @@ const Header = memo(
                   sx={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
                 >
                   <Badge
-                    badgeContent={(cartItems || []).reduce((acc, item) => acc + (item.quantity || 0), 0)}
+                    badgeContent={(cart || []).reduce((acc, item) => acc + (item.quantity || 0), 0)}
                     max={300}
                     sx={{
                       '& .MuiBadge-badge': {
@@ -466,7 +470,7 @@ const Header = memo(
         <Drawer
           anchor="left"
           open={isMobileMenuOpen}
-          onClose={() => setMobileMenuOpen(false)}
+          onClose={() => setIsMobileMenuOpen(false)}
           sx={{
             '& .MuiDrawer-paper': {
               width: { xs: '260px', md: '280px' },
@@ -487,9 +491,13 @@ const Header = memo(
                 >
                   {customTheme?.logo_url ? (
                     <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${customTheme.logo_url}`}
-                      alt="Logo du Café"
+                      src={customTheme.logo_url}
+                      alt="Café Logo"
                       style={{ maxHeight: '40px', maxWidth: '100px' }}
+                      onError={(e) => {
+                        console.error('Error loading logo image:', customTheme.logo_url);
+                        e.target.src = '/placeholder.jpg';
+                      }}
                     />
                   ) : (
                     <>
@@ -499,7 +507,7 @@ const Header = memo(
                   )}
                 </Typography>
                 <IconButton
-                  onClick={() => setMobileMenuOpen(false)}
+                  onClick={() => setIsMobileMenuOpen(false)}
                   sx={{ width: { xs: '44px', md: '40px' }, height: { xs: '44px', md: '40px' }, borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
                 >
                   <CloseIcon />
@@ -516,7 +524,7 @@ const Header = memo(
     );
   },
   (prev, next) =>
-    prev.cartItems?.length === next.cartItems?.length &&
+    prev.cart?.length === next.cart?.length &&
     prev.setIsCartOpen === next.setIsCartOpen &&
     prev.user?.role === next.user?.role &&
     prev.user?.name === next.user?.name &&
