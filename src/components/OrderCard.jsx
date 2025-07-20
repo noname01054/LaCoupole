@@ -13,7 +13,6 @@ import {
   Cancel,
 } from '@mui/icons-material';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/40?text=Aucune+Image';
 
 // Helper function to safely parse numbers
@@ -541,9 +540,7 @@ function OrderCard({
             {/* Items List */}
             <div style={itemsListStyle}>
               {groupedItems.length > 0 ? groupedItems.map((item, index) => {
-                const imageUrl = item.imageUrl
-                  ? `${BACKEND_URL}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
-                  : FALLBACK_IMAGE;
+                const imageUrl = item.imageUrl || FALLBACK_IMAGE;
                 const itemTotalPrice = safeParseFloat(item.unitPrice, 0) * safeParseInt(item.quantity, 1);
 
                 return (
@@ -552,7 +549,10 @@ function OrderCard({
                       src={imageUrl}
                       alt={item.name}
                       style={itemImageStyle}
-                      onError={(e) => (e.target.src = FALLBACK_IMAGE)}
+                      onError={(e) => {
+                        console.error('Error loading order item image:', imageUrl);
+                        e.target.src = FALLBACK_IMAGE;
+                      }}
                       loading="lazy"
                     />
                     <div style={itemDetailsStyle}>
