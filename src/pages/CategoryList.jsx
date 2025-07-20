@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -11,11 +11,6 @@ function CategoryList() {
   const [error, setError] = useState(null);
   const [showCloseAnimation, setShowCloseAnimation] = useState(false);
   const navigate = useNavigate();
-  const containerRef = useRef(null);
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [touchCurrentX, setTouchCurrentX] = useState(null);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const lastTouchTime = useRef(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -26,7 +21,7 @@ function CategoryList() {
         const response = await api.get('/categories');
         setCategories(response.data || []);
       } catch (error) {
-        console.error('Erreur lors du chargement des catégories:', error);
+        console.error('Erreur lors du chargement des catégories :', error);
         toast.error(error.response?.data?.error || 'Échec du chargement des catégories');
         setError('Échec du chargement des catégories.');
       } finally {
@@ -47,61 +42,6 @@ function CategoryList() {
     }, 200);
   }, [navigate]);
 
-  const handleTouchStart = useCallback((e) => {
-    if (window.innerWidth > 768) return;
-    setTouchStartX(e.touches[0].clientX);
-    setTouchCurrentX(e.touches[0].clientX);
-    setIsSwiping(true);
-  }, []);
-
-  const handleTouchMove = useCallback(
-    (e) => {
-      if (!isSwiping || window.innerWidth > 768) return;
-      const now = performance.now();
-      if (now - lastTouchTime.current < 16) return; // Throttle to ~60fps
-      lastTouchTime.current = now;
-
-      setTouchCurrentX(e.touches[0].clientX);
-      const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
-      if (containerRef.current) {
-        requestAnimationFrame(() => {
-          containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
-          containerRef.current.style.transition = 'none';
-        });
-      }
-    },
-    [isSwiping, touchStartX, touchCurrentX]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isSwiping || window.innerWidth > 768) return;
-    setIsSwiping(false);
-    const deltaX = touchCurrentX - touchStartX;
-    const swipeThreshold = 80;
-
-    if (containerRef.current) {
-      requestAnimationFrame(() => {
-        containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        containerRef.current.style.transform = 'translateX(0)';
-      });
-    } else {
-      // If containerRef is null, reset touch states and exit
-      setTouchStartX(null);
-      setTouchCurrentX(null);
-      return;
-    }
-
-    if (deltaX > swipeThreshold) {
-      navigate('/');
-    } else if (deltaX < -swipeThreshold && categories.length > 0) {
-      navigate(`/category/${categories[0].id}`);
-    }
-
-    setTouchStartX(null);
-    setTouchCurrentX(null);
-  }, [isSwiping, touchCurrentX, touchStartX, navigate, categories]);
-
   const categoryItems = useMemo(() => {
     return categories.map((category, index) => (
       <div
@@ -113,13 +53,13 @@ function CategoryList() {
         <div className="category-list-image-container">
           {category.image_url ? (
             <img
-              src={category.image_url}
+              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${category.image_url}`}
               alt={category.name}
               className="category-list-image"
               loading="lazy"
               decoding="async"
               onError={(e) => {
-                console.error('Erreur lors du chargement de l\'image de catégorie:', category.image_url);
+                console.error('Erreur lors du chargement de l\'image de catégorie :', category.image_url);
                 e.target.src = '/placeholder.jpg';
               }}
             />
@@ -136,7 +76,7 @@ function CategoryList() {
         <div className="category-list-card-content">
           <h3 className="category-list-category-name">{category.name}</h3>
           <p className="category-list-category-description">
-            {category.description || 'Découvrez de délicieuses options dans cette catégorie'}
+            {category.description || 'Découvrez des options délicieuses dans cette catégorie'}
           </p>
         </div>
       </div>
@@ -145,13 +85,7 @@ function CategoryList() {
 
   if (error) {
     return (
-      <div
-        className="category-list-error-container"
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="category-list-error-container">
         <div className="category-list-error-content">
           <AlertTriangle size={56} color="#ff6b35" className="category-list-error-icon" />
           <h3 className="category-list-error-title">Oups ! Une erreur s'est produite</h3>
@@ -167,13 +101,7 @@ function CategoryList() {
 
   if (loading) {
     return (
-      <div
-        className="category-list-loading-container"
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="category-list-loading-container">
         <div className="category-list-loading-spinner"></div>
         <p className="category-list-loading-text">Chargement des catégories...</p>
       </div>
@@ -183,10 +111,6 @@ function CategoryList() {
   return (
     <div
       className={`category-list-container ${showCloseAnimation ? 'category-list-container-closing' : ''}`}
-      ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
     >
       <div className="category-list-header">
         <div className="category-list-header-content">
