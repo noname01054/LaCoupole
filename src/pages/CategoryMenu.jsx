@@ -235,7 +235,7 @@ function CategoryMenu({ addToCart }) {
             <div 
               className="category-menu-header-image"
               style={{
-                backgroundImage: `url(${import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000'}${categoryImage})`
+                backgroundImage: `url(${categoryImage})`
               }}
             />
           ) : (
