@@ -37,8 +37,8 @@ function BestSellers({ addToCart }) {
         setTheme(updatedTheme);
         applyTheme(updatedTheme);
       } catch (error) {
-        console.error('Error fetching best sellers or theme:', error);
-        toast.error(error.response?.data?.error || 'Failed to load best sellers or theme');
+        console.error('Erreur lors de la récupération des meilleurs vendeurs ou du thème:', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des meilleurs vendeurs ou du thème');
       } finally {
         setLoading(false);
       }
@@ -127,7 +127,7 @@ function BestSellers({ addToCart }) {
           requestAnimationFrame(() => {
             container.scrollTo({
               left: scrollLeft,
-              behavior: 'auto', // Changed to auto for performance
+              behavior: 'auto',
             });
           });
         }
@@ -234,7 +234,7 @@ function BestSellers({ addToCart }) {
                 loading="lazy"
                 decoding="async"
                 onError={(e) => {
-                  console.error('Error loading best seller image:', item.image_url);
+                  console.error('Erreur lors du chargement de l\'image du meilleur vendeur:', item.image_url);
                   e.target.src = '/placeholder.jpg';
                 }}
               />
@@ -265,10 +265,10 @@ function BestSellers({ addToCart }) {
                 ...(centerIndex === index ? { ...styles.centerItemPriceContainer, backgroundColor: theme.primary_color || '#ff6b35' } : { backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5' }),
               }}
             >
-              <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}>$</span>
               <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}>
                 {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
               </span>
+              <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}> DT</span>
             </div>
           </div>
         </div>
@@ -280,7 +280,7 @@ function BestSellers({ addToCart }) {
     return (
       <div style={{ ...styles.loadingContainer, backgroundColor: theme.background_color || '#faf8f5' }}>
         <div style={{ ...styles.loadingSpinner, borderTopColor: theme.primary_color || '#ff6b35' }}></div>
-        <p style={{ ...styles.loadingText, color: theme.text_color || '#1f2937' }}>Loading best sellers...</p>
+        <p style={{ ...styles.loadingText, color: theme.text_color || '#1f2937' }}>Chargement des meilleurs vendeurs...</p>
       </div>
     );
   }
@@ -296,7 +296,7 @@ function BestSellers({ addToCart }) {
         <div style={styles.bestSellersHeader}>
           <div style={styles.titleContainer}>
             <Star size={20} style={{ ...styles.starIcon, color: theme.primary_color || '#ff6b35' }} />
-            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color || '#ff6b35' }}>Best Sellers</h2>
+            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color || '#ff6b35' }}>Meilleurs Vendeurs</h2>
           </div>
           <div style={styles.indicatorContainer}>
             {bestSellers.map((_, index) => (
@@ -471,7 +471,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '3px',
-    width: '100%',
+    width: '防',
   },
   bestSellerName: {
     fontSize: '13px',
