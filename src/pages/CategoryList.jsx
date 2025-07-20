@@ -11,11 +11,6 @@ function CategoryList() {
   const [error, setError] = useState(null);
   const [showCloseAnimation, setShowCloseAnimation] = useState(false);
   const navigate = useNavigate();
-  const containerRef = useRef(null);
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [touchCurrentX, setTouchCurrentX] = useState(null);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const lastTouchTime = useRef(0);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -26,9 +21,9 @@ function CategoryList() {
         const response = await api.get('/categories');
         setCategories(response.data || []);
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast.error(error.response?.data?.error || 'Failed to load categories');
-        setError('Failed to load categories.');
+        console.error('Erreur lors de la récupération des catégories:', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des catégories');
+        setError('Échec du chargement des catégories.');
       } finally {
         setLoading(false);
       }
@@ -47,56 +42,6 @@ function CategoryList() {
     }, 200);
   }, [navigate]);
 
-  const handleTouchStart = useCallback((e) => {
-    if (window.innerWidth > 768) return;
-    setTouchStartX(e.touches[0].clientX);
-    setTouchCurrentX(e.touches[0].clientX);
-    setIsSwiping(true);
-  }, []);
-
-  const handleTouchMove = useCallback(
-    (e) => {
-      if (!isSwiping || window.innerWidth > 768) return;
-      const now = performance.now();
-      if (now - lastTouchTime.current < 16) return; // Throttle to ~60fps
-      lastTouchTime.current = now;
-
-      setTouchCurrentX(e.touches[0].clientX);
-      const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
-      if (containerRef.current) {
-        requestAnimationFrame(() => {
-          containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
-          containerRef.current.style.transition = 'none';
-        });
-      }
-    },
-    [isSwiping, touchStartX, touchCurrentX]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isSwiping || window.innerWidth > 768) return;
-    setIsSwiping(false);
-    const deltaX = touchCurrentX - touchStartX;
-    const swipeThreshold = 80;
-
-    if (containerRef.current) {
-      requestAnimationFrame(() => {
-        containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        containerRef.current.style.transform = 'translateX(0)';
-      });
-    }
-
-    if (deltaX > swipeThreshold) {
-      navigate('/');
-    } else if (deltaX < -swipeThreshold && categories.length > 0) {
-      navigate(`/category/${categories[0].id}`);
-    }
-
-    setTouchStartX(null);
-    setTouchCurrentX(null);
-  }, [isSwiping, touchCurrentX, touchStartX, navigate, categories]);
-
   const categoryItems = useMemo(() => {
     return categories.map((category, index) => (
       <div
@@ -114,7 +59,7 @@ function CategoryList() {
               loading="lazy"
               decoding="async"
               onError={(e) => {
-                console.error('Error loading category image:', category.image_url);
+                console.error('Erreur lors du chargement de l\'image de la catégorie:', category.image_url);
                 e.target.src = '/placeholder.jpg';
               }}
             />
@@ -131,7 +76,7 @@ function CategoryList() {
         <div className="category-list-card-content">
           <h3 className="category-list-category-name">{category.name}</h3>
           <p className="category-list-category-description">
-            {category.description || 'Explore delicious options in this category'}
+            {category.description || 'Découvrez de délicieuses options dans cette catégorie'}
           </p>
         </div>
       </div>
@@ -140,20 +85,14 @@ function CategoryList() {
 
   if (error) {
     return (
-      <div
-        className="category-list-error-container"
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="category-list-error-container">
         <div className="category-list-error-content">
           <AlertTriangle size={56} color="#ff6b35" className="category-list-error-icon" />
-          <h3 className="category-list-error-title">Oops! Something went wrong</h3>
+          <h3 className="category-list-error-title">Oups ! Quelque chose s'est mal passé</h3>
           <p className="category-list-error-text">{error}</p>
           <button className="category-list-retry-button" onClick={() => window.location.reload()}>
             <RotateCw size={18} style={{ marginRight: '8px' }} />
-            Try Again
+            Réessayer
           </button>
         </div>
       </div>
@@ -162,27 +101,15 @@ function CategoryList() {
 
   if (loading) {
     return (
-      <div
-        className="category-list-loading-container"
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="category-list-loading-container">
         <div className="category-list-loading-spinner"></div>
-        <p className="category-list-loading-text">Loading categories...</p>
+        <p className="category-list-loading-text">Chargement des catégories...</p>
       </div>
     );
   }
 
   return (
-    <div
-      className={`category-list-container ${showCloseAnimation ? 'category-list-container-closing' : ''}`}
-      ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className={`category-list-container ${showCloseAnimation ? 'category-list-container-closing' : ''}`}>
       <div className="category-list-header">
         <div className="category-list-header-content">
           <button 
@@ -192,8 +119,8 @@ function CategoryList() {
             <X size={20} color="#fff" />
           </button>
           <div className="category-list-title-section">
-            <h1 className="category-list-title">Our Categories</h1>
-            <p className="category-list-subtitle">Discover what we have to offer</p>
+            <h1 className="category-list-title">Nos catégories</h1>
+            <p className="category-list-subtitle">Découvrez ce que nous proposons</p>
           </div>
           <div className="category-list-header-emoji">🍴</div>
         </div>
@@ -202,8 +129,8 @@ function CategoryList() {
         {categories.length === 0 && !loading && (
           <div className="category-list-empty-state">
             <Coffee size={64} color="#ff8c42" className="category-list-empty-icon" />
-            <h3 className="category-list-empty-title">No Categories Yet</h3>
-            <p className="category-list-empty-text">Check back soon for new categories!</p>
+            <h3 className="category-list-empty-title">Aucune catégorie pour le moment</h3>
+            <p className="category-list-empty-text">Revenez bientôt pour découvrir de nouvelles catégories !</p>
           </div>
         )}
         <div className="category-list-grid">{categoryItems}</div>
