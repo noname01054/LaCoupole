@@ -55,7 +55,7 @@ function ThemeManagement() {
       try {
         const response = await api.get('/check-auth');
         const currentUser = response.data;
-        console.log('Session response:', currentUser); // Debug log
+        console.log('Session validation:', currentUser); // Debug log
         if (!currentUser || !currentUser.id) {
           toast.error('User not authenticated. Please log in again.');
           return;
@@ -68,11 +68,11 @@ function ThemeManagement() {
         setIsAdmin(true);
 
         const themeResponse = await api.getTheme();
-        console.log('Theme response:', themeResponse.data); // Debug log
+        console.log('Theme data:', themeResponse.data); // Debug log
         setTheme(themeResponse.data);
-        applyTheme(themeResponse.data); // Apply theme on load
+        applyTheme(themeResponse.data); // Apply theme
       } catch (error) {
-        console.error('Error fetching session or theme:', error);
+        console.error('Error validating session or fetching theme:', error);
         toast.error(error.response?.data?.error || 'Failed to load theme');
       } finally {
         setLoading(false);
@@ -80,6 +80,14 @@ function ThemeManagement() {
     };
 
     fetchUserAndTheme();
+
+    // Periodically validate session and refresh theme to ensure admin access and UI consistency
+    const sessionValidationInterval = setInterval(() => {
+      fetchUserAndTheme(); // Reuse existing function to validate session and update theme
+    }, 600000); // 600,000 ms = 10 minutes
+
+    // Clean up interval on component unmount
+    return () => clearInterval(sessionValidationInterval);
   }, []);
 
   const handleInputChange = (e) => {
