@@ -112,17 +112,12 @@ function ProductDetails({ addToCart }) {
       const selectedSupplementData = selectedSupplement !== '0'
         ? supplements.find((s) => s.supplement_id === parseInt(selectedSupplement))
         : null;
-      const imageSrc = product.image_url &&
-        product.image_url !== '/Uploads/undefined' &&
-        product.image_url !== 'null'
-        ? `${api.defaults.baseURL.replace('/api', '')}${product.image_url}`
-        : '/placeholder.jpg';
       const itemToAdd = {
         item_id: parseInt(product.id),
         name: product.name || 'Produit inconnu',
         unit_price: parseFloat(product.sale_price || product.regular_price) || 0,
         quantity: parseInt(quantity) || 1,
-        image_url: imageSrc,
+        image_url: product.image_url && product.image_url !== 'null' ? product.image_url : '/placeholder.jpg',
         supplement_id: selectedSupplementData ? parseInt(selectedSupplementData.supplement_id) : null,
         supplement_name: selectedSupplementData ? selectedSupplementData.name : null,
         supplement_price: selectedSupplementData ? parseFloat(selectedSupplementData.additional_price) || 0 : 0,
@@ -299,9 +294,7 @@ function ProductDetails({ addToCart }) {
     );
   }
 
-  const imageSrc = product.image_url && product.image_url !== '/Uploads/undefined' && product.image_url !== 'null'
-    ? `${api.defaults.baseURL.replace('/api', '')}${product.image_url}`
-    : '/placeholder.jpg';
+  const imageSrc = product.image_url && product.image_url !== 'null' ? product.image_url : '/placeholder.jpg';
 
   const regularPrice = parseFloat(product.regular_price) || 0;
   const salePrice = parseFloat(product.sale_price) || null;
@@ -324,7 +317,10 @@ function ProductDetails({ addToCart }) {
             className="product-details-product-image"
             loading="lazy"
             decoding="async"
-            onError={(e) => (e.target.src = '/placeholder.jpg')}
+            onError={(e) => {
+              console.error('Erreur lors du chargement de l\'image du produit:', product.image_url);
+              e.target.src = '/placeholder.jpg';
+            }}
           />
         </div>
       </div>
