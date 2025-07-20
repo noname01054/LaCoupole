@@ -24,8 +24,8 @@ function TopCategories() {
         const response = await api.getTopCategories();
         setTopCategories(response.data || []);
       } catch (error) {
-        console.error('Erreur lors de la récupération des catégories principales :', error);
-        toast.error(error.response?.data?.error || 'Échec du chargement des catégories principales');
+        console.error('Error fetching top categories:', error);
+        toast.error(error.response?.data?.error || 'Failed to load top categories');
       } finally {
         setLoading(false);
       }
@@ -175,13 +175,11 @@ function TopCategories() {
     navigate(`/category/${categoryId}`);
   }, [navigate, handleUserInteraction]);
 
-  const getBaseUrl = () => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
-
   if (loading) {
     return (
       <div style={styles.loadingContainer}>
         <div style={styles.loadingSpinner}></div>
-        <p style={styles.loadingText}>Chargement des catégories principales...</p>
+        <p style={styles.loadingText}>Loading top categories...</p>
       </div>
     );
   }
@@ -195,7 +193,7 @@ function TopCategories() {
       <style>{cssStyles}</style>
       <div style={styles.topCategoriesSection}>
         <div style={styles.topCategoriesHeader}>
-          <h2 style={styles.topCategoriesTitle}>Catégories principales</h2>
+          <h2 style={styles.topCategoriesTitle}>Top Categories</h2>
         </div>
         <div
           style={styles.topCategoriesScrollContainer}
@@ -223,15 +221,19 @@ function TopCategories() {
                 >
                   {category.image_url ? (
                     <img
-                      src={`${getBaseUrl()}${category.image_url}`}
+                      src={category.image_url}
                       srcSet={`
-                        ${getBaseUrl()}${category.image_url}?w=120 1x,
-                        ${getBaseUrl()}${category.image_url}?w=240 2x
+                        ${category.image_url}?w=120 1x,
+                        ${category.image_url}?w=240 2x
                       `}
                       alt={category.name}
                       style={styles.topCategoryImage}
                       loading="lazy"
                       decoding="async"
+                      onError={(e) => {
+                        console.error('Error loading top category image:', category.image_url);
+                        e.target.src = '/placeholder.jpg';
+                      }}
                     />
                   ) : (
                     <div style={styles.topCategoryPlaceholder}>
