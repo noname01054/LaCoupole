@@ -606,7 +606,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             className="order-waiting-button"
             onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
             onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-            onMouseLeave={(e) => (e.target.style.transform = 'scale( છ)')}
+            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
           >
             Retour à l'accueil
           </button>
@@ -639,8 +639,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       </div>
     );
   }
-
-  const baseImageUrl = api.defaults.baseURL.replace('/api', '');
 
   const getOrderTypeDisplay = (orderType) => {
     switch (orderType) {
@@ -724,9 +722,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <h2 className="order-waiting-section-title">Votre commande</h2>
           <div className="order-waiting-items">
             {groupedItems.map((item, index) => {
-              const imageUrl = item.imageUrl
-                ? `${baseImageUrl}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
-                : 'https://via.placeholder.com/40?text=Aucune+Image';
+              const imageUrl = item.imageUrl && item.imageUrl !== 'null' ? item.imageUrl : '/placeholder.jpg';
               const itemTotalPrice = safeParseFloat(item.baseUnitPrice, 0) * safeParseInt(item.quantity, 1);
 
               return (
@@ -739,7 +735,10 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                     src={imageUrl}
                     alt={item.name}
                     className="order-waiting-item-image"
-                    onError={(e) => (e.target.src = 'https://via.placeholder.com/40?text=Aucune+Image')}
+                    onError={(e) => {
+                      console.error(`Erreur lors du chargement de l'image de l'article (${item.type}):`, item.imageUrl);
+                      e.target.src = '/placeholder.jpg';
+                    }}
                   />
                   <div className="order-waiting-item-details">
                     <span className="order-waiting-item-name">{item.name}</span>
