@@ -10,9 +10,9 @@ import {
   Cancel,
   ArrowBack,
   Restaurant,
-  Coffee,
   Category as CategoryIcon
 } from '@mui/icons-material';
+import { Coffee } from 'lucide-react';
 import './css/AdminBreakfasts.css';
 
 function AdminBreakfasts() {
@@ -28,8 +28,6 @@ function AdminBreakfasts() {
   const [userId, setUserId] = useState(null);
   const [formErrors, setFormErrors] = useState({ name: '', price: '' });
   const navigate = useNavigate();
-
-  const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
 
   const fetchBreakfastDetails = async (breakfast) => {
     const [optionsRes, groupsRes] = await Promise.all([
@@ -587,12 +585,24 @@ function AdminBreakfasts() {
                   onChange={handleInputChange}
                   className="admin-breakfasts__form-input"
                 />
-                {editingBreakfast.image_url && (
-                  <img
-                    src={`${API_BASE_URL}${editingBreakfast.image_url}`}
-                    alt={editingBreakfast.name}
-                    className="admin-breakfasts__item-image"
-                  />
+                {editingBreakfast.image_url && !(editingBreakfast.image instanceof File) && (
+                  <div className="admin-breakfasts__image-container">
+                    <img
+                      src={editingBreakfast.image_url}
+                      alt={editingBreakfast.name}
+                      className="admin-breakfasts__item-image"
+                      loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        console.error('Error loading breakfast image:', editingBreakfast.image_url);
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                    <div className="admin-breakfasts__placeholder-image" style={{ display: 'none' }}>
+                      <Coffee size={40} color="#ff8c42" />
+                    </div>
+                  </div>
                 )}
                 <div className="admin-breakfasts__no-image" style={{ display: editingBreakfast.image_url ? 'none' : 'flex' }}>
                   No Image Available
@@ -867,11 +877,23 @@ function AdminBreakfasts() {
           {breakfasts.map(breakfast => (
             <div key={breakfast.id} className="admin-breakfasts__item-card">
               {breakfast.image_url ? (
-                <img
-                  src={`${API_BASE_URL}${breakfast.image_url}`}
-                  alt={breakfast.name}
-                  className="admin-breakfasts__item-image"
-                />
+                <div className="admin-breakfasts__image-container">
+                  <img
+                    src={breakfast.image_url}
+                    alt={breakfast.name}
+                    className="admin-breakfasts__item-image"
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      console.error('Error loading breakfast image:', breakfast.image_url);
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                  <div className="admin-breakfasts__placeholder-image" style={{ display: 'none' }}>
+                    <Coffee size={40} color="#ff8c42" />
+                  </div>
+                </div>
               ) : (
                 <div className="admin-breakfasts__no-image">No Image Available</div>
               )}
