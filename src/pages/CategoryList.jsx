@@ -44,7 +44,7 @@ function CategoryList() {
     setShowCloseAnimation(true);
     setTimeout(() => {
       navigate(-1);
-    }, 200); // Reduced animation duration
+    }, 200);
   }, [navigate]);
 
   const handleTouchStart = useCallback((e) => {
@@ -102,17 +102,21 @@ function CategoryList() {
       <div
         key={category.id}
         className="category-list-card"
-        style={{ animationDelay: `${index * 0.05}s` }} // Reduced delay
+        style={{ animationDelay: `${index * 0.05}s` }}
         onClick={() => handleCategoryClick(category.id)}
       >
         <div className="category-list-image-container">
           {category.image_url ? (
             <img
-              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${category.image_url}`}
+              src={category.image_url}
               alt={category.name}
               className="category-list-image"
               loading="lazy"
               decoding="async"
+              onError={(e) => {
+                console.error('Error loading category image:', category.image_url);
+                e.target.src = '/placeholder.jpg';
+              }}
             />
           ) : (
             <div className="category-list-placeholder-image">
@@ -188,8 +192,8 @@ function CategoryList() {
             <X size={20} color="#fff" />
           </button>
           <div className="category-list-title-section">
-            <h1 className="category-list-title">Nos catégories</h1>
-            <p className="category-list-subtitle">Découvrez ce que nous avons à offrir</p>
+            <h1 className="category-list-title">Our Categories</h1>
+            <p className="category-list-subtitle">Discover what we have to offer</p>
           </div>
           <div className="category-list-header-emoji">🍴</div>
         </div>
@@ -198,8 +202,8 @@ function CategoryList() {
         {categories.length === 0 && !loading && (
           <div className="category-list-empty-state">
             <Coffee size={64} color="#ff8c42" className="category-list-empty-icon" />
-            <h3 className="category-list-empty-title">Aucune catégorie pour le moment</h3>
-            <p className="category-list-empty-text">Revenez bientôt pour découvrir de nouvelles catégories !</p>
+            <h3 className="category-list-empty-title">No Categories Yet</h3>
+            <p className="category-list-empty-text">Check back soon for new categories!</p>
           </div>
         )}
         <div className="category-list-grid">{categoryItems}</div>
