@@ -27,6 +27,15 @@ function ThemeManagement() {
   const [logoFile, setLogoFile] = useState(null);
   const [faviconFile, setFaviconFile] = useState(null);
 
+  // Function to construct image URLs with cache-busting
+  const getImageUrl = (imageUrl) => {
+    if (!imageUrl) return '';
+    // If image_url is a full Cloudinary URL, use it directly; otherwise, prepend the API base URL
+    return imageUrl.startsWith('http')
+      ? `${imageUrl}?v=${Date.now()}`
+      : `${import.meta.env.VITE_API_URL || 'https://lacoupole-back.onrender.com'}${imageUrl}?v=${Date.now()}`;
+  };
+
   // Apply theme to CSS custom properties
   const applyTheme = (themeData) => {
     document.documentElement.style.setProperty('--primary-color', themeData.primary_color);
@@ -42,7 +51,7 @@ function ThemeManagement() {
       document.head.appendChild(favicon);
     }
     const faviconUrl = themeData.favicon_url
-      ? `${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${themeData.favicon_url}?v=${Date.now()}`
+      ? getImageUrl(themeData.favicon_url)
       : '/favicon.ico';
     favicon.href = faviconUrl;
 
@@ -70,7 +79,7 @@ function ThemeManagement() {
         const themeResponse = await api.getTheme();
         console.log('Theme data:', themeResponse.data); // Debug log
         setTheme(themeResponse.data);
-        applyTheme(themeResponse.data); // Apply theme
+        applyTheme(themeResponse.data); // Apply theme on load
       } catch (error) {
         console.error('Error validating session or fetching theme:', error);
         toast.error(error.response?.data?.error || 'Failed to load theme');
@@ -81,9 +90,9 @@ function ThemeManagement() {
 
     fetchUserAndTheme();
 
-    // Periodically validate session and refresh theme to ensure admin access and UI consistency
+    // Periodically validate session and refresh theme to keep backend awake
     const sessionValidationInterval = setInterval(() => {
-      fetchUserAndTheme(); // Reuse existing function to validate session and update theme
+      fetchUserAndTheme();
     }, 600000); // 600,000 ms = 10 minutes
 
     // Clean up interval on component unmount
@@ -247,10 +256,19 @@ function ThemeManagement() {
             <Typography variant="body1" sx={{ mb: 1, color: 'var(--text-color)' }}>
               Logo
             </Typography>
-            {theme.logo_url && (
+            {theme.logo_url ? (
               <Box sx={{ mb: 1 }}>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${theme.logo_url}`} alt="Logo" style={{ maxWidth: '150px', maxHeight: '100px' }} />
+                <img
+                  src={getImageUrl(theme.logo_url)}
+                  alt="Logo"
+                  style={{ maxWidth: '150px', maxHeight: '100px', borderRadius: '8px', objectFit: 'cover' }}
+                  onError={() => toast.error('Failed to load logo image')}
+                />
               </Box>
+            ) : (
+              <Typography color="textSecondary" sx={{ mb: 1 }}>
+                No logo uploaded
+              </Typography>
             )}
             <Input
               type="file"
@@ -265,10 +283,19 @@ function ThemeManagement() {
             <Typography variant="body1" sx={{ mb: 1, color: 'var(--text-color)' }}>
               Favicon
             </Typography>
-            {theme.favicon_url && (
+            {theme.favicon_url ? (
               <Box sx={{ mb: 1 }}>
-                <img src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.6:5000'}${theme.favicon_url}`} alt="Favicon" style={{ maxWidth: '32px', maxHeight: '32px' }} />
+                <img
+                  src={getImageUrl(theme.favicon_url)}
+                  alt="Favicon"
+                  style={{ maxWidth: '32px', maxHeight: '32px', borderRadius: '8px', objectFit: 'cover' }}
+                  onError={() => toast.error('Failed to load favicon image')}
+                />
               </Box>
+            ) : (
+              <Typography color="textSecondary" sx={{ mb: 1 }}>
+                No favicon uploaded
+              </Typography>
             )}
             <Input
               type="file"
@@ -293,7 +320,7 @@ function ThemeManagement() {
             disabled={loading || (!logoFile && !faviconFile && !theme.site_title)}
             sx={{
               background: 'var(--primary-color)',
-              color: '#fff',
+              colorerville: '#fff',
               borderRadius: '8px',
               textTransform: 'none',
               fontWeight: 500,
