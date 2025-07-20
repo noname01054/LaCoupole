@@ -11,6 +11,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CategoryIcon from '@mui/icons-material/Category';
 import ImageIcon from '@mui/icons-material/Image';
 import StarIcon from '@mui/icons-material/Star';
+import { Coffee } from 'lucide-react';
 import './css/Categories.css';
 
 function Categories() {
@@ -282,11 +283,23 @@ function Categories() {
                         className="categories__file-input"
                       />
                       {category.image_url && !(editingCategory.image instanceof File) && (
-                        <img 
-                          src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${category.image_url}`} 
-                          alt="Current" 
-                          className="categories__card-image categories__card-image--preview" 
-                        />
+                        <div className="categories__card-image-container">
+                          <img 
+                            src={`https://res.cloudinary.com/your-cloud-name/image/upload/${category.image_url}`} 
+                            alt="Current" 
+                            className="categories__card-image categories__card-image--preview" 
+                            loading="lazy"
+                            decoding="async"
+                            onError={(e) => {
+                              console.error('Error loading category image:', category.image_url);
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div className="categories__card-placeholder-image" style={{ display: 'none' }}>
+                            <Coffee size={40} color="#ff8c42" />
+                          </div>
+                        </div>
                       )}
                     </div>
                     <div className="categories__input-group">
@@ -332,11 +345,23 @@ function Categories() {
                       <p className="categories__card-description">{category.description}</p>
                     )}
                     {category.image_url && (
-                      <img 
-                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${category.image_url}`} 
-                        alt={category.name} 
-                        className="categories__card-image"
-                      />
+                      <div className="categories__card-image-container">
+                        <img 
+                          src={`https://res.cloudinary.com/your-cloud-name/image/upload/${category.image_url}`} 
+                          alt={category.name} 
+                          className="categories__card-image"
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            console.error('Error loading category image:', category.image_url);
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                        <div className="categories__card-placeholder-image" style={{ display: 'none' }}>
+                          <Coffee size={40} color="#ff8c42" />
+                        </div>
+                      </div>
                     )}
                     <div className="categories__card-actions">
                       <button
