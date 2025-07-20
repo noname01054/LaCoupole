@@ -22,15 +22,6 @@ function Home({ addToCart }) {
   const [filteredItems, setFilteredItems] = useState([]);
   const navigate = useNavigate();
   const bannerContainerRef = useRef(null);
-  const containerRef = useRef(null);
-  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [touchCurrentX, setTouchCurrentX] = useState(null);
-  const [touchStartY, setTouchStartY] = useState(null);
-  const [touchCurrentY, setTouchCurrentY] = useState(null);
-  const [isSwiping, setIsSwiping] = useState(false);
-  const [swipeEnabled, setSwipeEnabled] = useState(true);
-  const lastTouchTime = useRef(0);
   const isMounted = useRef(true);
 
   const debouncedSearch = useMemo(
@@ -149,84 +140,6 @@ function Home({ addToCart }) {
     }
   }, [navigate]);
 
-  const handleTouchStart = useCallback((e) => {
-    if (window.innerWidth > 768) return;
-    const isScrollable = e.target.closest(
-      '.home-categories-scroll-container, .home-banner-container, .home-sale-scroll-container, .home-category-scroll-container, [class*="top-categories"], [class*="best-sellers"]'
-    );
-    setSwipeEnabled(!isScrollable);
-    if (!isScrollable) {
-      setTouchStartX(e.touches[0].clientX);
-      setTouchCurrentX(e.touches[0].clientX);
-      setTouchStartY(e.touches[0].clientY);
-      setTouchCurrentY(e.touches[0].clientY);
-      setIsSwiping(true);
-    }
-  }, []);
-
-  const handleTouchMove = useCallback(
-    (e) => {
-      if (!isSwiping || window.innerWidth > 768) return;
-      const now = performance.now();
-      if (now - lastTouchTime.current < 16) return;
-      lastTouchTime.current = now;
-
-      requestAnimationFrame(() => {
-        setTouchCurrentX(e.touches[0].clientX);
-        setTouchCurrentY(e.touches[0].clientY);
-        const deltaX = touchCurrentX - touchStartX;
-        const deltaY = touchCurrentY - touchStartY;
-
-        if (Math.abs(deltaY) > Math.abs(deltaX)) {
-          setSwipeEnabled(false);
-          return;
-        }
-
-        if (swipeEnabled && containerRef.current) {
-          const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
-          containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
-          containerRef.current.style.transition = 'none';
-        }
-      });
-    },
-    [isSwiping, touchStartX, touchCurrentX, touchStartY, touchCurrentY, swipeEnabled]
-  );
-
-  const handleTouchEnd = useCallback(() => {
-    if (!isSwiping || window.innerWidth > 768) return;
-    setIsSwiping(false);
-    const deltaX = touchCurrentX - touchStartX;
-    const swipeThreshold = 80;
-
-    if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-      containerRef.current.style.transform = 'translateX(0)';
-    }
-
-    if (swipeEnabled && Math.abs(deltaX) > swipeThreshold) {
-      navigate('/categories');
-    }
-
-    setTouchStartX(null);
-    setTouchCurrentX(null);
-    setTouchStartY(null);
-    setTouchCurrentY(null);
-    setSwipeEnabled(true);
-  }, [isSwiping, touchCurrentX, touchStartX, swipeEnabled, navigate]);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-      containerRef.current.style.transform = 'translateX(0)';
-    }
-    setIsSwiping(false);
-    setTouchStartX(null);
-    setTouchCurrentX(null);
-    setTouchStartY(null);
-    setTouchCurrentY(null);
-    setSwipeEnabled(true);
-  }, []);
-
   const categoryItems = useMemo(() => {
     return categories.slice(0, 6).map((category, index) => (
       <div
@@ -339,13 +252,7 @@ function Home({ addToCart }) {
 
   if (error) {
     return (
-      <div
-        className="home-error-container"
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="home-error-container">
         <div className="home-error-content">
           <p className="home-error-text">Erreur: {error}</p>
         </div>
@@ -355,13 +262,7 @@ function Home({ addToCart }) {
 
   if (loading) {
     return (
-      <div
-        className="home-loading-container"
-        ref={containerRef}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+      <div className="home-loading-container">
         <div className="home-loading-spinner"></div>
         <p className="home-loading-text">Chargement du menu...</p>
       </div>
@@ -369,13 +270,7 @@ function Home({ addToCart }) {
   }
 
   return (
-    <div
-      className="home-container"
-      ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="home-container">
       <div className="home-header">
         <div className="home-welcome-section">
           <div className="home-welcome-content">
