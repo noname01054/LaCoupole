@@ -614,7 +614,7 @@ function CartModal({
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Ajoutez des instructions spéciales (par exemple, 'mahouch 7arr Barsha')"
+                    placeholder="Ajoutez des instructions spéciales (par exemple, 'Sans Sucre')"
                     className="cart-modal-textarea"
                     rows="3"
                   />
