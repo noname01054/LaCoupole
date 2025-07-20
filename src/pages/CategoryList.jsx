@@ -26,9 +26,9 @@ function CategoryList() {
         const response = await api.get('/categories');
         setCategories(response.data || []);
       } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast.error(error.response?.data?.error || 'Failed to load categories');
-        setError('Failed to load categories.');
+        console.error('Erreur lors du chargement des catégories:', error);
+        toast.error(error.response?.data?.error || 'Échec du chargement des catégories');
+        setError('Échec du chargement des catégories.');
       } finally {
         setLoading(false);
       }
@@ -85,6 +85,11 @@ function CategoryList() {
         containerRef.current.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
         containerRef.current.style.transform = 'translateX(0)';
       });
+    } else {
+      // If containerRef is null, reset touch states and exit
+      setTouchStartX(null);
+      setTouchCurrentX(null);
+      return;
     }
 
     if (deltaX > swipeThreshold) {
@@ -114,7 +119,7 @@ function CategoryList() {
               loading="lazy"
               decoding="async"
               onError={(e) => {
-                console.error('Error loading category image:', category.image_url);
+                console.error('Erreur lors du chargement de l\'image de catégorie:', category.image_url);
                 e.target.src = '/placeholder.jpg';
               }}
             />
@@ -131,7 +136,7 @@ function CategoryList() {
         <div className="category-list-card-content">
           <h3 className="category-list-category-name">{category.name}</h3>
           <p className="category-list-category-description">
-            {category.description || 'Explore delicious options in this category'}
+            {category.description || 'Découvrez de délicieuses options dans cette catégorie'}
           </p>
         </div>
       </div>
@@ -149,11 +154,11 @@ function CategoryList() {
       >
         <div className="category-list-error-content">
           <AlertTriangle size={56} color="#ff6b35" className="category-list-error-icon" />
-          <h3 className="category-list-error-title">Oops! Something went wrong</h3>
+          <h3 className="category-list-error-title">Oups ! Une erreur s'est produite</h3>
           <p className="category-list-error-text">{error}</p>
           <button className="category-list-retry-button" onClick={() => window.location.reload()}>
             <RotateCw size={18} style={{ marginRight: '8px' }} />
-            Try Again
+            Réessayer
           </button>
         </div>
       </div>
@@ -170,7 +175,7 @@ function CategoryList() {
         onTouchEnd={handleTouchEnd}
       >
         <div className="category-list-loading-spinner"></div>
-        <p className="category-list-loading-text">Loading categories...</p>
+        <p className="category-list-loading-text">Chargement des catégories...</p>
       </div>
     );
   }
@@ -192,8 +197,8 @@ function CategoryList() {
             <X size={20} color="#fff" />
           </button>
           <div className="category-list-title-section">
-            <h1 className="category-list-title">Our Categories</h1>
-            <p className="category-list-subtitle">Discover what we have to offer</p>
+            <h1 className="category-list-title">Nos Catégories</h1>
+            <p className="category-list-subtitle">Découvrez ce que nous proposons</p>
           </div>
           <div className="category-list-header-emoji">🍴</div>
         </div>
@@ -202,8 +207,8 @@ function CategoryList() {
         {categories.length === 0 && !loading && (
           <div className="category-list-empty-state">
             <Coffee size={64} color="#ff8c42" className="category-list-empty-icon" />
-            <h3 className="category-list-empty-title">No Categories Yet</h3>
-            <p className="category-list-empty-text">Check back soon for new categories!</p>
+            <h3 className="category-list-empty-title">Aucune catégorie pour le moment</h3>
+            <p className="category-list-empty-text">Revenez bientôt pour découvrir de nouvelles catégories !</p>
           </div>
         )}
         <div className="category-list-grid">{categoryItems}</div>
