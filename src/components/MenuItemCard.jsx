@@ -71,7 +71,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
     return item?.image_url &&
       item.image_url !== '/Uploads/undefined' &&
       item.image_url !== 'null'
-      ? `${api.defaults.baseURL.replace('/api', '')}${item.image_url}`
+      ? item.image_url // Use image_url directly
       : '/placeholder.jpg';
   }, [item?.image_url]);
 
@@ -145,7 +145,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             option_ids: [],
             cartItemId: `${item.id}-${Date.now()}`,
             name: item.name,
-            image_url: imageSrc,
+            image_url: item.image_url, // Pass image_url directly
             type: 'breakfast',
             options: [],
           });
@@ -160,12 +160,12 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             supplement_price: 0,
             cartItemId: `${item.id}-${Date.now()}`,
             type: 'menuItem',
-            image_url: imageSrc,
+            image_url: item.image_url, // Pass image_url directly
           });
         }
       }
     },
-    [item, onAddToCart, supplements, selectedOptions, imageSrc]
+    [item, onAddToCart, supplements, selectedOptions]
   );
 
   const handleOptionSelection = useCallback(() => {
@@ -183,7 +183,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         quantity: 1,
         option_ids: selectedOptionIds,
         name: item.name,
-        image_url: imageSrc,
+        image_url: item.image_url, // Pass image_url directly
         type: 'breakfast',
         options: supplements.options
           .filter((opt) => selectedOptionIds.includes(opt.id))
@@ -205,13 +205,13 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         supplement_price: supplement ? parseFloat(supplement.additional_price || 0) : 0,
         cartItemId: `${item.id}-${Date.now()}`,
         type: 'menuItem',
-        image_url: imageSrc,
+        image_url: item.image_url, // Pass image_url directly
       });
     }
     setShowOptionPopup(false);
     setSelectedOptions({});
     setValidationErrors({});
-  }, [item, onAddToCart, supplements, selectedOptions, imageSrc]);
+  }, [item, onAddToCart, supplements, selectedOptions]);
 
   const handleViewProduct = useCallback(
     (e) => {
@@ -691,6 +691,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             decoding="async"
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
+              console.error('Error loading menu item image:', item.image_url);
               e.target.src = '/placeholder.jpg';
               setImageLoaded(true);
             }}
@@ -815,7 +816,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       onClick={handleViewProduct}
                       title="Voir les détails"
                     >
-                      <RemoveRedEyeIcon sx={ { fontSize: 14, color: 'var(--background-color)' }} />
+                      <RemoveRedEyeIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
                     </button>
                     <button
                       style={{
