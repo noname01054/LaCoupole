@@ -227,8 +227,6 @@ function Home({ addToCart }) {
     setSwipeEnabled(true);
   }, []);
 
-  const getBaseUrl = useCallback(() => import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000', []);
-
   const categoryItems = useMemo(() => {
     return categories.slice(0, 6).map((category, index) => (
       <div
@@ -240,15 +238,19 @@ function Home({ addToCart }) {
         <div className="home-category-image-container">
           {category.image_url ? (
             <img
-              src={`${getBaseUrl()}${category.image_url}`}
+              src={category.image_url}
               srcSet={`
-                ${getBaseUrl()}${category.image_url}?w=72 1x,
-                ${getBaseUrl()}${category.image_url}?w=144 2x
+                ${category.image_url}?w=72 1x,
+                ${category.image_url}?w=144 2x
               `}
               alt={category.name}
               className="home-category-image"
               loading="lazy"
               decoding="async"
+              onError={(e) => {
+                console.error('Error loading category image:', category.image_url);
+                e.target.src = '/placeholder.jpg';
+              }}
             />
           ) : (
             <div className="home-category-placeholder">
@@ -259,7 +261,7 @@ function Home({ addToCart }) {
         <p className="home-category-name">{category.name}</p>
       </div>
     ));
-  }, [categories, handleCategoryClick, getBaseUrl]);
+  }, [categories, handleCategoryClick]);
 
   const bannerItems = useMemo(() => {
     return banners.map((banner) => (
