@@ -92,15 +92,17 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Validate or generate deviceId
-      let fallbackDeviceId = localStorage.getItem('deviceId');
+      // Initialize deviceId: Reuse existing or generate new only if missing
+      let storedDeviceId = localStorage.getItem('deviceId');
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!fallbackDeviceId || !uuidRegex.test(fallbackDeviceId)) {
-        fallbackDeviceId = uuidv4();
-        localStorage.setItem('deviceId', fallbackDeviceId);
-        console.log('Generated new deviceId:', fallbackDeviceId, { timestamp: new Date().toISOString() });
+      if (!storedDeviceId || !uuidRegex.test(storedDeviceId)) {
+        storedDeviceId = uuidv4();
+        localStorage.setItem('deviceId', storedDeviceId);
+        console.log('Generated new deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
+      } else {
+        console.log('Reusing existing deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
       }
-      setDeviceId(fallbackDeviceId);
+      setDeviceId(storedDeviceId);
 
       // Initialize sessionId
       let fallbackSessionId = localStorage.getItem('sessionId');
@@ -112,7 +114,7 @@ function App() {
 
       // Set API headers
       api.defaults.headers.common['X-Session-Id'] = fallbackSessionId;
-      api.defaults.headers.common['X-Device-Id'] = fallbackDeviceId;
+      api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
 
       const socketCleanup = initSocket(
         () => {},
@@ -135,7 +137,7 @@ function App() {
       setIsSocketReady(true);
 
       socketInstance.on('connect', () => {
-        console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, deviceId: fallbackDeviceId, timestamp: new Date().toISOString() });
+        console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, deviceId: storedDeviceId, timestamp: new Date().toISOString() });
       });
       socketInstance.on('connect_error', (error) => {
         console.error('Socket connection error in App.jsx:', error.message, { timestamp: new Date().toISOString() });
@@ -152,57 +154,36 @@ function App() {
             console.warn('No valid token found during auth check', { timestamp: new Date().toISOString() });
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('sessionId');
-            localStorage.removeItem('deviceId');
             delete api.defaults.headers.common['X-Session-Id'];
-            delete api.defaults.headers.common['X-Device-Id'];
-            delete api.defaults.headers.common['Authorization'];
             setUser(null);
-            // Regenerate sessionId and deviceId for guest
+            // Regenerate sessionId for guest, reuse existing deviceId
             const newSessionId = `guest-${uuidv4()}`;
-            const newDeviceId = uuidv4();
             localStorage.setItem('sessionId', newSessionId);
-            localStorage.setItem('deviceId', newDeviceId);
             setSessionId(newSessionId);
-            setDeviceId(newDeviceId);
             api.defaults.headers.common['X-Session-Id'] = newSessionId;
-            api.defaults.headers.common['X-Device-Id'] = newDeviceId;
+            api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
             return;
           }
           console.log('Checking auth with token:', token.substring(0, 10) + '...', { timestamp: new Date().toISOString() });
           const res = await api.get('/check-auth');
           setUser(res.data);
           const authSessionId = `user-${res.data.id}-${uuidv4()}`;
-          // Reuse existing deviceId if valid, otherwise generate new
-          let authDeviceId = localStorage.getItem('deviceId');
-          if (!authDeviceId || !uuidRegex.test(authDeviceId)) {
-            authDeviceId = uuidv4();
-            localStorage.setItem('deviceId', authDeviceId);
-            console.log('Generated new deviceId for authenticated user:', authDeviceId, { timestamp: new Date().toISOString() });
-          }
           setSessionId(authSessionId);
-          setDeviceId(authDeviceId);
           localStorage.setItem('sessionId', authSessionId);
-          localStorage.setItem('deviceId', authDeviceId);
           api.defaults.headers.common['X-Session-Id'] = authSessionId;
-          api.defaults.headers.common['X-Device-Id'] = authDeviceId;
+          api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
         } catch (err) {
           console.error('Error checking auth:', err.response?.data || err.message, { timestamp: new Date().toISOString() });
           localStorage.removeItem('jwt_token');
           localStorage.removeItem('sessionId');
-          localStorage.removeItem('deviceId');
           delete api.defaults.headers.common['X-Session-Id'];
-          delete api.defaults.headers.common['X-Device-Id'];
-          delete api.defaults.headers.common['Authorization'];
           setUser(null);
-          // Regenerate sessionId and deviceId for guest
+          // Regenerate sessionId for guest, reuse existing deviceId
           const newSessionId = `guest-${uuidv4()}`;
-          const newDeviceId = uuidv4();
           localStorage.setItem('sessionId', newSessionId);
-          localStorage.setItem('deviceId', newDeviceId);
           setSessionId(newSessionId);
-          setDeviceId(newDeviceId);
           api.defaults.headers.common['X-Session-Id'] = newSessionId;
-          api.defaults.headers.common['X-Device-Id'] = newDeviceId;
+          api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
         }
       };
 
@@ -263,9 +244,7 @@ function App() {
       toast.error('Invalid login data received from server');
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('sessionId');
-      localStorage.removeItem('deviceId');
       delete api.defaults.headers.common['X-Session-Id'];
-      delete api.defaults.headers.common['X-Device-Id'];
       delete api.defaults.headers.common['Authorization'];
       navigate('/login');
       return;
@@ -274,21 +253,11 @@ function App() {
     localStorage.setItem('jwt_token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     const authSessionId = `user-${user.id}-${uuidv4()}`;
-    // Reuse existing deviceId if valid, otherwise generate new
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    let authDeviceId = localStorage.getItem('deviceId');
-    if (!authDeviceId || !uuidRegex.test(authDeviceId)) {
-      authDeviceId = uuidv4();
-      localStorage.setItem('deviceId', authDeviceId);
-      console.log('Generated new deviceId for login:', authDeviceId, { timestamp: new Date().toISOString() });
-    }
     setSessionId(authSessionId);
-    setDeviceId(authDeviceId);
     localStorage.setItem('sessionId', authSessionId);
-    localStorage.setItem('deviceId', authDeviceId);
     api.defaults.headers.common['X-Session-Id'] = authSessionId;
-    api.defaults.headers.common['X-Device-Id'] = authDeviceId;
-    console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId, 'deviceId:', authDeviceId, { timestamp: new Date().toISOString() });
+    api.defaults.headers.common['X-Device-Id'] = deviceId; // Use existing deviceId
+    console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId, 'deviceId:', deviceId, { timestamp: new Date().toISOString() });
     navigate(user.role === 'admin' ? '/admin' : '/staff');
   };
 
@@ -297,18 +266,13 @@ function App() {
       await api.post('/logout');
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('sessionId');
-      localStorage.removeItem('deviceId');
       delete api.defaults.headers.common['Authorization'];
       delete api.defaults.headers.common['X-Session-Id'];
-      delete api.defaults.headers.common['X-Device-Id'];
       const guestSessionId = `guest-${uuidv4()}`;
-      const guestDeviceId = uuidv4();
       setSessionId(guestSessionId);
-      setDeviceId(guestDeviceId);
       localStorage.setItem('sessionId', guestSessionId);
-      localStorage.setItem('deviceId', guestDeviceId);
       api.defaults.headers.common['X-Session-Id'] = guestSessionId;
-      api.defaults.headers.common['X-Device-Id'] = guestDeviceId;
+      api.defaults.headers.common['X-Device-Id'] = deviceId; // Retain deviceId
       setUser(null);
       setCart([]);
       setDeliveryAddress('');
