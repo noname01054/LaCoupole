@@ -46,6 +46,7 @@ function App() {
   const [latestOrderId, setLatestOrderId] = useState(null);
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
+  const [deviceId, setDeviceId] = useState(null);
   const [socket, setSocket] = useState(null);
   const [theme, setTheme] = useState(null);
   const [isSocketReady, setIsSocketReady] = useState(false);
@@ -92,12 +93,19 @@ function App() {
   useEffect(() => {
     const initializeApp = async () => {
       let fallbackSessionId = localStorage.getItem('sessionId');
+      let fallbackDeviceId = localStorage.getItem('deviceId');
       if (!fallbackSessionId) {
         fallbackSessionId = `guest-${uuidv4()}`;
         localStorage.setItem('sessionId', fallbackSessionId);
       }
+      if (!fallbackDeviceId) {
+        fallbackDeviceId = uuidv4();
+        localStorage.setItem('deviceId', fallbackDeviceId);
+      }
       setSessionId(fallbackSessionId);
+      setDeviceId(fallbackDeviceId);
       api.defaults.headers.common['X-Session-Id'] = fallbackSessionId;
+      api.defaults.headers.common['X-Device-Id'] = fallbackDeviceId;
 
       const socketCleanup = initSocket(
         () => {},
@@ -120,7 +128,7 @@ function App() {
       setIsSocketReady(true);
 
       socketInstance.on('connect', () => {
-        console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, timestamp: new Date().toISOString() });
+        console.log('Socket connected in App.jsx', { sessionId: fallbackSessionId, deviceId: fallbackDeviceId, timestamp: new Date().toISOString() });
       });
       socketInstance.on('connect_error', (error) => {
         console.error('Socket connection error in App.jsx:', error.message, { timestamp: new Date().toISOString() });
@@ -137,7 +145,9 @@ function App() {
             console.warn('No valid token found during auth check', { timestamp: new Date().toISOString() });
             localStorage.removeItem('jwt_token');
             localStorage.removeItem('sessionId');
+            localStorage.removeItem('deviceId');
             delete api.defaults.headers.common['X-Session-Id'];
+            delete api.defaults.headers.common['X-Device-Id'];
             delete api.defaults.headers.common['Authorization'];
             setUser(null);
             return;
@@ -146,14 +156,20 @@ function App() {
           const res = await api.get('/check-auth');
           setUser(res.data);
           const authSessionId = `user-${res.data.id}-${uuidv4()}`;
+          const authDeviceId = uuidv4();
           setSessionId(authSessionId);
+          setDeviceId(authDeviceId);
           localStorage.setItem('sessionId', authSessionId);
+          localStorage.setItem('deviceId', authDeviceId);
           api.defaults.headers.common['X-Session-Id'] = authSessionId;
+          api.defaults.headers.common['X-Device-Id'] = authDeviceId;
         } catch (err) {
           console.error('Error checking auth:', err.response?.data || err.message, { timestamp: new Date().toISOString() });
           localStorage.removeItem('jwt_token');
           localStorage.removeItem('sessionId');
+          localStorage.removeItem('deviceId');
           delete api.defaults.headers.common['X-Session-Id'];
+          delete api.defaults.headers.common['X-Device-Id'];
           delete api.defaults.headers.common['Authorization'];
           setUser(null);
         }
@@ -216,7 +232,9 @@ function App() {
       toast.error('Invalid login data received from server');
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('sessionId');
+      localStorage.removeItem('deviceId');
       delete api.defaults.headers.common['X-Session-Id'];
+      delete api.defaults.headers.common['X-Device-Id'];
       delete api.defaults.headers.common['Authorization'];
       navigate('/login');
       return;
@@ -225,10 +243,14 @@ function App() {
     localStorage.setItem('jwt_token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     const authSessionId = `user-${user.id}-${uuidv4()}`;
+    const authDeviceId = uuidv4();
     setSessionId(authSessionId);
+    setDeviceId(authDeviceId);
     localStorage.setItem('sessionId', authSessionId);
+    localStorage.setItem('deviceId', authDeviceId);
     api.defaults.headers.common['X-Session-Id'] = authSessionId;
-    console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId, { timestamp: new Date().toISOString() });
+    api.defaults.headers.common['X-Device-Id'] = authDeviceId;
+    console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId, 'deviceId:', authDeviceId, { timestamp: new Date().toISOString() });
     navigate(user.role === 'admin' ? '/admin' : '/staff');
   };
 
@@ -237,12 +259,18 @@ function App() {
       await api.post('/logout');
       localStorage.removeItem('jwt_token');
       localStorage.removeItem('sessionId');
+      localStorage.removeItem('deviceId');
       delete api.defaults.headers.common['Authorization'];
       delete api.defaults.headers.common['X-Session-Id'];
+      delete api.defaults.headers.common['X-Device-Id'];
       const guestSessionId = `guest-${uuidv4()}`;
+      const guestDeviceId = uuidv4();
       setSessionId(guestSessionId);
+      setDeviceId(guestDeviceId);
       localStorage.setItem('sessionId', guestSessionId);
+      localStorage.setItem('deviceId', guestDeviceId);
       api.defaults.headers.common['X-Session-Id'] = guestSessionId;
+      api.defaults.headers.common['X-Device-Id'] = guestDeviceId;
       setUser(null);
       setCart([]);
       setDeliveryAddress('');
