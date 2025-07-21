@@ -92,18 +92,25 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      let fallbackSessionId = localStorage.getItem('sessionId');
+      // Validate or generate deviceId
       let fallbackDeviceId = localStorage.getItem('deviceId');
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!fallbackDeviceId || !uuidRegex.test(fallbackDeviceId)) {
+        fallbackDeviceId = uuidv4();
+        localStorage.setItem('deviceId', fallbackDeviceId);
+        console.log('Generated new deviceId:', fallbackDeviceId, { timestamp: new Date().toISOString() });
+      }
+      setDeviceId(fallbackDeviceId);
+
+      // Initialize sessionId
+      let fallbackSessionId = localStorage.getItem('sessionId');
       if (!fallbackSessionId) {
         fallbackSessionId = `guest-${uuidv4()}`;
         localStorage.setItem('sessionId', fallbackSessionId);
       }
-      if (!fallbackDeviceId) {
-        fallbackDeviceId = uuidv4();
-        localStorage.setItem('deviceId', fallbackDeviceId);
-      }
       setSessionId(fallbackSessionId);
-      setDeviceId(fallbackDeviceId);
+
+      // Set API headers
       api.defaults.headers.common['X-Session-Id'] = fallbackSessionId;
       api.defaults.headers.common['X-Device-Id'] = fallbackDeviceId;
 
@@ -150,13 +157,28 @@ function App() {
             delete api.defaults.headers.common['X-Device-Id'];
             delete api.defaults.headers.common['Authorization'];
             setUser(null);
+            // Regenerate sessionId and deviceId for guest
+            const newSessionId = `guest-${uuidv4()}`;
+            const newDeviceId = uuidv4();
+            localStorage.setItem('sessionId', newSessionId);
+            localStorage.setItem('deviceId', newDeviceId);
+            setSessionId(newSessionId);
+            setDeviceId(newDeviceId);
+            api.defaults.headers.common['X-Session-Id'] = newSessionId;
+            api.defaults.headers.common['X-Device-Id'] = newDeviceId;
             return;
           }
           console.log('Checking auth with token:', token.substring(0, 10) + '...', { timestamp: new Date().toISOString() });
           const res = await api.get('/check-auth');
           setUser(res.data);
           const authSessionId = `user-${res.data.id}-${uuidv4()}`;
-          const authDeviceId = uuidv4();
+          // Reuse existing deviceId if valid, otherwise generate new
+          let authDeviceId = localStorage.getItem('deviceId');
+          if (!authDeviceId || !uuidRegex.test(authDeviceId)) {
+            authDeviceId = uuidv4();
+            localStorage.setItem('deviceId', authDeviceId);
+            console.log('Generated new deviceId for authenticated user:', authDeviceId, { timestamp: new Date().toISOString() });
+          }
           setSessionId(authSessionId);
           setDeviceId(authDeviceId);
           localStorage.setItem('sessionId', authSessionId);
@@ -172,6 +194,15 @@ function App() {
           delete api.defaults.headers.common['X-Device-Id'];
           delete api.defaults.headers.common['Authorization'];
           setUser(null);
+          // Regenerate sessionId and deviceId for guest
+          const newSessionId = `guest-${uuidv4()}`;
+          const newDeviceId = uuidv4();
+          localStorage.setItem('sessionId', newSessionId);
+          localStorage.setItem('deviceId', newDeviceId);
+          setSessionId(newSessionId);
+          setDeviceId(newDeviceId);
+          api.defaults.headers.common['X-Session-Id'] = newSessionId;
+          api.defaults.headers.common['X-Device-Id'] = newDeviceId;
         }
       };
 
@@ -243,7 +274,14 @@ function App() {
     localStorage.setItem('jwt_token', token);
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     const authSessionId = `user-${user.id}-${uuidv4()}`;
-    const authDeviceId = uuidv4();
+    // Reuse existing deviceId if valid, otherwise generate new
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let authDeviceId = localStorage.getItem('deviceId');
+    if (!authDeviceId || !uuidRegex.test(authDeviceId)) {
+      authDeviceId = uuidv4();
+      localStorage.setItem('deviceId', authDeviceId);
+      console.log('Generated new deviceId for login:', authDeviceId, { timestamp: new Date().toISOString() });
+    }
     setSessionId(authSessionId);
     setDeviceId(authDeviceId);
     localStorage.setItem('sessionId', authSessionId);
