@@ -15,7 +15,9 @@ import {
   Close,
   Save,
   GridView,
-  ViewList
+  ViewList,
+  GroupAdd,
+  DeleteSweep
 } from '@mui/icons-material';
 import './css/TableManagement.css';
 
@@ -26,6 +28,10 @@ function TableManagement() {
   const [newTable, setNewTable] = useState({ table_number: '', capacity: '' });
   const [editTable, setEditTable] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showBulkAddForm, setShowBulkAddForm] = useState(false);
+  const [showBulkDeleteForm, setShowBulkDeleteForm] = useState(false);
+  const [bulkAdd, setBulkAdd] = useState({ start_number: '', end_number: '', capacity: '' });
+  const [bulkDelete, setBulkDelete] = useState({ start_number: '', end_number: '' });
   const [viewMode, setViewMode] = useState('grid');
   const navigate = useNavigate();
 
@@ -42,12 +48,15 @@ function TableManagement() {
           setUser(res.data);
           socketCleanup = initSocket({
             onTableStatusUpdate: (data) => {
-              setTables((prevTables) =>
-                prevTables.map((table) =>
+              setTables((prevTables) => {
+                if (data.status === 'deleted') {
+                  return prevTables.filter(table => table.id !== data.table_id);
+                }
+                return prevTables.map((table) =>
                   table.id === data.table_id ? { ...table, status: data.status } : table
-                )
-              );
-              toast.info(`Table ${data.table_id} status updated to ${data.status}`);
+                );
+              });
+              toast.info(`Table ${data.table_id} ${data.status === 'deleted' ? 'deleted' : `status updated to ${data.status}`}`);
             }
           });
         }
@@ -104,6 +113,91 @@ function TableManagement() {
     } catch (error) {
       console.error('Error adding table:', error);
       toast.error(error.response?.data?.error || 'Failed to add table');
+    }
+  };
+
+  const bulkAddTables = async (e) => {
+    e.preventDefault();
+    try {
+      if (!user || user.role !== 'admin') {
+        toast.error('Admin access required');
+        navigate('/login');
+        return;
+      }
+      const start = parseInt(bulkAdd.start_number);
+      const end = parseInt(bulkAdd.end_number);
+      const capacity = parseInt(bulkAdd.capacity);
+      
+      if (isNaN(start) || isNaN(end) || isNaN(capacity)) {
+        toast.error('All fields must be valid numbers');
+        return;
+      }
+      if (start > end) {
+        toast.error('Start number must be less than or equal to end number');
+        return;
+      }
+      if (capacity <= 0) {
+        toast.error('Capacity must be a positive number');
+        return;
+      }
+      if (end - start + 1 > 500) {
+        toast.error('Cannot create more than 500 tables at once');
+        return;
+      }
+
+      await api.bulkAddTables({ 
+        user_id: user.id, 
+        start_number: start, 
+        end_number: end, 
+        capacity 
+      });
+      toast.success(`Successfully added ${end - start + 1} tables`);
+      setBulkAdd({ start_number: '', end_number: '', capacity: '' });
+      setShowBulkAddForm(false);
+      const res = await api.getTables();
+      setTables(res.data || []);
+    } catch (error) {
+      console.error('Error adding bulk tables:', error);
+      toast.error(error.response?.data?.error || 'Failed to add tables');
+    }
+  };
+
+  const bulkDeleteTables = async (e) => {
+    e.preventDefault();
+    if (!window.confirm(`Are you sure you want to delete tables from ${bulkDelete.start_number} to ${bulkDelete.end_number}?`)) {
+      return;
+    }
+    try {
+      if (!user || user.role !== 'admin') {
+        toast.error('Admin access required');
+        navigate('/login');
+        return;
+      }
+      const start = parseInt(bulkDelete.start_number);
+      const end = parseInt(bulkDelete.end_number);
+      
+      if (isNaN(start) || isNaN(end)) {
+        toast.error('All fields must be valid numbers');
+        return;
+      }
+      if (start > end) {
+        toast.error('Start number must be less than or equal to end number');
+        return;
+      }
+
+      await api.bulkDeleteTables({ 
+        user_id: user.id, 
+        start_number: start, 
+        end_number: end 
+      });
+      toast.success(`Successfully deleted tables`);
+      setBulkDelete({ start_number: '', end_number: '' });
+      setShowBulkDeleteForm(false);
+      const res = await api.getTables();
+      setTables(res.data || []);
+    } catch (error) {
+      console.error('Error deleting bulk tables:', error);
+      toast.error(error.response?.data?.error || 'Failed to delete tables');
     }
   };
 
@@ -206,6 +300,22 @@ function TableManagement() {
           <h2 className="table-management-card-title">
             Tables ({tables.length})
           </h2>
+          <div className="table-management-bulk-actions">
+            <button
+              onClick={() => setShowBulkAddForm(true)}
+              className="table-management-button-secondary"
+            >
+              <GroupAdd className="table-management-icon-small" />
+              Bulk Add
+            </button>
+            <button
+              onClick={() => setShowBulkDeleteForm(true)}
+              className="table-management-button-secondary"
+            >
+              <DeleteSweep className="table-management-icon-small" />
+              Bulk Delete
+            </button>
+          </div>
         </div>
         
         {tables.length === 0 ? (
@@ -330,6 +440,148 @@ function TableManagement() {
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
+                  className="table-management-button-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showBulkAddForm && (
+        <div className="table-management-overlay" onClick={() => setShowBulkAddForm(false)}>
+          <div className="table-management-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowBulkAddForm(false)}
+              className="table-management-close-button"
+            >
+              <Close />
+            </button>
+            
+            <h2 className="table-management-modal-title">
+              <GroupAdd />
+              Bulk Add Tables
+            </h2>
+            
+            <form onSubmit={bulkAddTables}>
+              <div className="table-management-form-row">
+                <div className="table-management-form-group">
+                  <label className="table-management-label">Start Table Number</label>
+                  <input
+                    type="number"
+                    value={bulkAdd.start_number}
+                    onChange={(e) => setBulkAdd({ ...bulkAdd, start_number: e.target.value })}
+                    placeholder="1"
+                    min="1"
+                    required
+                    className="table-management-input"
+                  />
+                </div>
+                <div className="table-management-form-group">
+                  <label className="table-management-label">End Table Number</label>
+                  <input
+                    type="number"
+                    value={bulkAdd.end_number}
+                    onChange={(e) => setBulkAdd({ ...bulkAdd, end_number: e.target.value })}
+                    placeholder="200"
+                    min="1"
+                    required
+                    className="table-management-input"
+                  />
+                </div>
+              </div>
+              <div className="table-management-form-row">
+                <div className="table-management-form-group">
+                  <label className="table-management-label">Capacity</label>
+                  <input
+                    type="number"
+                    value={bulkAdd.capacity}
+                    onChange={(e) => setBulkAdd({ ...bulkAdd, capacity: e.target.value })}
+                    placeholder="1"
+                    min="1"
+                    required
+                    className="table-management-input"
+                  />
+                </div>
+              </div>
+              
+              <div className="table-management-form-actions">
+                <button
+                  type="submit"
+                  className="table-management-button-primary"
+                >
+                  <Save />
+                  Add Tables
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkAddForm(false)}
+                  className="table-management-button-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showBulkDeleteForm && (
+        <div className="table-management-overlay" onClick={() => setShowBulkDeleteForm(false)}>
+          <div className="table-management-modal" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowBulkDeleteForm(false)}
+              className="table-management-close-button"
+            >
+              <Close />
+            </button>
+            
+            <h2 className="table-management-modal-title">
+              <DeleteSweep />
+              Bulk Delete Tables
+            </h2>
+            
+            <form onSubmit={bulkDeleteTables}>
+              <div className="table-management-form-row">
+                <div className="table-management-form-group">
+                  <label className="table-management-label">Start Table Number</label>
+                  <input
+                    type="number"
+                    value={bulkDelete.start_number}
+                    onChange={(e) => setBulkDelete({ ...bulkDelete, start_number: e.target.value })}
+                    placeholder="1"
+                    min="1"
+                    required
+                    className="table-management-input"
+                  />
+                </div>
+                <div className="table-management-form-group">
+                  <label className="table-management-label">End Table Number</label>
+                  <input
+                    type="number"
+                    value={bulkDelete.end_number}
+                    onChange={(e) => setBulkDelete({ ...bulkDelete, end_number: e.target.value })}
+                    placeholder="200"
+                    min="1"
+                    required
+                    className="table-management-input"
+                  />
+                </div>
+              </div>
+              
+              <div className="table-management-form-actions">
+                <button
+                  type="submit"
+                  className="table-management-button-primary"
+                >
+                  <DeleteSweep />
+                  Delete Tables
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkDeleteForm(false)}
                   className="table-management-button-secondary"
                 >
                   Cancel
