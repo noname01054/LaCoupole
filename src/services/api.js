@@ -19,8 +19,10 @@ api.interceptors.request.use(
         console.warn('Invalid token detected, clearing localStorage');
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('sessionId');
+        localStorage.removeItem('deviceId');
         delete config.headers.Authorization;
         delete config.headers['X-Session-Id'];
+        delete config.headers['X-Device-Id'];
       } else {
         config.headers.Authorization = `Bearer ${token}`;
         console.log('Setting Authorization header:', `Bearer ${token.substring(0, 10)}...`);
@@ -34,6 +36,12 @@ api.interceptors.request.use(
       config.headers['X-Session-Id'] = sessionId;
     } else {
       delete config.headers['X-Session-Id'];
+    }
+    const deviceId = localStorage.getItem('deviceId');
+    if (deviceId && typeof deviceId === 'string' && deviceId.trim()) {
+      config.headers['X-Device-Id'] = deviceId;
+    } else {
+      delete config.headers['X-Device-Id'];
     }
     if (config.data instanceof FormData) {
       config.headers['Content-Type'] = 'multipart/form-data';
@@ -65,7 +73,9 @@ api.interceptors.response.use(
           console.warn('No valid token for refresh, redirecting to login');
           localStorage.removeItem('jwt_token');
           localStorage.removeItem('sessionId');
+          localStorage.removeItem('deviceId');
           delete api.defaults.headers.common['X-Session-Id'];
+          delete api.defaults.headers.common['X-Device-Id'];
           delete api.defaults.headers.common['Authorization'];
           window.location.href = '/login';
           return Promise.reject(error);
@@ -89,7 +99,9 @@ api.interceptors.response.use(
         console.error('Token refresh failed:', refreshError.response?.data || refreshError.message);
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('sessionId');
+        localStorage.removeItem('deviceId');
         delete api.defaults.headers.common['X-Session-Id'];
+        delete api.defaults.headers.common['X-Device-Id'];
         delete api.defaults.headers.common['Authorization'];
         window.location.href = '/login';
         return Promise.reject(refreshError);
@@ -140,8 +152,8 @@ api.searchMenuItems = (query) => api.get('/menu-items/search', { params: { query
 api.getBestSellers = () => api.get('/menu-items/best-sellers');
 
 // Supplement API methods
-api.getSupplementsByMenuItem = (menuItemId) => api.get(`/menu-items/${menuItemId}/supplements`);
-api.addSupplementToMenuItem = (menuItemId, data) => api.post(`/menu-items/${menuItemId}/supplements`, data);
+apiಸapi.getSupplementsByMenuItem = (menuItemId) => api.get(`/menu-items/${menuItemId}/supplements`);
+api.add補SupplementToMenuItem = (menuItemId, data) => api.post(`/menu-items/${menuItemId}/supplements`, data);
 api.updateSupplementForMenuItem = (menuItemId, supplementId, data) => api.put(`/menu-items/${menuItemId}/supplements/${supplementId}`, data);
 api.deleteSupplementFromMenuItem = (menuItemId, supplementId, data) => api.delete(`/menu-items/${menuItemId}/supplements/${supplementId}`, { data });
 
