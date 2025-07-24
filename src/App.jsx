@@ -28,6 +28,9 @@ import AdminBreakfasts from './pages/AdminBreakfasts';
 import BreakfastMenu from './pages/BreakfastMenu';
 import ThemeManagement from './pages/ThemeManagement';
 import ReusableOptionGroups from './pages/ReusableOptionGroups';
+import AdminAddStock from './pages/Stock/AdminAddStock';
+import AddStockToMenuItems from './pages/Stock/AddStockToMenuItems';
+import StockDashboard from './pages/Stock/StockDashboard';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartModal from './components/CartModal';
@@ -57,7 +60,7 @@ function App() {
     background_color: '#faf8f5',
     text_color: '#1f2937',
     logo_url: null,
-    favicon_url: '/favicon.ico',
+    favicon_url: '/Uploads/favicon.ico',
     site_title: 'Café Local',
   };
 
@@ -84,7 +87,7 @@ function App() {
     const baseApiUrl = import.meta.env.VITE_API_URL || 'https://coffe-back-production-e0b2.up.railway.app';
     const faviconUrl = themeData.favicon_url
       ? `${baseApiUrl}/public${themeData.favicon_url}?v=${Date.now()}`
-      : defaultTheme.favicon_url;
+      : `${baseApiUrl}${defaultTheme.favicon_url}`;
     favicon.href = faviconUrl;
 
     document.title = themeData.site_title || defaultTheme.site_title;
@@ -92,29 +95,41 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // Initialize deviceId: Reuse existing or generate new only if missing
-      let storedDeviceId = localStorage.getItem('deviceId');
+      // UUID regex for validation
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!storedDeviceId || !uuidRegex.test(storedDeviceId)) {
+
+      // Initialize deviceId: Reuse existing or generate new only if missing or invalid
+      let storedDeviceId;
+      try {
+        storedDeviceId = localStorage.getItem('deviceId');
+        if (!storedDeviceId || !uuidRegex.test(storedDeviceId)) {
+          storedDeviceId = uuidv4();
+          localStorage.setItem('deviceId', storedDeviceId);
+          console.log('Generated new deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
+        } else {
+          console.log('Reusing existing deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
+        }
+      } catch (err) {
+        console.warn('localStorage access failed, generating temporary deviceId:', err.message, { timestamp: new Date().toISOString() });
         storedDeviceId = uuidv4();
-        localStorage.setItem('deviceId', storedDeviceId);
-        console.log('Generated new deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
-      } else {
-        console.log('Reusing existing deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
       }
       setDeviceId(storedDeviceId);
+      api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
 
       // Initialize sessionId
-      let fallbackSessionId = localStorage.getItem('sessionId');
-      if (!fallbackSessionId) {
+      let fallbackSessionId;
+      try {
+        fallbackSessionId = localStorage.getItem('sessionId');
+        if (!fallbackSessionId) {
+          fallbackSessionId = `guest-${uuidv4()}`;
+          localStorage.setItem('sessionId', fallbackSessionId);
+        }
+      } catch (err) {
+        console.warn('localStorage access failed, generating temporary sessionId:', err.message, { timestamp: new Date().toISOString() });
         fallbackSessionId = `guest-${uuidv4()}`;
-        localStorage.setItem('sessionId', fallbackSessionId);
       }
       setSessionId(fallbackSessionId);
-
-      // Set API headers
       api.defaults.headers.common['X-Session-Id'] = fallbackSessionId;
-      api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
 
       const socketCleanup = initSocket(
         () => {},
@@ -156,20 +171,27 @@ function App() {
             localStorage.removeItem('sessionId');
             delete api.defaults.headers.common['X-Session-Id'];
             setUser(null);
-            // Regenerate sessionId for guest, reuse existing deviceId
             const newSessionId = `guest-${uuidv4()}`;
-            localStorage.setItem('sessionId', newSessionId);
+            try {
+              localStorage.setItem('sessionId', newSessionId);
+            } catch (err) {
+              console.warn('Failed to set sessionId in localStorage:', err.message, { timestamp: new Date().toISOString() });
+            }
             setSessionId(newSessionId);
             api.defaults.headers.common['X-Session-Id'] = newSessionId;
             api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
             return;
           }
-          console.log('Checking auth with token:', token.substring(0, 10) + '...', { timestamp: new Date().toISOString() });
+          console.log('Checking auth with token:', token.substring(0, 10) + '...', { deviceId: storedDeviceId, timestamp: new Date().toISOString() });
           const res = await api.get('/check-auth');
           setUser(res.data);
           const authSessionId = `user-${res.data.id}-${uuidv4()}`;
           setSessionId(authSessionId);
-          localStorage.setItem('sessionId', authSessionId);
+          try {
+            localStorage.setItem('sessionId', authSessionId);
+          } catch (err) {
+            console.warn('Failed to set sessionId in localStorage:', err.message, { timestamp: new Date().toISOString() });
+          }
           api.defaults.headers.common['X-Session-Id'] = authSessionId;
           api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
         } catch (err) {
@@ -178,9 +200,12 @@ function App() {
           localStorage.removeItem('sessionId');
           delete api.defaults.headers.common['X-Session-Id'];
           setUser(null);
-          // Regenerate sessionId for guest, reuse existing deviceId
           const newSessionId = `guest-${uuidv4()}`;
-          localStorage.setItem('sessionId', newSessionId);
+          try {
+            localStorage.setItem('sessionId', newSessionId);
+          } catch (err) {
+            console.warn('Failed to set sessionId in localStorage:', err.message, { timestamp: new Date().toISOString() });
+          }
           setSessionId(newSessionId);
           api.defaults.headers.common['X-Session-Id'] = newSessionId;
           api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
@@ -189,6 +214,7 @@ function App() {
 
       const fetchPromotions = async () => {
         try {
+          console.log('Fetching promotions with deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
           const response = await api.get('/promotions');
           setPromotions(response.data || []);
         } catch (error) {
@@ -200,6 +226,7 @@ function App() {
 
       const fetchReusableOptionGroups = async () => {
         try {
+          console.log('Fetching reusable option groups with deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
           const response = await api.get('/option-groups/reusable');
           setReusableOptionGroups(response.data || []);
         } catch (error) {
@@ -211,6 +238,7 @@ function App() {
 
       const fetchTheme = async () => {
         try {
+          console.log('Fetching theme with deviceId:', storedDeviceId, { timestamp: new Date().toISOString() });
           const response = await api.getTheme();
           setTheme(response.data);
           applyTheme(response.data);
@@ -246,17 +274,34 @@ function App() {
       localStorage.removeItem('sessionId');
       delete api.defaults.headers.common['X-Session-Id'];
       delete api.defaults.headers.common['Authorization'];
+      const newSessionId = `guest-${uuidv4()}`;
+      try {
+        localStorage.setItem('sessionId', newSessionId);
+      } catch (err) {
+        console.warn('Failed to set sessionId in localStorage:', err.message, { timestamp: new Date().toISOString() });
+      }
+      setSessionId(newSessionId);
+      api.defaults.headers.common['X-Session-Id'] = newSessionId;
+      api.defaults.headers.common['X-Device-Id'] = deviceId;
       navigate('/login');
       return;
     }
     setUser(user);
-    localStorage.setItem('jwt_token', token);
+    try {
+      localStorage.setItem('jwt_token', token);
+    } catch (err) {
+      console.warn('Failed to set jwt_token in localStorage:', err.message, { timestamp: new Date().toISOString() });
+    }
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     const authSessionId = `user-${user.id}-${uuidv4()}`;
     setSessionId(authSessionId);
-    localStorage.setItem('sessionId', authSessionId);
+    try {
+      localStorage.setItem('sessionId', authSessionId);
+    } catch (err) {
+      console.warn('Failed to set sessionId in localStorage:', err.message, { timestamp: new Date().toISOString() });
+    }
     api.defaults.headers.common['X-Session-Id'] = authSessionId;
-    api.defaults.headers.common['X-Device-Id'] = deviceId; // Use existing deviceId
+    api.defaults.headers.common['X-Device-Id'] = deviceId;
     console.log('Login successful, setting token:', token.substring(0, 10) + '...', 'sessionId:', authSessionId, 'deviceId:', deviceId, { timestamp: new Date().toISOString() });
     navigate(user.role === 'admin' ? '/admin' : '/staff');
   };
@@ -270,9 +315,13 @@ function App() {
       delete api.defaults.headers.common['X-Session-Id'];
       const guestSessionId = `guest-${uuidv4()}`;
       setSessionId(guestSessionId);
-      localStorage.setItem('sessionId', guestSessionId);
+      try {
+        localStorage.setItem('sessionId', guestSessionId);
+      } catch (err) {
+        console.warn('Failed to set sessionId in localStorage:', err.message, { timestamp: new Date().toISOString() });
+      }
       api.defaults.headers.common['X-Session-Id'] = guestSessionId;
-      api.defaults.headers.common['X-Device-Id'] = deviceId; // Retain deviceId
+      api.defaults.headers.common['X-Device-Id'] = deviceId;
       setUser(null);
       setCart([]);
       setDeliveryAddress('');
@@ -506,6 +555,9 @@ function App() {
         <Route path="/admin/reusable-option-groups" element={<ReusableOptionGroups />} />
         <Route path="/admin/table-reservations" element={<AdminTableReservations />} />
         <Route path="/admin/theme" element={<ThemeManagement />} />
+        <Route path="/admin/stock/add" element={<AdminAddStock />} />
+        <Route path="/admin/stock/assign" element={<AddStockToMenuItems />} />
+        <Route path="/admin/stock/dashboard" element={<StockDashboard />} />
         <Route path="/staff/table-reservations" element={<StaffTableReservations />} />
         <Route path="/category/:id" element={<CategoryMenu addToCart={addToCart} />} />
         <Route path="/product/:id" element={<ProductDetails addToCart={addToCart} latestOrderId={latestOrderId} />} />
