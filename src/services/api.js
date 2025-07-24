@@ -1,3 +1,4 @@
+// File: api(10).js
 import axios from 'axios';
 
 const api = axios.create({
@@ -8,44 +9,40 @@ const api = axios.create({
   timeout: 15000,
 });
 
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     if (process.env.NODE_ENV === 'development') {
       console.log(`[${config.method.toUpperCase()}] ${config.url}`);
     }
     const token = localStorage.getItem('jwt_token');
-    if (token) {
-      if (typeof token !== 'string' || token === 'null' || token === 'undefined' || !token.trim()) {
-        console.warn('Invalid token detected, clearing localStorage');
-        localStorage.removeItem('jwt_token');
-        localStorage.removeItem('sessionId');
-        localStorage.removeItem('deviceId');
-        delete config.headers.Authorization;
-        delete config.headers['X-Session-Id'];
-        delete config.headers['X-Device-Id'];
-      } else {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log('Setting Authorization header:', `Bearer ${token.substring(0, 10)}...`);
-      }
+    const sessionId = localStorage.getItem('sessionId');
+    const deviceId = localStorage.getItem('deviceId');
+
+    if (token && typeof token === 'string' && token !== 'null' && token !== 'undefined' && token.trim()) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Setting Authorization header:', `Bearer ${token.substring(0, 10)}...`);
     } else {
-      console.warn('No token found for request:', config.url);
+      console.warn('No valid token found for request:', config.url);
       delete config.headers.Authorization;
     }
-    const sessionId = localStorage.getItem('sessionId');
+
     if (sessionId && typeof sessionId === 'string' && sessionId.trim()) {
       config.headers['X-Session-Id'] = sessionId;
     } else {
       delete config.headers['X-Session-Id'];
     }
-    const deviceId = localStorage.getItem('deviceId');
+
     if (deviceId && typeof deviceId === 'string' && deviceId.trim()) {
       config.headers['X-Device-Id'] = deviceId;
     } else {
       delete config.headers['X-Device-Id'];
     }
+
     if (config.data instanceof FormData) {
       config.headers['Content-Type'] = 'multipart/form-data';
     }
+
     return config;
   },
   (error) => {
@@ -54,6 +51,7 @@ api.interceptors.request.use(
   }
 );
 
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     if (process.env.NODE_ENV === 'development') {
@@ -65,6 +63,7 @@ api.interceptors.response.use(
     const originalRequest = error.config;
     const message = error.response?.data?.error || error.message;
     console.error(`[Error] ${error.config?.url}: ${message}`);
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       try {
@@ -74,9 +73,9 @@ api.interceptors.response.use(
           localStorage.removeItem('jwt_token');
           localStorage.removeItem('sessionId');
           localStorage.removeItem('deviceId');
+          delete api.defaults.headers.common['Authorization'];
           delete api.defaults.headers.common['X-Session-Id'];
           delete api.defaults.headers.common['X-Device-Id'];
-          delete api.defaults.headers.common['Authorization'];
           window.location.href = '/login';
           return Promise.reject(error);
         }
@@ -100,9 +99,9 @@ api.interceptors.response.use(
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('sessionId');
         localStorage.removeItem('deviceId');
+        delete api.defaults.headers.common['Authorization'];
         delete api.defaults.headers.common['X-Session-Id'];
         delete api.defaults.headers.common['X-Device-Id'];
-        delete api.defaults.headers.common['Authorization'];
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -160,7 +159,7 @@ api.deleteSupplementFromMenuItem = (menuItemId, supplementId, data) => api.delet
 // Order API methods
 api.submitOrder = (data) => api.post('/orders', data);
 api.approveOrder = (id) => api.post(`/orders/${id}/approve`);
-api.cancelOrder = (id) => api.post(`/orders/${id}/cancel`);
+api.cancelOrder = (id, data) => api.post(`/orders/${id}/cancel`, data);
 api.getOrder = (id) => api.get(`/orders/${id}`);
 api.getSession = () => api.get('/session');
 
@@ -195,5 +194,126 @@ api.deleteReusableOptionGroup = (id, data) => api.delete(`/option-groups/reusabl
 api.getTheme = () => api.get('/theme');
 api.updateTheme = (data) => api.put('/theme', data);
 api.updateBranding = (data) => api.put('/theme/branding', data);
+
+// Stock API methods
+api.getIngredients = (params) => {
+  if (!params.user_id) {
+    console.error('user_id is required for getIngredients');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.get('/stock/ingredients', { params });
+};
+api.addIngredient = (data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for addIngredient');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.post('/stock/ingredients', data);
+};
+api.updateIngredient = (id, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for updateIngredient');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.put(`/stock/ingredients/${id}`, data);
+};
+api.deleteIngredient = (id, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for deleteIngredient');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.delete(`/stock/ingredients/${id}`, { data });
+};
+api.assignIngredientToMenuItem = (menuItemId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for assignIngredientToMenuItem');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.post(`/stock/menu-items/${menuItemId}/ingredients`, data);
+};
+api.updateIngredientForMenuItem = (menuItemId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for updateIngredientForMenuItem');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.put(`/stock/menu-items/${menuItemId}/ingredients/${ingredientId}`, data);
+};
+api.deleteIngredientFromMenuItem = (menuItemId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for deleteIngredientFromMenuItem');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.delete(`/stock/menu-items/${menuItemId}/ingredients/${ingredientId}`, { data });
+};
+api.assignIngredientToBreakfast = (breakfastId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for assignIngredientToBreakfast');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.post(`/stock/breakfasts/${breakfastId}/ingredients`, data);
+};
+api.updateIngredientForBreakfast = (breakfastId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for updateIngredientForBreakfast');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.put(`/stock/breakfasts/${breakfastId}/ingredients/${ingredientId}`, data);
+};
+api.deleteIngredientFromBreakfast = (breakfastId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for deleteIngredientFromBreakfast');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.delete(`/stock/breakfasts/${breakfastId}/ingredients/${ingredientId}`, { data });
+};
+api.assignIngredientToSupplement = (supplementId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for assignIngredientToSupplement');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.post(`/stock/supplements/${supplementId}/ingredients`, data);
+};
+api.updateIngredientForSupplement = (supplementId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for updateIngredientForSupplement');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.put(`/stock/supplements/${supplementId}/ingredients/${ingredientId}`, data);
+};
+api.deleteIngredientFromSupplement = (supplementId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for deleteIngredientFromSupplement');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.delete(`/stock/supplements/${supplementId}/ingredients/${ingredientId}`, { data });
+};
+api.assignIngredientToBreakfastOption = (optionId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for assignIngredientToBreakfastOption');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.post(`/stock/breakfast-options/${optionId}/ingredients`, data);
+};
+api.updateIngredientForBreakfastOption = (optionId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for updateIngredientForBreakfastOption');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.put(`/stock/breakfast-options/${optionId}/ingredients/${ingredientId}`, data);
+};
+api.deleteIngredientFromBreakfastOption = (optionId, ingredientId, data) => {
+  if (!data.user_id) {
+    console.error('user_id is required for deleteIngredientFromBreakfastOption');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.delete(`/stock/breakfast-options/${optionId}/ingredients/${ingredientId}`, { data });
+};
+api.getStockDashboard = (params) => {
+  if (!params.user_id) {
+    console.error('user_id is required for getStockDashboard');
+    return Promise.reject(new Error('user_id is required'));
+  }
+  return api.get('/stock/stock-dashboard', { params });
+};
 
 export { api };
