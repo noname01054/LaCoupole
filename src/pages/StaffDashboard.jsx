@@ -130,7 +130,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     if (!isLoading && orders.length > 0 && !hasScrolled.current && !isNaN(scrollToOrderId) && orderRefs.current[scrollToOrderId]) {
       const orderExists = orders.some(order => order.id === scrollToOrderId);
       if (orderExists) {
-        orderRefs.current[scrollToOrderId].scrollIntoView({ behaviorすす: 'smooth', block: 'start' });
+        orderRefs.current[scrollToOrderId].scrollIntoView({ behavior: 'smooth', block: 'start' });
         hasScrolled.current = true;
         setTimeout(() => {
           queryParams.delete('scrollTo');
@@ -370,14 +370,14 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     }
   }, [handleOrderApproved]);
 
-  const cancelOrder = useCallback(async (orderId) => {
+  const cancelOrder = useCallback(async (orderId, restoreStock = false) => {
     if (!orderId || isNaN(orderId)) {
       console.error('Invalid orderId:', orderId);
       toast.error('Invalid order ID');
       return;
     }
     try {
-      const response = await api.cancelOrder(orderId);
+      const response = await api.cancelOrder(orderId, { restoreStock });
       const orderDetails = response.data.order || { approved: 0, status: 'cancelled' };
       handleOrderCancelled({ orderId, status: 'cancelled', orderDetails });
     } catch (error) {
@@ -470,7 +470,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm= {4} className="staff-dashboard-filter-item debug-border">
+          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
             <Button
               variant="contained"
               className="staff-dashboard-refresh-button"
