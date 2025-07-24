@@ -768,7 +768,7 @@ const AddStockToMenuItems = () => {
                     : 'Loading...'}
                 </Dialog.Title>
                 <div className="modal-body">
-                  {editModalSw0ingredients.length > 0 ? (
+                  {editModal.ingredients.length > 0 ? (
                     <ul className="ingredient-list">
                       {editModal.ingredients.map((assoc) => (
                         <li key={assoc.ingredient_id} className="ingredient-item">
