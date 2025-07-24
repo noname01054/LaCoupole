@@ -115,6 +115,8 @@
   padding: 12px 0;
   height: calc(100vh - 72px);
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 @media (max-width: 767px) {
   .header-drawer-content {
@@ -161,15 +163,17 @@
   min-width: 36px;
 }
 .header-primary-list-item .header-list-item-icon {
-  color: var(--text-color);
+  color: #fff; /* Keep white for primary items for contrast */
 }
 
 .header-list-item-text .MuiListItemText-primary {
   font-size: 15px;
   font-weight: 500;
+  color: #000; /* Hardcoded black text for visibility */
 }
 .header-primary-list-item .header-list-item-text .MuiListItemText-primary {
   font-weight: 600;
+  color: #000; /* Hardcoded black text for visibility */
 }
 @media (max-width: 767px) {
   .header-list-item-text .MuiListItemText-primary {
@@ -185,7 +189,6 @@
 .header-user-section {
   padding: 16px 20px;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
-  margin-top: auto;
 }
 @media (max-width: 767px) {
   .header-user-section {
@@ -215,6 +218,7 @@
 .header-user-name {
   font-weight: 600;
   margin-bottom: 4px;
+  color: #000; /* Hardcoded black text for visibility */
 }
 @media (max-width: 767px) {
   .header-user-name {
@@ -230,14 +234,6 @@
 .header-desktop-nav {
   display: none;
 }
-@media (min-width: 768px) {
-  .header-desktop-nav {
-    display: flex;
-    gap: 10px;
-    position: absolute;
-    right: 12px;
-  }
-}
 
 .header-menu-section {
   margin-bottom: 12px;
@@ -245,7 +241,7 @@
 
 .header-list-subheader {
   background-color: transparent;
-  color: #8E8E93;
+  color: #000; /* Hardcoded black text for visibility */
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -261,6 +257,7 @@
 
 .header-menu-container {
   padding-bottom: 80px;
+  flex-grow: 1;
 }
 
 .header-management-tools {
