@@ -92,46 +92,65 @@ const StockDashboard = () => {
   const createCharts = () => {
     // Add a small delay to ensure DOM is fully rendered
     setTimeout(() => {
+      // Helper function to get last 7 days
+      const getLast7Days = () => {
+        const dates = [];
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          dates.push(date.toISOString().split('T')[0]);
+        }
+        return dates;
+      };
+
+      // Helper function to aggregate transactions by date and ingredient
+      const aggregateTransactions = (transactions, type, ingredients) => {
+        const dataByIngredient = {};
+        ingredients.forEach(ing => {
+          dataByIngredient[ing.name] = { id: ing.id, data: {} };
+        });
+
+        transactions.forEach(tx => {
+          if (tx.transaction_type === type) {
+            const date = new Date(tx.created_at).toISOString().split('T')[0];
+            if (dataByIngredient[tx.name]) {
+              dataByIngredient[tx.name].data[date] = (dataByIngredient[tx.name].data[date] || 0) + Math.abs(tx.quantity);
+            }
+          }
+        });
+
+        return dataByIngredient;
+      };
+
       // Ingredient Usage Over Time (Line Chart)
       const usageCanvas = document.getElementById('usageChart');
       if (usageCanvas) {
         const usageCtx = usageCanvas.getContext('2d');
         if (usageCtx) {
-          // Destroy existing chart
           if (chartRefs.current.usageChart) {
             chartRefs.current.usageChart.destroy();
           }
-          
+
+          const last7Days = getLast7Days();
+          const usageData = aggregateTransactions(dashboardData.transactions, 'deduction', dashboardData.ingredients.slice(0, 3));
+
+          const datasets = Object.keys(usageData).map((name, index) => {
+            const colors = ['#1e40af', '#15803d', '#b91c1c'];
+            return {
+              label: name,
+              data: last7Days.map(date => usageData[name].data[date] || 0),
+              borderColor: colors[index % colors.length],
+              backgroundColor: colors[index % colors.length] + '33', // Add transparency
+              fill: true,
+              tension: 0.4,
+            };
+          });
+
           chartRefs.current.usageChart = new Chart(usageCtx, {
             type: 'line',
             data: {
-              labels: ['2025-07-17', '2025-07-18', '2025-07-19', '2025-07-20', '2025-07-21', '2025-07-22', '2025-07-23'],
-              datasets: [
-                {
-                  label: 'Coffee',
-                  data: [50, 55, 60, 65, 70, 75, 80],
-                  borderColor: '#1e40af',
-                  backgroundColor: 'rgba(30, 64, 175, 0.1)',
-                  fill: true,
-                  tension: 0.4,
-                },
-                {
-                  label: 'Milk',
-                  data: [30, 35, 40, 45, 50, 55, 60],
-                  borderColor: '#15803d',
-                  backgroundColor: 'rgba(21, 128, 61, 0.1)',
-                  fill: true,
-                  tension: 0.4,
-                },
-                {
-                  label: 'Sugar',
-                  data: [20, 25, 30, 35, 40, 45, 50],
-                  borderColor: '#b91c1c',
-                  backgroundColor: 'rgba(185, 28, 28, 0.1)',
-                  fill: true,
-                  tension: 0.4,
-                },
-              ],
+              labels: last7Days,
+              datasets,
             },
             options: {
               responsive: true,
@@ -169,28 +188,27 @@ const StockDashboard = () => {
           if (chartRefs.current.topUsedChart) {
             chartRefs.current.topUsedChart.destroy();
           }
-          
+
+          const usageByIngredient = {};
+          dashboardData.transactions.forEach(tx => {
+            if (tx.transaction_type === 'deduction') {
+              usageByIngredient[tx.name] = (usageByIngredient[tx.name] || 0) + Math.abs(tx.quantity);
+            }
+          });
+
+          const sortedIngredients = Object.entries(usageByIngredient)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5);
+
           chartRefs.current.topUsedChart = new Chart(topUsedCtx, {
             type: 'bar',
             data: {
-              labels: ['Coffee', 'Milk', 'Sugar', 'Syrup', 'Cream'],
+              labels: sortedIngredients.map(([name]) => name),
               datasets: [{
                 label: 'Usage This Week (kg)',
-                data: [200, 150, 100, 80, 60],
-                backgroundColor: [
-                  '#1e40af',
-                  '#15803d', 
-                  '#b91c1c',
-                  '#d97706',
-                  '#7c3aed'
-                ],
-                borderColor: [
-                  '#1e40af',
-                  '#15803d', 
-                  '#b91c1c',
-                  '#d97706',
-                  '#7c3aed'
-                ],
+                data: sortedIngredients.map(([_, qty]) => qty),
+                backgroundColor: ['#1e40af', '#15803d', '#b91c1c', '#d97706', '#7c3aed'],
+                borderColor: ['#1e40af', '#15803d', '#b91c1c', '#d97706', '#7c3aed'],
                 borderWidth: 1,
               }],
             },
@@ -215,28 +233,27 @@ const StockDashboard = () => {
           if (chartRefs.current.refillChart) {
             chartRefs.current.refillChart.destroy();
           }
-          
+
+          const refillData = aggregateTransactions(dashboardData.transactions, 'addition', dashboardData.ingredients.slice(0, 3));
+          const uniqueDates = [...new Set(dashboardData.transactions
+            .filter(tx => tx.transaction_type === 'addition')
+            .map(tx => new Date(tx.created_at).toISOString().split('T')[0]))
+          ].sort().slice(-3); // Last 3 unique dates
+
+          const datasets = Object.keys(refillData).map((name, index) => {
+            const colors = ['#1e40af', '#15803d', '#b91c1c'];
+            return {
+              label: name,
+              data: uniqueDates.map(date => refillData[name].data[date] || 0),
+              backgroundColor: colors[index % colors.length],
+            };
+          });
+
           chartRefs.current.refillChart = new Chart(refillCtx, {
             type: 'bar',
             data: {
-              labels: ['2025-07-01', '2025-07-08', '2025-07-15'],
-              datasets: [
-                {
-                  label: 'Coffee',
-                  data: [50, 60, 70],
-                  backgroundColor: '#1e40af',
-                },
-                {
-                  label: 'Milk',
-                  data: [40, 50, 60],
-                  backgroundColor: '#15803d',
-                },
-                {
-                  label: 'Sugar',
-                  data: [30, 40, 50],
-                  backgroundColor: '#b91c1c',
-                },
-              ],
+              labels: uniqueDates,
+              datasets,
             },
             options: {
               responsive: true,
@@ -380,7 +397,7 @@ const StockDashboard = () => {
           </div>
         </div>
 
-        <div className viera="dashboard-card chart-card">
+        <div className="dashboard-card chart-card">
           <h2 className="card-title">Top Used Ingredients</h2>
           <div className="chart-container">
             <canvas id="topUsedChart" width="400" height="300"></canvas>
