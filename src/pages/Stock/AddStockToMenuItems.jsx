@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { PlusCircleIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { Coffee } from 'lucide-react';
 import './css/AddStockToMenuItems.css';
 
 const AddStockToMenuItems = () => {
@@ -475,12 +476,28 @@ const AddStockToMenuItems = () => {
               const assignedIngredients = getAssignedIngredients(type, item.id);
               return (
                 <div key={item.id} className="item-card">
-                  {item.image_url && (
-                    <img
-                      src={`${import.meta.env.VITE_API_URL || 'http://192.168.1.14:5000'}${item.image_url}`}
-                      alt={item.name}
-                      className="item-image"
-                    />
+                  {item.image_url ? (
+                    <div className="item-image-container">
+                      <img
+                        src={item.image_url}
+                        alt={item.name}
+                        className="item-image"
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          console.error('Error loading image:', item.image_url);
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div className="item-placeholder-image" style={{ display: 'none' }}>
+                        <Coffee size={40} color="#ff8c42" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="item-no-image" style={{ display: 'flex' }}>
+                      No Image Available
+                    </div>
                   )}
                   <div className="item-content">
                     <div className="item-header">
@@ -751,7 +768,7 @@ const AddStockToMenuItems = () => {
                     : 'Loading...'}
                 </Dialog.Title>
                 <div className="modal-body">
-                  {editModal.ingredients.length > 0 ? (
+                  {editModalSw0ingredients.length > 0 ? (
                     <ul className="ingredient-list">
                       {editModal.ingredients.map((assoc) => (
                         <li key={assoc.ingredient_id} className="ingredient-item">
