@@ -12,7 +12,10 @@ import {
   Note,
   Cancel,
 } from '@mui/icons-material';
+import { api } from '../services/api';
+import { toast } from 'react-toastify';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
 const FALLBACK_IMAGE = 'https://via.placeholder.com/40?text=Aucune+Image';
 
 // Helper function to safely parse numbers
@@ -88,6 +91,9 @@ function OrderCard({
   const [isExpanded, setIsExpanded] = useState(initialExpanded);
   const [isApproving, setIsApproving] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelPopup, setShowCancelPopup] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState(null);
+  const [isOrderApproved, setIsOrderApproved] = useState(false);
   const cardRef = useRef(null);
 
   // Memoize expensive calculations
@@ -195,9 +201,34 @@ function OrderCard({
   const handleCancelOrder = async () => {
     setIsCancelling(true);
     try {
-      await onCancelOrder?.(order.id);
+      const response = await api.getOrder(order.id);
+      const orderData = response.data;
+      if (orderData.approved) {
+        setCancelOrderId(order.id);
+        setIsOrderApproved(true);
+        setShowCancelPopup(true);
+      } else {
+        await onCancelOrder?.(order.id, { restoreStock: false });
+        toast.success('Order cancelled successfully');
+      }
+    } catch (error) {
+      console.error('Error checking order status:', error.response?.data || error.message);
+      toast.error(error.response?.data?.error || 'Failed to check order status');
     } finally {
       setTimeout(() => setIsCancelling(false), 500);
+    }
+  };
+
+  const confirmCancelOrder = async (restoreStock) => {
+    try {
+      await onCancelOrder?.(cancelOrderId, { restoreStock });
+      toast.success(`Order ${restoreStock ? 'cancelled with stock restoration' : 'cancelled without stock restoration'}`);
+      setShowCancelPopup(false);
+      setCancelOrderId(null);
+      setIsOrderApproved(false);
+    } catch (error) {
+      console.error('Error cancelling order:', error.response?.data || error.message);
+      toast.error(error.response?.data?.error || 'Failed to cancel order');
     }
   };
 
@@ -220,6 +251,7 @@ function OrderCard({
       : '0 2px 12px rgba(0, 0, 0, 0.08)',
     overflow: 'hidden',
     transition: 'box-shadow 0.2s ease',
+    position: 'relative', // Ensure popup is positioned relative to card
   };
 
   const headerStyle = {
@@ -447,6 +479,74 @@ function OrderCard({
     boxShadow: order.status === 'cancelled' ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.3)',
   };
 
+  const popupStyle = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 50,
+  };
+
+  const popupContentStyle = {
+    backgroundColor: '#ffffff',
+    padding: '24px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    maxWidth: '400px',
+    width: '90%',
+  };
+
+  const popupTitleStyle = {
+    fontSize: '20px',
+    fontWeight: '600',
+    marginBottom: '16px',
+    color: '#1a1a1a',
+  };
+
+  const popupTextStyle = {
+    fontSize: '14px',
+    color: '#374151',
+    marginBottom: '16px',
+  };
+
+  const popupButtonContainerStyle = {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    gap: '12px',
+  };
+
+  const popupButtonStyle = {
+    padding: '10px 16px',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    border: 'none',
+  };
+
+  const cancelWithoutStockButtonStyle = {
+    ...popupButtonStyle,
+    backgroundColor: '#6b7280',
+    color: 'white',
+  };
+
+  const cancelWithStockButtonStyle = {
+    ...popupButtonStyle,
+    backgroundColor: '#3b82f6',
+    color: 'white',
+  };
+
+  const closeButtonStyle = {
+    ...popupButtonStyle,
+    backgroundColor: '#ef4444',
+    color: 'white',
+  };
+
   return (
     <div style={cardStyle} ref={cardRef}>
       {/* Header */}
@@ -609,6 +709,42 @@ function OrderCard({
           </>
         )}
       </div>
+
+      {/* Cancellation Popup */}
+      {showCancelPopup && (
+        <div style={popupStyle}>
+          <div style={popupContentStyle}>
+            <h2 style={popupTitleStyle}>Cancel Order</h2>
+            <p style={popupTextStyle}>
+              This order has been approved. Would you like to restore the stock for the cancelled order?
+            </p>
+            <div style={popupButtonContainerStyle}>
+              <button
+                style={cancelWithoutStockButtonStyle}
+                onClick={() => confirmCancelOrder(false)}
+              >
+                Cancel Without Restoring Stock
+              </button>
+              <button
+                style={cancelWithStockButtonStyle}
+                onClick={() => confirmCancelOrder(true)}
+              >
+                Cancel and Restore Stock
+              </button>
+              <button
+                style={closeButtonStyle}
+                onClick={() => {
+                  setShowCancelPopup(false);
+                  setCancelOrderId(null);
+                  setIsOrderApproved(false);
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
