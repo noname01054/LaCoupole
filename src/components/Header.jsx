@@ -48,6 +48,7 @@ import {
   AddCircleOutline as AddCircleOutlineIcon,
   Image as ImageIcon,
   Palette as PaletteIcon,
+  Inventory as InventoryIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { lazy, Suspense } from 'react';
@@ -64,6 +65,7 @@ const Header = memo(
     const [categories, setCategories] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isDesktopMenuOpen, setIsDesktopMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [expandedSection, setExpandedSection] = useState('');
     const socket = getSocket();
@@ -82,6 +84,12 @@ const Header = memo(
       { to: '/admin/table-reservations', label: 'Table Reservations', icon: <TableIcon /> },
       { to: '/admin/banners', label: 'Banner Management', icon: <ImageIcon /> },
       { to: '/admin/theme', label: 'Theme Management', icon: <PaletteIcon /> },
+    ];
+
+    const stockManagementLinks = [
+      { to: '/admin/stock/add', label: 'Add Stock', icon: <InventoryIcon /> },
+      { to: '/admin/stock/assign', label: 'Assign Stock', icon: <InventoryIcon /> },
+      { to: '/admin/stock/dashboard', label: 'Stock Dashboard', icon: <InventoryIcon /> },
     ];
 
     const staffLinks = [
@@ -161,6 +169,7 @@ const Header = memo(
           navigate(`/search?q=${encodeURIComponent(query)}`);
           setSearchQuery('');
           setIsMobileMenuOpen(false);
+          setIsDesktopMenuOpen(false);
         }
       }, 300),
       [navigate]
@@ -199,35 +208,115 @@ const Header = memo(
 
     const renderDesktopNavItems = useCallback(() => {
       const links = user?.role === 'admin' ? adminLinks : user?.role === 'server' ? staffLinks : publicLinks.slice(0, 4);
-      return links.map((link) => (
-        <Button
-          key={link.to}
-          component={Link}
-          to={link.to}
-          startIcon={link.icon}
-          variant={link.primary ? 'contained' : 'outlined'}
-          sx={{
-            borderRadius: '16px',
-            textTransform: 'none',
-            fontWeight: 500,
-            padding: '4px 12px',
-            backgroundColor: link.primary ? 'var(--primary-color)' : 'transparent',
-            color: 'var(--text-color)',
-            borderColor: 'var(--text-color)',
-            '&:hover': {
-              backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(255, 255, 255, 0.2)',
-            },
-          }}
-        >
-          {link.label}
-        </Button>
-      ));
-    }, [user?.role, categories]);
+      return (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px' }}>
+          {user?.role === 'admin' && (
+            <>
+              {links.map((link) => (
+                <Button
+                  key={link.to}
+                  component={Link}
+                  to={link.to}
+                  startIcon={link.icon}
+                  variant={link.primary ? 'contained' : 'outlined'}
+                  sx={{
+                    borderRadius: '8px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    padding: '6px 12px',
+                    backgroundColor: link.primary ? 'var(--primary-color)' : 'transparent',
+                    color: '#000',
+                    borderColor: '#000',
+                    '&:hover': {
+                      backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.2)',
+                    },
+                  }}
+                  onClick={() => setIsDesktopMenuOpen(false)}
+                >
+                  {link.label}
+                </Button>
+              ))}
+              <Button
+                onClick={() => setExpandedSection(expandedSection === 'stock' ? '' : 'stock')}
+                startIcon={<InventoryIcon />}
+                sx={{
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  padding: '6px 12px',
+                  backgroundColor: 'transparent',
+                  color: '#000',
+                  borderColor: '#000',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  },
+                }}
+              >
+                Stock Management
+                {expandedSection === 'stock' ? <ExpandLess /> : <ExpandMore />}
+              </Button>
+              <Collapse in={expandedSection === 'stock'} timeout={100}>
+                <Box sx={{ paddingLeft: '12px' }}>
+                  {stockManagementLinks.map((link) => (
+                    <Button
+                      key={link.to}
+                      component={Link}
+                      to={link.to}
+                      startIcon={link.icon}
+                      variant="outlined"
+                      sx={{
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        padding: '6px 12px',
+                        backgroundColor: 'transparent',
+                        color: '#000',
+                        borderColor: '#000',
+                        '&:hover': {
+                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                        },
+                      }}
+                      onClick={() => setIsDesktopMenuOpen(false)}
+                    >
+                      {link.label}
+                    </Button>
+                  ))}
+                </Box>
+              </Collapse>
+            </>
+          )}
+          {user?.role !== 'admin' && links.map((link) => (
+            <Button
+              key={link.to}
+              component={Link}
+              to={link.to}
+              startIcon={link.icon}
+              variant={link.primary ? 'contained' : 'outlined'}
+              sx={{
+                borderRadius: '8px',
+                textTransform: 'none',
+                fontWeight: 500,
+                padding: '6px 12px',
+                backgroundColor: link.primary ? 'var(--primary-color)' : 'transparent',
+                color: '#000',
+                borderColor: '#000',
+                '&:hover': {
+                  backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.2)',
+                },
+              }}
+              onClick={() => setIsDesktopMenuOpen(false)}
+            >
+              {link.label}
+            </Button>
+          ))}
+        </Box>
+      );
+    }, [user?.role, categories, expandedSection]);
 
     const renderMenuSection = useCallback(
       (title, links, isPrimary = false) => (
         <Box className="header-menu-section" key={title}>
-          <ListSubheader sx={{ backgroundColor: 'transparent', color: '#8E8E93', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', paddingLeft: '20px', paddingBottom: '6px' }}>
+          <ListSubheader sx={{ backgroundColor: 'transparent', color: '#000', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', paddingLeft: '20px', paddingBottom: '6px' }}>
             {title}
           </ListSubheader>
           {links.map((link) => (
@@ -286,13 +375,31 @@ const Header = memo(
                   </ListItemIcon>
                   <ListItemText
                     primary="Management Tools"
-                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-color)' }}
+                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 500, color: '#000' }}
                   />
                   {expandedSection === 'management' ? <ExpandLess /> : <ExpandMore />}
                 </ListItemButton>
                 <Collapse in={expandedSection === 'management'} timeout={100}>
                   <Box sx={{ paddingLeft: '12px' }}>
                     {renderMenuSection('Tools', adminLinks.filter((link) => !link.primary))}
+                  </Box>
+                </Collapse>
+                <ListItemButton
+                  onClick={() => setExpandedSection(expandedSection === 'stock' ? '' : 'stock')}
+                  sx={{ margin: '2px 12px', borderRadius: '8px' }}
+                >
+                  <ListItemIcon sx={{ color: 'var(--primary-color)', minWidth: '36px' }}>
+                    <InventoryIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Stock Management"
+                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 500, color: '#000' }}
+                  />
+                  {expandedSection === 'stock' ? <ExpandLess /> : <ExpandMore />}
+                </ListItemButton>
+                <Collapse in={expandedSection === 'stock'} timeout={100}>
+                  <Box sx={{ paddingLeft: '12px' }}>
+                    {renderMenuSection('Stock Tools', stockManagementLinks)}
                   </Box>
                 </Collapse>
               </>
@@ -312,7 +419,7 @@ const Header = memo(
                 <Box>
                   <Typography
                     variant="subtitle1"
-                    sx={{ fontWeight: 600, color: 'var(--text-color)', marginBottom: '4px' }}
+                    sx={{ fontWeight: 600, color: '#000', marginBottom: '4px' }}
                   >
                     {user.name || 'User'}
                   </Typography>
@@ -333,7 +440,7 @@ const Header = memo(
                 sx={{
                   borderRadius: '8px',
                   borderColor: 'var(--primary-color)',
-                  color: 'var(--primary-color)',
+                  color: '#000',
                   textTransform: 'none',
                   fontWeight: 500,
                   '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.06)' },
@@ -349,10 +456,12 @@ const Header = memo(
                 onClick={() => {
                   navigate('/login');
                   setIsMobileMenuOpen(false);
+                  setIsDesktopMenuOpen(false);
                 }}
                 sx={{
                   borderRadius: '8px',
                   backgroundColor: 'var(--primary-color)',
+                  color: '#000',
                   textTransform: 'none',
                   fontWeight: 500,
                   '&:hover': { backgroundColor: 'var(--secondary-color)' },
@@ -383,7 +492,14 @@ const Header = memo(
             <IconButton
               edge="start"
               onClick={() => setIsMobileMenuOpen(true)}
-              sx={{ width: { xs: '44px', md: '40px' }, height: { xs: '44px', md: '40px' }, borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
+              sx={{ width: { xs: '44px', md: '40px' }, height: { xs: '44px', md: '40px' }, borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }, display: { xs: 'flex', md: 'none' } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <IconButton
+              edge="start"
+              onClick={() => setIsDesktopMenuOpen(true)}
+              sx={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }, display: { xs: 'none', md: 'flex' } }}
             >
               <MenuIcon />
             </IconButton>
@@ -421,10 +537,6 @@ const Header = memo(
                 </>
               )}
             </Typography>
-
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: '10px', position: 'absolute', right: '12px' }}>
-              {renderDesktopNavItems()}
-            </Box>
 
             <Box sx={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
               {['admin', 'server'].includes(user?.role) && (
@@ -519,6 +631,100 @@ const Header = memo(
           </Slide>
         </Drawer>
 
+        <Drawer
+          anchor="left"
+          open={isDesktopMenuOpen}
+          onClose={() => setIsDesktopMenuOpen(false)}
+          sx={{
+            display: { xs: 'none', md: 'block' },
+            '& .MuiDrawer-paper': {
+              width: '280px',
+              backgroundColor: 'var(--background-color)',
+              borderTopRightRadius: '16px',
+              borderBottomRightRadius: '16px',
+              boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
+            },
+            '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
+          }}
+        >
+          <Slide direction="right" in={isDesktopMenuOpen} timeout={100}>
+            <Box>
+              <Box sx={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', backgroundColor: '#fff' }}>
+                <Typography
+                  variant="h6"
+                  sx={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '18px' }}
+                >
+                  {customTheme?.logo_url ? (
+                    <img
+                      src={customTheme.logo_url}
+                      alt="Café Logo"
+                      style={{ maxHeight: '40px', maxWidth: '100px' }}
+                      onError={(e) => {
+                        console.error('Error loading logo image:', customTheme.logo_url);
+                        e.target.src = '/placeholder.jpg';
+                      }}
+                    />
+                  ) : (
+                    <>
+                      <RestaurantIcon sx={{ fontSize: '24px', color: 'var(--primary-color)' }} />
+                      Café Local
+                    </>
+                  )}
+                </Typography>
+                <IconButton
+                  onClick={() => setIsDesktopMenuOpen(false)}
+                  sx={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+              <Box className="header-drawer-content" sx={{ backgroundColor: 'var(--background-color)', padding: '12px', height: 'calc(100vh - 72px)', overflowY: 'auto' }}>
+                {renderDesktopNavItems()}
+                <Box className="header-user-section" sx={{ padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid rgba(0, 0, 0, 0.06)', marginTop: 'auto' }}>
+                  {user ? (
+                    <Button
+                      fullWidth
+                      variant="outlined"
+                      startIcon={<LogoutIcon />}
+                      onClick={handleLogout}
+                      sx={{
+                        borderRadius: '8px',
+                        borderColor: 'var(--primary-color)',
+                        color: '#000',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.06)' },
+                      }}
+                    >
+                      Sign Out
+                    </Button>
+                  ) : (
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<PersonIcon />}
+                      onClick={() => {
+                        navigate('/login');
+                        setIsDesktopMenuOpen(false);
+                      }}
+                      sx={{
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--primary-color)',
+                        color: '#000',
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        '&:hover': { backgroundColor: 'var(--secondary-color)' },
+                      }}
+                    >
+                      Staff Login
+                    </Button>
+                  )}
+                </Box>
+              </Box>
+            </Box>
+          </Slide>
+        </Drawer>
+
         <Box sx={{ height: { xs: '64px', md: '56px' } }} />
       </>
     );
@@ -542,16 +748,16 @@ const NavItem = memo(
         margin: '2px 12px',
         borderRadius: '8px',
         backgroundColor: isPrimary ? 'var(--primary-color)' : 'transparent',
-        color: isPrimary ? 'var(--text-color)' : '#000',
+        color: '#000',
         '&:hover': { backgroundColor: isPrimary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.06)' },
       }}
     >
-      <ListItemIcon sx={{ color: isPrimary ? 'var(--text-color)' : 'var(--primary-color)', minWidth: '36px' }}>
+      <ListItemIcon sx={{ color: isPrimary ? '#fff' : 'var(--primary-color)', minWidth: '36px' }}>
         {link.icon}
       </ListItemIcon>
       <ListItemText
         primary={link.label}
-        primaryTypographyProps={{ fontSize: '15px', fontWeight: isPrimary ? 600 : 500, color: isPrimary ? 'var(--text-color)' : '#000' }}
+        primaryTypographyProps={{ fontSize: '15px', fontWeight: isPrimary ? 600 : 500, color: '#000' }}
       />
       {!isPrimary && <ChevronRightIcon sx={{ color: '#C7C7CC', fontSize: '16px' }} />}
     </ListItemButton>
