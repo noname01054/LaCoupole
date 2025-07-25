@@ -466,16 +466,17 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
 
   const groupedItems = (() => {
     if (!orderDetails) {
+      console.log('No order details available for grouping');
       return [];
     }
 
     const acc = {};
 
     // Process menu items
-    const itemIds = orderDetails.item_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
+    const itemIds = (orderDetails.item_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
     const itemNames = orderDetails.item_names?.split(',') || [];
     const unitPrices = orderDetails.unit_prices?.split(',').map(price => safeParseFloat(price)) || [];
-    const menuQuantities = orderDetails.menu_quantities?.split(',').filter(q => q !== 'NULL' && q?.trim()).map(q => safeParseInt(q, 1)) || [];
+    const menuQuantities = (orderDetails.menu_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim()).map(q => safeParseInt(q, 1));
     const supplementIds = orderDetails.supplement_ids?.split(',') || [];
     const supplementNames = orderDetails.supplement_names?.split(',') || [];
     const supplementPrices = orderDetails.supplement_prices?.split(',').map(price => safeParseFloat(price)) || [];
@@ -503,28 +504,41 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           options: [],
         };
       }
-      if (acc[key].quantity === 0) {
-        acc[key].quantity = quantity;
-      }
-      console.log(`Traitement de l'article de menu : id=${id}, supplementId=${supplementId}, quantity=${quantity}, key=${key}`, { timestamp: new Date().toISOString() });
+      acc[key].quantity = quantity;
+      console.log(`Processed menu item: id=${id}, supplementId=${supplementId}, quantity=${quantity}, key=${key}`);
     });
 
     // Process breakfast items
-    const breakfastIds = orderDetails.breakfast_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
+    const breakfastIds = (orderDetails.breakfast_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
     const breakfastNames = orderDetails.breakfast_names?.split(',') || [];
-    const breakfastQuantities = orderDetails.breakfast_quantities?.split(',').filter(q => q !== 'NULL' && q?.trim()) || [];
+    const breakfastQuantities = (orderDetails.breakfast_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim()).map(q => safeParseInt(q, 1));
     const unitPricesBreakfast = orderDetails.unit_prices?.split(',').map(price => safeParseFloat(price)) || [];
     const breakfastImages = orderDetails.breakfast_images?.split(',') || [];
-    const optionIds = orderDetails.breakfast_option_ids?.split(',').filter(id => id?.trim() && !isNaN(parseInt(id))) || [];
+    const optionIds = (orderDetails.breakfast_option_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
     const optionNames = orderDetails.breakfast_option_names?.split(',') || [];
     const optionPrices = orderDetails.breakfast_option_prices?.split(',').map(price => safeParseFloat(price)) || [];
 
     breakfastIds.forEach((id, idx) => {
       if (idx >= breakfastQuantities.length || idx >= breakfastNames.length || idx >= unitPricesBreakfast.length) return;
 
-      const key = id.trim();
-      const quantity = safeParseInt(breakfastQuantities[idx], 1);
+      const quantity = breakfastQuantities[idx] || 1;
       const unitPrice = safeParseFloat(unitPricesBreakfast[idx], 0);
+      const imageUrl = idx < breakfastImages.length ? breakfastImages[idx]?.trim() || null : null;
+      const options = [];
+      const optionsPerItem = Math.floor(optionIds.length / (breakfastIds.length || 1));
+      const startIdx = idx * optionsPerItem;
+      const endIdx = (idx + 1) * optionsPerItem;
+
+      for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
+        if (optionIds[i]) {
+          options.push({
+            name: i < optionNames.length ? optionNames[i]?.trim() || 'Option inconnue' : 'Option inconnue',
+            price: i < optionPrices.length ? safeParseFloat(optionPrices[i], 0) : 0,
+          });
+        }
+      }
+
+      const key = `${id.trim()}_${options.map(opt => opt.name).join('-') || 'no-options'}`;
 
       if (!acc[key]) {
         acc[key] = {
@@ -534,27 +548,20 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           quantity: 0,
           unitPrice: unitPrice,
           baseUnitPrice: unitPrice,
-          imageUrl: breakfastImages[idx]?.trim() || null,
-          options: [],
+          imageUrl: imageUrl,
+          options: options,
+          supplementName: null,
         };
       }
-      acc[key].quantity += quantity;
-
-      const optionsPerItem = optionIds.length / (breakfastIds.length || 1);
-      const startIdx = Math.floor(idx * optionsPerItem);
-      const endIdx = Math.floor((idx + 1) * optionsPerItem);
-      for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
-        if (optionIds[i]) {
-          acc[key].options.push({
-            name: optionNames[i]?.trim() || 'Option inconnue',
-            price: safeParseFloat(optionPrices[i], 0),
-          });
-        }
-      }
-      acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
+      acc[key].quantity = quantity;
+      console.log(`Processed breakfast item: id=${id}, quantity=${quantity}, options=${JSON.stringify(options)}, key=${key}`);
     });
 
-    return Object.values(acc).filter(item => item.quantity > 0);
+    const items = Object.values(acc).filter(item => item.quantity > 0);
+    if (items.length === 0) {
+      console.log('No items grouped from orderDetails:', orderDetails);
+    }
+    return items;
   })();
 
   const deliveryAlertStyle = orderDetails?.delivery_address ? {
@@ -721,50 +728,54 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         <div className="order-waiting-items-section">
           <h2 className="order-waiting-section-title">Votre commande</h2>
           <div className="order-waiting-items">
-            {groupedItems.map((item, index) => {
-              const imageUrl = item.imageUrl && item.imageUrl !== 'null' ? item.imageUrl : '/placeholder.jpg';
-              const itemTotalPrice = safeParseFloat(item.baseUnitPrice, 0) * safeParseInt(item.quantity, 1);
+            {groupedItems.length > 0 ? (
+              groupedItems.map((item, index) => {
+                const imageUrl = item.imageUrl && item.imageUrl !== 'null' ? item.imageUrl : '/placeholder.jpg';
+                const itemTotalPrice = safeParseFloat(item.baseUnitPrice, 0) * safeParseInt(item.quantity, 1);
 
-              return (
-                <div
-                  key={`${item.type}-${item.id}-${index}`}
-                  className={`order-waiting-item-row ${itemsVisible ? 'visible' : ''}`}
-                  style={{ transitionDelay: `${index * 0.1}s` }}
-                >
-                  <img
-                    src={imageUrl}
-                    alt={item.name}
-                    className="order-waiting-item-image"
-                    onError={(e) => {
-                      console.error(`Erreur lors du chargement de l'image de l'article (${item.type}):`, item.imageUrl);
-                      e.target.src = '/placeholder.jpg';
-                    }}
-                  />
-                  <div className="order-waiting-item-details">
-                    <span className="order-waiting-item-name">{item.name}</span>
-                    {item.supplementName && (
-                      <span className="order-waiting-item-option">
-                        + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+${safeParseFloat(item.supplementPrice, 0).toFixed(2)} DT)`}
-                      </span>
-                    )}
-                    {(item.options || []).map((opt, optIdx) => (
-                      <span key={optIdx} className="order-waiting-item-option">
-                        + {opt.name} (+${safeParseFloat(opt.price, 0).toFixed(2)} DT)
-                      </span>
-                    ))}
-                    <span className="order-waiting-item-total">{itemTotalPrice.toFixed(2)} DT</span>
+                return (
+                  <div
+                    key={`${item.type}-${item.id}-${index}`}
+                    className={`order-waiting-item-row ${itemsVisible ? 'visible' : ''}`}
+                    style={{ transitionDelay: `${index * 0.1}s` }}
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={item.name}
+                      className="order-waiting-item-image"
+                      onError={(e) => {
+                        console.error(`Erreur lors du chargement de l'image de l'article (${item.type}):`, item.imageUrl);
+                        e.target.src = '/placeholder.jpg';
+                      }}
+                    />
+                    <div className="order-waiting-item-details">
+                      <span className="order-waiting-item-name">{item.name}</span>
+                      {item.supplementName && (
+                        <span className="order-waiting-item-option">
+                          + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+${safeParseFloat(item.supplementPrice, 0).toFixed(2)} DT)`}
+                        </span>
+                      )}
+                      {(item.options || []).map((opt, optIdx) => (
+                        <span key={optIdx} className="order-waiting-item-option">
+                          + {opt.name} {safeParseFloat(opt.price, 0) > 0 && `(+${safeParseFloat(opt.price, 0).toFixed(2)} DT)`}
+                        </span>
+                      ))}
+                      <span className="order-waiting-item-total">{itemTotalPrice.toFixed(2)} DT</span>
+                    </div>
+                    <span className="order-waiting-quantity-badge">{item.quantity}</span>
                   </div>
-                  <span className="order-waiting-quantity-badge">{item.quantity}</span>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <div className="order-waiting-no-items">Aucun article dans cette commande.</div>
+            )}
           </div>
         </div>
 
         <div className="order-waiting-total-section">
           <div className="order-waiting-total-row">
             <span className="order-waiting-total-label">Total</span>
-            <span className="order-waiting-total-value">{safeParseFloat(orderDetails.total_price).toFixed(2)} DT</span>
+            <span className="order-waiting-total-value">{safeParseFloat(orderDetails.total_price || 0).toFixed(2)} DT</span>
           </div>
         </div>
       </div>
