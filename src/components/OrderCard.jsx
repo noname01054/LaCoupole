@@ -120,6 +120,7 @@ function OrderCard({
       const unitPrice = safeParseFloat(unitPrices[idx], 0);
       const supplementName = supplementId !== 'no-supplement' ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null;
       const supplementPrice = supplementId !== 'no-supplement' ? safeParseFloat(supplementPrices[idx], 0) : 0;
+      // Align with hosted version: assume image_urls contain relative paths, prepend BACKEND_URL
       const imageUrl = imageUrls[idx]?.trim() ? `${BACKEND_URL}${imageUrls[idx].startsWith('/') ? '' : '/'}${imageUrls[idx]}` : null;
 
       if (!acc[key]) {
