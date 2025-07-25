@@ -120,7 +120,7 @@ function OrderCard({
       const unitPrice = safeParseFloat(unitPrices[idx], 0);
       const supplementName = supplementId !== 'no-supplement' ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null;
       const supplementPrice = supplementId !== 'no-supplement' ? safeParseFloat(supplementPrices[idx], 0) : 0;
-      const imageUrl = imageUrls[idx]?.trim() || null;
+      const imageUrl = imageUrls[idx]?.trim() ? `${BACKEND_URL}${imageUrls[idx].startsWith('/') ? '' : '/'}${imageUrls[idx]}` : null;
 
       if (!acc[key]) {
         acc[key] = {
@@ -177,7 +177,7 @@ function OrderCard({
           quantity: 0,
           unitPrice: unitPrice,
           baseUnitPrice: unitPrice,
-          imageUrl: breakfastImages[idx]?.trim() || null,
+          imageUrl: breakfastImages[idx]?.trim() ? `${BACKEND_URL}${breakfastImages[idx].startsWith('/') ? '' : '/'}${breakfastImages[idx]}` : null,
           options: [],
           optionIds: optionIdsForItem.map(id => safeParseInt(id, 0)),
           supplementIds: [],
@@ -707,9 +707,7 @@ function OrderCard({
             {/* Items List */}
             <div style={itemsListStyle}>
               {groupedItems.length > 0 ? groupedItems.map((item, index) => {
-                const imageUrl = item.imageUrl
-                  ? `${BACKEND_URL}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
-                  : FALLBACK_IMAGE;
+                const imageUrl = item.imageUrl || FALLBACK_IMAGE;
                 const itemTotalPrice = safeParseFloat(item.unitPrice, 0) * safeParseInt(item.quantity, 1);
 
                 return (
@@ -718,7 +716,10 @@ function OrderCard({
                       src={imageUrl}
                       alt={item.name}
                       style={itemImageStyle}
-                      onError={(e) => (e.target.src = FALLBACK_IMAGE)}
+                      onError={(e) => {
+                        console.error('Error loading order item image:', imageUrl);
+                        e.target.src = FALLBACK_IMAGE;
+                      }}
                       loading="lazy"
                     />
                     <div style={itemDetailsStyle}>
