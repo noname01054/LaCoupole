@@ -731,8 +731,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             {groupedItems.length > 0 ? (
               groupedItems.map((item, index) => {
                 const imageUrl = item.imageUrl && item.imageUrl !== 'null' ? item.imageUrl : '/placeholder.jpg';
-                const itemTotalPrice = safeParseFloat(item.baseUnitPrice, 0) * safeParseInt(item.quantity, 1);
-
                 return (
                   <div
                     key={`${item.type}-${item.id}-${index}`}
@@ -760,7 +758,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                           + {opt.name} {safeParseFloat(opt.price, 0) > 0 && `(+${safeParseFloat(opt.price, 0).toFixed(2)} DT)`}
                         </span>
                       ))}
-                      <span className="order-waiting-item-total">{itemTotalPrice.toFixed(2)} DT</span>
                     </div>
                     <span className="order-waiting-quantity-badge">{item.quantity}</span>
                   </div>
