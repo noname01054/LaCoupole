@@ -12,6 +12,11 @@ import {
   Divider,
   CircularProgress,
   Button,
+  Switch,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { Notifications as NotificationsIcon, Receipt, TableBar, CheckCircle } from '@mui/icons-material';
 import { api } from '../services/api';
@@ -90,18 +95,42 @@ const notificationStyles = {
     justifyContent: 'center',
     padding: '16px',
   },
+  soundToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '8px 16px',
+    borderTop: '1px solid #e5e7eb',
+    backgroundColor: '#ffffff',
+  },
+  dialog: {
+    maxWidth: '400px',
+    margin: 'auto',
+  },
+  dialogTitle: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#111827',
+  },
+  dialogContent: {
+    fontSize: '14px',
+    color: '#6b7280',
+  },
 };
 
 function NotificationBell({ user, navigate, notifications, handleNewNotification, socket }) {
   const [anchorEl, setAnchorEl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [showInteractionPrompt, setShowInteractionPrompt] = useState(false);
   const audioRef = useRef(null);
   const hasInteracted = useRef(false);
   const location = useLocation();
+  const pendingSounds = useRef([]); // Queue for pending notifications
+  const retryAttempts = useRef({}); // Track retries per notification
 
-  // Preload audio and validate
+  // Check and preload audio
   useEffect(() => {
-    if (!user) return;
+    if (!user || !['admin', 'server'].includes(user.role)) return;
 
     const audioPath = '/assets/notification.mp3';
     audioRef.current = new Audio(audioPath);
@@ -111,16 +140,24 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
     fetch(audioPath, { method: 'HEAD' })
       .then((response) => {
         if (!response.ok) {
-          console.error(`Audio file not found at ${audioPath}`, { timestamp: new Date().toISOString() });
-          toast.error('Notification sound file is missing.');
+          console.error(`Fichier audio introuvable à ${audioPath}`, { timestamp: new Date().toISOString() });
+          toast.error('Le fichier de son de notification est manquant.');
         } else {
-          console.log(`Audio file preloaded successfully: ${audioPath}`, { timestamp: new Date().toISOString() });
+          console.log(`Fichier audio préchargé avec succès : ${audioPath}`, { timestamp: new Date().toISOString() });
         }
       })
       .catch((err) => {
-        console.error('Error checking audio file:', err, { timestamp: new Date().toISOString() });
-        toast.error('Failed to load notification sound.');
+        console.error('Erreur lors de la vérification du fichier audio :', err, { timestamp: new Date().toISOString() });
+        toast.error('Échec du chargement du son de notification.');
       });
+
+    // Check interaction state from localStorage
+    const interactionState = localStorage.getItem('hasInteracted');
+    if (interactionState === 'true') {
+      hasInteracted.current = true;
+    } else {
+      setShowInteractionPrompt(true); // Show prompt if no prior interaction
+    }
 
     return () => {
       if (audioRef.current) {
@@ -132,60 +169,83 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
 
   // Handle user interaction and socket events
   useEffect(() => {
-    if (!user || !socket) return;
+    if (!user || !socket || !['admin', 'server'].includes(user.role)) return;
 
     const handleInteraction = () => {
-      hasInteracted.current = true;
-      console.log('User interaction detected, audio playback enabled', { timestamp: new Date().toISOString() });
+      if (!hasInteracted.current) {
+        hasInteracted.current = true;
+        localStorage.setItem('hasInteracted', 'true');
+        console.log('Interaction utilisateur détectée, lecture audio activée', { timestamp: new Date().toISOString() });
+        // Play all pending sounds
+        if (soundEnabled && pendingSounds.current.length > 0) {
+          pendingSounds.current.forEach((notification) => playSound(notification));
+          pendingSounds.current = [];
+          retryAttempts.current = {};
+        }
+      }
       window.removeEventListener('click', handleInteraction);
       window.removeEventListener('keydown', handleInteraction);
     };
     window.addEventListener('click', handleInteraction);
     window.addEventListener('keydown', handleInteraction);
 
-    const playSound = async () => {
+    const playSound = async (notification, attempt = 1) => {
+      if (!soundEnabled) {
+        console.log('Son désactivé par l’utilisateur, lecture ignorée', { notificationId: notification.id, timestamp: new Date().toISOString() });
+        return;
+      }
       if (!audioRef.current) {
-        console.warn('Audio not initialized', { timestamp: new Date().toISOString() });
+        console.warn('Audio non initialisé', { notificationId: notification.id, timestamp: new Date().toISOString() });
         return;
       }
       if (!hasInteracted.current) {
-        console.log('Waiting for user interaction to play sound', { timestamp: new Date().toISOString() });
-        // Retry after interaction
-        const retrySound = () => {
-          if (hasInteracted.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch((err) => {
-              console.error('Retry audio play error:', err, { timestamp: new Date().toISOString() });
-              toast.warn('Notification sound blocked by browser.');
-            });
-            window.removeEventListener('click', retrySound);
-            window.removeEventListener('keydown', retrySound);
-          }
-        };
-        window.addEventListener('click', retrySound);
-        window.addEventListener('keydown', retrySound);
+        console.log('Aucune interaction utilisateur, mise en file d’attente du son pour la notification :', notification.id, {
+          timestamp: new Date().toISOString(),
+        });
+        if (!pendingSounds.current.some((n) => n.id === notification.id)) {
+          pendingSounds.current.push(notification);
+        }
         return;
       }
       try {
         audioRef.current.currentTime = 0;
         await audioRef.current.play();
-        console.log('Notification sound played successfully', { timestamp: new Date().toISOString() });
+        console.log('Son de notification joué avec succès pour :', notification.id, {
+          timestamp: new Date().toISOString(),
+        });
+        retryAttempts.current[notification.id] = 0; // Reset retries on success
       } catch (err) {
-        console.error('Audio playback failed:', err, { timestamp: new Date().toISOString() });
-        toast.warn('Notification sound blocked by browser.');
+        console.error('Échec de la lecture audio :', err, {
+          notificationId: notification.id,
+          attempt,
+          timestamp: new Date().toISOString(),
+        });
+        const maxRetries = 3;
+        if (attempt <= maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
+          console.log(`Nouvelle tentative de lecture du son pour la notification ${notification.id} après ${delay}ms`, {
+            attempt,
+            timestamp: new Date().toISOString(),
+          });
+          setTimeout(() => playSound(notification, attempt + 1), delay);
+          retryAttempts.current[notification.id] = attempt;
+        } else {
+          console.warn(`Nombre maximum de tentatives (${maxRetries}) atteint pour la notification ${notification.id}`, {
+            timestamp: new Date().toISOString(),
+          });
+          toast.warn('Le son de notification est bloqué par le navigateur. Veuillez activer le son ou interagir avec la page.');
+        }
       }
     };
 
     const handleSocketNotification = (notification) => {
       if (!notification?.type || !notification?.id) {
-        console.warn('Invalid notification data received:', notification, { timestamp: new Date().toISOString() });
+        console.warn('Données de notification invalides reçues :', notification, { timestamp: new Date().toISOString() });
         return;
       }
       if (notification.type === 'order' && !notification.is_read) {
-        console.log('New order notification received, attempting to play sound:', notification, {
-          timestamp: new Date().toISOString(),
-        });
-        playSound();
+        console.log('Nouvelle notification de commande reçue :', notification, { timestamp: new Date().toISOString() });
+        playSound(notification);
       }
       handleNewNotification(notification);
     };
@@ -193,13 +253,11 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
     socket.on('newNotification', handleSocketNotification);
 
     socket.on('connect', () => {
-      console.log('Socket connected, checking for pending notifications', { timestamp: new Date().toISOString() });
+      console.log('Socket connecté, vérification des notifications en attente', { timestamp: new Date().toISOString() });
       const unreadOrder = notifications.find((n) => n.type === 'order' && !n.is_read);
-      if (unreadOrder) {
-        console.log('Found unread order notification, playing sound:', unreadOrder, {
-          timestamp: new Date().toISOString(),
-        });
-        playSound();
+      if (unreadOrder && soundEnabled) {
+        console.log('Notification de commande non lue trouvée :', unreadOrder, { timestamp: new Date().toISOString() });
+        playSound(unreadOrder);
       }
     });
 
@@ -209,11 +267,18 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
       socket.off('newNotification', handleSocketNotification);
       socket.off('connect');
     };
-  }, [user, socket, notifications, handleNewNotification]);
+  }, [user, socket, notifications, handleNewNotification, soundEnabled]);
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget);
     hasInteracted.current = true;
+    localStorage.setItem('hasInteracted', 'true');
+    // Play all pending sounds
+    if (soundEnabled && pendingSounds.current.length > 0) {
+      pendingSounds.current.forEach((notification) => playSound(notification));
+      pendingSounds.current = [];
+      retryAttempts.current = {};
+    }
   };
 
   const handleClose = () => {
@@ -236,8 +301,8 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
           navigate(targetPath, { replace: true });
         }
       } else if (notification.type === 'order') {
-        console.warn('Invalid order notification: missing reference_id', notification, { timestamp: new Date().toISOString() });
-        toast.error('Cannot navigate to order: invalid order ID');
+        console.warn('Notification de commande invalide : reference_id manquant', notification, { timestamp: new Date().toISOString() });
+        toast.error('Impossible de naviguer vers la commande : ID de commande invalide');
         if (location.pathname !== '/staff') {
           navigate('/staff', { replace: true });
         }
@@ -248,8 +313,8 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
         }
       }
     } catch (err) {
-      console.error('Error processing notification:', err, { timestamp: new Date().toISOString() });
-      toast.error('Failed to process notification');
+      console.error('Erreur lors du traitement de la notification :', err, { timestamp: new Date().toISOString() });
+      toast.error('Échec du traitement de la notification');
     }
   };
 
@@ -258,13 +323,37 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
       setIsLoading(true);
       await api.clearNotifications();
       handleNewNotification({ clearAll: true });
-      toast.success('All notifications cleared');
+      toast.success('Toutes les notifications ont été supprimées');
     } catch (err) {
-      console.error('Error clearing notifications:', err, { timestamp: new Date().toISOString() });
-      toast.error('Failed to clear notifications');
+      console.error('Erreur lors de la suppression des notifications :', err, { timestamp: new Date().toISOString() });
+      toast.error('Échec de la suppression des notifications');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSoundToggle = (event) => {
+    setSoundEnabled(event.target.checked);
+    if (event.target.checked && pendingSounds.current.length > 0) {
+      pendingSounds.current.forEach((notification) => playSound(notification));
+      pendingSounds.current = [];
+      retryAttempts.current = {};
+    }
+  };
+
+  const handleInteractionConfirm = () => {
+    hasInteracted.current = true;
+    localStorage.setItem('hasInteracted', 'true');
+    setShowInteractionPrompt(false);
+    // Play any pending sounds
+    if (soundEnabled && pendingSounds.current.length > 0) {
+      pendingSounds.current.forEach((notification) => playSound(notification));
+      pendingSounds.current = [];
+      retryAttempts.current = {};
+    }
+    // Force page refresh to ensure orders are fetched
+    console.log('Interaction confirmée, actualisation de la page pour récupérer les commandes', { timestamp: new Date().toISOString() });
+    window.location.reload();
   };
 
   const open = Boolean(anchorEl);
@@ -294,7 +383,7 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
                 sx={notificationStyles.clearButton}
                 disabled={isLoading}
               >
-                Clear All
+                Tout supprimer
               </Button>
             )}
           </Box>
@@ -305,7 +394,7 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
           </Box>
         ) : notifications.length === 0 ? (
           <Typography sx={notificationStyles.emptyMessage}>
-            No notifications yet
+            Aucune notification pour le moment
           </Typography>
         ) : (
           <List sx={notificationStyles.notificationList}>
@@ -328,7 +417,7 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
                   primary={notification.message}
                   secondary={
                     <Typography sx={notificationStyles.timestamp}>
-                      {new Date(notification.created_at).toLocaleString()}
+                      {new Date(notification.created_at).toLocaleString('fr-FR')}
                     </Typography>
                   }
                 />
@@ -336,7 +425,33 @@ function NotificationBell({ user, navigate, notifications, handleNewNotification
             ))}
           </List>
         )}
+        <Box sx={notificationStyles.soundToggle}>
+          <Typography sx={{ fontSize: '14px', color: '#111827' }}>Son des notifications</Typography>
+          <Switch
+            checked={soundEnabled}
+            onChange={handleSoundToggle}
+            color="primary"
+            size="small"
+          />
+        </Box>
       </Popover>
+      <Dialog
+        open={showInteractionPrompt}
+        onClose={handleInteractionConfirm}
+        sx={notificationStyles.dialog}
+      >
+        <DialogTitle sx={notificationStyles.dialogTitle}>Activer les notifications</DialogTitle>
+        <DialogContent sx={notificationStyles.dialogContent}>
+          <Typography>
+            Pour garantir la réception des notifications et des commandes, veuillez cliquer sur "Confirmer" pour activer la lecture audio et actualiser la page.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleInteractionConfirm} color="primary" variant="contained">
+            Confirmer
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 }
