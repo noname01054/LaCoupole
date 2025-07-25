@@ -416,12 +416,6 @@ function OrderCard({
     marginBottom: '2px',
   };
 
-  const itemPriceStyle = {
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#059669',
-  };
-
   const quantityBadgeStyle = {
     backgroundColor: '#e5e7eb',
     color: '#374151',
@@ -670,7 +664,6 @@ function OrderCard({
               {groupedItems.length > 0 ? (
                 groupedItems.map((item, index) => {
                   const imageUrl = item.imageUrl || FALLBACK_IMAGE;
-                  const itemTotalPrice = safeParseFloat(item.unitPrice, 0) * safeParseInt(item.quantity, 1);
 
                   return (
                     <div
@@ -692,15 +685,14 @@ function OrderCard({
                         <span style={itemNameStyle}>{item.name}</span>
                         {item.supplementName && (
                           <span style={itemOptionStyle}>
-                            + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+${safeParseFloat(item.supplementPrice, 0).toFixed(2)} DT)`}
+                            + {item.supplementName}
                           </span>
                         )}
                         {(item.options || []).map((opt, optIdx) => (
                           <span key={optIdx} style={itemOptionStyle}>
-                            + {opt.name} (+${safeParseFloat(opt.price, 0).toFixed(2)} DT)
+                            + {opt.name}
                           </span>
                         ))}
-                        <span style={itemPriceStyle}>{itemTotalPrice.toFixed(2)} DT</span>
                       </div>
                       <span style={quantityBadgeStyle}>{item.quantity}</span>
                     </div>
