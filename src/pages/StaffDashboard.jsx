@@ -14,6 +14,7 @@ import { Receipt, CheckCircle, Cancel, Refresh, Assignment, ShoppingCart } from 
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
+import PropTypes from 'prop-types';
 import OrderCard from '../components/OrderCard';
 import './css/StaffDashboard.css';
 
@@ -34,57 +35,54 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     const diffMs = now - orderTime;
     const diffMins = Math.round(diffMs / 60000);
 
-    if (diffMs < 0) return 'just now';
-    if (diffMins < 1) return 'just now';
-    if (diffMins === 1) return '1 min ago';
-    if (diffMins < 60) return `${diffMins} mins ago`;
+    if (diffMs < 0) return 'à l’instant';
+    if (diffMins < 1) return 'à l’instant';
+    if (diffMins === 1) return 'il y a 1 min';
+    if (diffMins < 60) return `il y a ${diffMins} min`;
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours === 1) return '1 hour ago';
-    if (diffHours < 24) return `${diffHours} hours ago`;
+    if (diffHours === 1) return 'il y a 1 heure';
+    if (diffHours < 24) return `il y a ${diffHours} heures`;
     const diffDays = Math.floor(diffHours / 24);
-    return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+    return diffDays === 1 ? 'il y a 1 jour' : `il y a ${diffDays} jours`;
   }, []);
 
   const processOrder = useCallback((order) => {
-    console.log('Processing order:', order);
     if (!order?.id) {
       console.error('Invalid order data:', order);
       return null;
     }
+
+    // Normalize fields to handle both string and array formats
+    const normalizeField = (field) =>
+      Array.isArray(field) ? field : typeof field === 'string' && field ? field.split(',') : [];
+
     return {
       ...order,
       approved: Number(order.approved || 0),
-      status: order.status || 'pending',
-      items: order.item_ids
-        ? order.item_ids.split(',').map((id, index) => ({
-            id: parseInt(id) || 0,
-            name: order.item_names ? order.item_names.split(',')[index]?.trim() || 'Unknown Item' : 'Unknown Item',
-            quantity: order.menu_quantities ? parseInt(order.menu_quantities.split(',')[index] || 0) : 0,
-            unit_price: order.unit_prices ? parseFloat(order.unit_prices.split(',')[index] || 0) : 0,
-            image_url: order.image_urls ? order.image_urls.split(',')[index]?.trim() || null : null,
-            supplement_name: order.supplement_names
-              ? order.supplement_names.split(',')[index]?.trim() || 'No Supplement'
-              : 'No Supplement',
-            supplement_price: order.supplement_prices
-              ? parseFloat(order.supplement_prices.split(',')[index] || 0)
-              : 0,
-          }))
-        : [],
-      breakfastItems: order.breakfast_ids
-        ? order.breakfast_ids.split(',').map((id, index) => ({
-            id: parseInt(id) || 0,
-            name: order.breakfast_names ? order.breakfast_names.split(',')[index]?.trim() || 'Unknown Breakfast' : 'Unknown Breakfast',
-            quantity: order.breakfast_quantities ? parseInt(order.breakfast_quantities.split(',')[index] || 0) : 0,
-            unit_price: order.unit_prices ? parseFloat(order.unit_prices.split(',')[index] || 0) : 0,
-            image_url: order.breakfast_images ? order.breakfast_images.split(',')[index]?.trim() || null : null,
-            option_names: order.breakfast_option_names
-              ? order.breakfast_option_names.split(',')[index]?.split('|').map(name => name?.trim() || 'Unknown Option') || []
-              : [],
-            option_prices: order.breakfast_option_prices
-              ? order.breakfast_option_prices.split(',')[index]?.split('|').map(price => parseFloat(price || 0)) || []
-              : [],
-          }))
-        : [],
+      status: order.status || 'en attente',
+      item_ids: normalizeField(order.item_ids),
+      item_names: normalizeField(order.item_names),
+      unit_prices: normalizeField(order.unit_prices).map((price) => parseFloat(price) || 0),
+      menu_quantities: normalizeField(order.menu_quantities).map((qty) => parseInt(qty, 10) || 0),
+      supplement_ids: normalizeField(order.supplement_ids),
+      supplement_names: normalizeField(order.supplement_names),
+      supplement_prices: normalizeField(order.supplement_prices).map((price) => parseFloat(price) || 0),
+      image_urls: normalizeField(order.image_urls),
+      breakfast_ids: normalizeField(order.breakfast_ids),
+      breakfast_names: normalizeField(order.breakfast_names),
+      breakfast_quantities: normalizeField(order.breakfast_quantities).map((qty) => parseInt(qty, 10) || 0),
+      breakfast_images: normalizeField(order.breakfast_images),
+      breakfast_option_ids: normalizeField(order.breakfast_option_ids),
+      breakfast_option_names: normalizeField(order.breakfast_option_names).map((names) =>
+        typeof names === 'string' && names
+          ? names.split('|').map((name) => name?.trim() || 'Option inconnue')
+          : ['Option inconnue']
+      ),
+      breakfast_option_prices: normalizeField(order.breakfast_option_prices).map((prices) =>
+        typeof prices === 'string' && prices
+          ? prices.split('|').map((price) => parseFloat(price) || 0)
+          : []
+      ),
       timeAgo: getTimeAgo(order.created_at),
     };
   }, [getTimeAgo]);
@@ -94,7 +92,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     setError(null);
     try {
       if (!user || !['admin', 'server'].includes(user.role)) {
-        throw new Error('You do not have permission to view orders');
+        throw new Error('Vous n\'avez pas la permission de voir les commandes');
       }
 
       const params = {};
@@ -104,17 +102,23 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
       const res = await api.get('/orders', { params });
       const fetchedOrders = res.data.data
         .map(processOrder)
-        .filter(order => order !== null)
+        .filter((order) => {
+          if (!order) {
+            console.warn('Filtered out invalid order');
+            return false;
+          }
+          return true;
+        })
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
       setOrders(fetchedOrders);
-      console.log('Orders fetched successfully:', fetchedOrders.length);
+      console.log('Commandes récupérées avec succès:', fetchedOrders.length);
     } catch (err) {
-      console.error('Error fetching orders:', {
+      console.error('Erreur lors de la récupération des commandes:', {
         message: err.message,
         status: err.response?.status,
         data: err.response?.data,
       });
-      const errorMessage = err.response?.data?.error || err.message || 'Failed to load orders';
+      const errorMessage = err.response?.data?.error || err.message || 'Échec du chargement des commandes';
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -128,7 +132,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     const expandOrderId = parseInt(queryParams.get('expandOrder'));
 
     if (!isLoading && orders.length > 0 && !hasScrolled.current && !isNaN(scrollToOrderId) && orderRefs.current[scrollToOrderId]) {
-      const orderExists = orders.some(order => order.id === scrollToOrderId);
+      const orderExists = orders.some((order) => order.id === scrollToOrderId);
       if (orderExists) {
         orderRefs.current[scrollToOrderId].scrollIntoView({ behavior: 'smooth', block: 'start' });
         hasScrolled.current = true;
@@ -138,7 +142,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
           navigate(`/staff?${queryParams.toString()}`, { replace: true });
         }, 1000);
       } else {
-        toast.warn(`Order #${scrollToOrderId} not found in current view`);
+        toast.warn(`Commande #${scrollToOrderId} non trouvée dans la vue actuelle`);
         queryParams.delete('scrollTo');
         queryParams.delete('expandOrder');
         navigate(`/staff?${queryParams.toString()}`, { replace: true });
@@ -150,190 +154,185 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     handleScrollAndExpand();
   }, [handleScrollAndExpand]);
 
-  const handleNewOrder = useCallback((order) => {
-    console.log('handleNewOrder triggered with order:', order);
-    if (!order?.id) {
-      console.error('Invalid newOrder data:', order);
-      toast.warn('Received invalid order data');
-      return;
-    }
+  const handleNewOrder = useCallback(
+    (order) => {
+      console.log('handleNewOrder déclenché avec la commande:', order);
+      if (!order?.id) {
+        console.error('Données de nouvelle commande invalides:', order);
+        toast.warn('Données de commande reçues invalides');
+        return;
+      }
 
-    const normalizedOrder = { ...order, approved: Number(order.approved || 0), status: order.status || 'pending' };
-    console.log('Normalized order:', normalizedOrder);
+      const normalizedOrder = { ...order, approved: Number(order.approved || 0), status: order.status || 'en attente' };
+      console.log('Commande normalisée:', normalizedOrder);
 
-    const now = new Date();
-    const orderTime = new Date(normalizedOrder.created_at);
-    const diffMs = now - orderTime;
-    const diffHours = diffMs / (1000 * 60 * 60);
-    const matchesTimeRange =
-      timeRange === 'all' ||
-      (timeRange === 'day' && diffHours < 24 && orderTime >= new Date().setHours(0, 0, 0, 0)) ||
-      (timeRange === 'hour' && diffHours < 1);
-    const matchesApproved =
-      approvedFilter === '' ||
-      (approvedFilter === '1' && normalizedOrder.approved === 1) ||
-      (approvedFilter === '0' && normalizedOrder.approved === 0);
+      const now = new Date();
+      const orderTime = new Date(normalizedOrder.created_at);
+      const diffMs = now - orderTime;
+      const diffHours = diffMs / (1000 * 60 * 60);
+      const matchesTimeRange =
+        timeRange === 'all' ||
+        (timeRange === 'day' && diffHours < 24 && orderTime >= new Date().setHours(0, 0, 0, 0)) ||
+        (timeRange === 'hour' && diffHours < 1);
+      const matchesApproved =
+        approvedFilter === '' ||
+        (approvedFilter === '1' && normalizedOrder.approved === 1) ||
+        (approvedFilter === '0' && normalizedOrder.approved === 0);
 
-    console.log('Filter check:', { matchesTimeRange, matchesApproved, timeRange, approvedFilter });
+      console.log('Vérification des filtres:', { matchesTimeRange, matchesApproved, timeRange, approvedFilter });
 
-    if (matchesTimeRange && matchesApproved) {
-      setOrders((prev) => {
-        if (prev.some((o) => o.id === normalizedOrder.id)) {
-          console.log('Order already exists, skipping:', normalizedOrder.id);
-          return prev;
-        }
-        const enrichedOrder = processOrder(normalizedOrder);
-        if (!enrichedOrder) {
-          console.error('Failed to process order:', normalizedOrder);
-          return prev;
-        }
-        console.log('Adding new order to state:', enrichedOrder);
-        handleNewNotification({
-          id: `order_${normalizedOrder.id}`,
-          type: 'order',
-          message: `New order #${normalizedOrder.id} received`,
-          reference_id: normalizedOrder.id.toString(),
-          is_read: 1,
-          created_at: new Date().toISOString(),
+      if (matchesTimeRange && matchesApproved) {
+        setOrders((prev) => {
+          if (prev.some((o) => o.id === normalizedOrder.id)) {
+            console.log('Commande déjà existante, ignorée:', normalizedOrder.id);
+            return prev;
+          }
+          const enrichedOrder = processOrder(normalizedOrder);
+          if (!enrichedOrder) {
+            console.error('Échec du traitement de la commande:', normalizedOrder);
+            return prev;
+          }
+          console.log('Ajout de la nouvelle commande à l\'état:', enrichedOrder);
+          handleNewNotification({
+            id: `order_${normalizedOrder.id}`,
+            type: 'order',
+            message: `Nouvelle commande #${normalizedOrder.id} reçue`,
+            reference_id: normalizedOrder.id.toString(),
+            is_read: 1,
+            created_at: new Date().toISOString(),
+          });
+          toast.info(`Nouvelle commande #${normalizedOrder.id} reçue !`, { autoClose: 5000 });
+          const newOrders = [enrichedOrder, ...prev].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          console.log('État des commandes mis à jour:', newOrders.length);
+          return newOrders;
         });
-        toast.info(`New order #${normalizedOrder.id} received!`, { autoClose: 5000 });
-        const newOrders = [enrichedOrder, ...prev].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        console.log('Updated orders state:', newOrders.length);
-        return newOrders;
-      });
-    } else {
-      console.log('Order filtered out:', { orderId: order.id, matchesTimeRange, matchesApproved });
-    }
-  }, [timeRange, approvedFilter, handleNewNotification, processOrder]);
+      } else {
+        console.log('Commande filtrée:', { orderId: order.id, matchesTimeRange, matchesApproved });
+      }
+    },
+    [timeRange, approvedFilter, handleNewNotification, processOrder]
+  );
 
-  const handleOrderUpdate = useCallback(({ orderId, status, orderDetails }) => {
-    console.log('StaffDashboard received orderUpdate:', { orderId, status, orderDetails });
-    if (!orderId) {
-      console.error('Invalid orderUpdate data:', { orderId, status, orderDetails });
-      return;
-    }
-    setOrders((prev) => {
-      const updatedOrders = prev.map((order) =>
-        order.id === parseInt(orderId)
-          ? { ...order, status, ...orderDetails, approved: Number(orderDetails.approved || 0), timeAgo: getTimeAgo(order.created_at) }
-          : order
-      ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      return updatedOrders;
-    });
-    toast.info(`Order ${orderId} updated to ${status}`);
-  }, [getTimeAgo]);
-
-  const handleOrderApproved = useCallback(({ orderId, status, orderDetails }) => {
-    console.log('StaffDashboard received orderApproved:', { orderId, status, orderDetails });
-    if (!orderId) {
-      console.error('Invalid orderApproved data:', { orderId, orderDetails });
-      return;
-    }
-    setOrders((prev) => {
-      const updatedOrders = prev.map((order) =>
-        order.id === parseInt(orderId)
-          ? { ...order, status: status || 'preparing', ...orderDetails, approved: 1, timeAgo: getTimeAgo(order.created_at) }
-          : order
-      ).filter((order) => (
-        approvedFilter === '' ||
-        (approvedFilter === '1' && order.approved === 1) ||
-        (approvedFilter === '0' && order.approved === 0)
-      )).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      return updatedOrders;
-    });
-    toast.info(`Order #${orderId} approved`);
-    if (socket && socket.connected) {
-      socket.emit('orderApproved', {
-        orderId,
-        status: status || 'preparing',
-        orderDetails: {
-          approved: 1,
-          status: status || 'preparing',
-          item_ids: orderDetails.item_ids || '',
-          item_names: orderDetails.item_names || '',
-          menu_quantities: orderDetails.menu_quantities || '',
-          unit_prices: orderDetails.unit_prices || '',
-          supplement_ids: orderDetails.supplement_ids || '',
-          supplement_names: orderDetails.supplement_names || '',
-          supplement_prices: orderDetails.supplement_prices || '',
-          image_urls: orderDetails.image_urls || '',
-          breakfast_ids: orderDetails.breakfast_ids || '',
-          breakfast_names: orderDetails.breakfast_names || '',
-          breakfast_quantities: orderDetails.breakfast_quantities || '',
-          breakfast_images: orderDetails.breakfast_images || '',
-          breakfast_option_ids: orderDetails.breakfast_option_ids || '',
-          breakfast_option_names: orderDetails.breakfast_option_names || '',
-          breakfast_option_prices: orderDetails.breakfast_option_prices || '',
-          total_price: orderDetails.total_price || 0,
-          order_type: orderDetails.order_type || 'local',
-          table_number: orderDetails.table_number || null,
-          delivery_address: orderDetails.delivery_address || null,
-          created_at: orderDetails.created_at || new Date().toISOString(),
-        },
+  const handleOrderUpdate = useCallback(
+    ({ orderId, status, orderDetails }) => {
+      console.log('StaffDashboard a reçu une mise à jour de commande:', { orderId, status, orderDetails });
+      if (!orderId) {
+        console.error('Données de mise à jour de commande invalides:', { orderId, status, orderDetails });
+        return;
+      }
+      setOrders((prev) => {
+        const updatedOrders = prev
+          .map((order) =>
+            order.id === parseInt(orderId)
+              ? processOrder({ ...order, status, ...orderDetails, approved: Number(orderDetails.approved || 0) })
+              : order
+          )
+          .filter((order) => order !== null)
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        return updatedOrders;
       });
-    } else {
-      console.warn('Socket not connected, cannot emit orderApproved event');
-      toast.warn('Real-time updates may be delayed due to connection issues');
-    }
-  }, [approvedFilter, getTimeAgo, socket]);
+      toast.info(`Commande ${orderId} mise à jour à ${status}`);
+    },
+    [processOrder]
+  );
 
-  const handleOrderCancelled = useCallback(({ orderId, status, orderDetails }) => {
-    console.log('StaffDashboard received orderCancelled:', { orderId, status, orderDetails });
-    if (!orderId) {
-      console.error('Invalid orderCancelled data:', { orderId, orderDetails });
-      return;
-    }
-    setOrders((prev) => {
-      const updatedOrders = prev.map((order) =>
-        order.id === parseInt(orderId)
-          ? { ...order, status: status || 'cancelled', ...orderDetails, approved: 0, timeAgo: getTimeAgo(order.created_at) }
-          : order
-      ).filter((order) => (
-        approvedFilter === '' ||
-        (approvedFilter === '1' && order.approved === 1) ||
-        (approvedFilter === '0' && order.approved === 0)
-      )).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      return updatedOrders;
-    });
-    toast.info(`Order #${orderId} cancelled`);
-    if (socket && socket.connected) {
-      socket.emit('orderCancelled', {
-        orderId,
-        status: status || 'cancelled',
-        orderDetails: {
-          approved: 0,
-          status: status || 'cancelled',
-          item_ids: orderDetails.item_ids || '',
-          item_names: orderDetails.item_names || '',
-          menu_quantities: orderDetails.menu_quantities || '',
-          unit_prices: orderDetails.unit_prices || '',
-          supplement_ids: orderDetails.supplement_ids || '',
-          supplement_names: orderDetails.supplement_names || '',
-          supplement_prices: orderDetails.supplement_prices || '',
-          image_urls: orderDetails.image_urls || '',
-          breakfast_ids: orderDetails.breakfast_ids || '',
-          breakfast_names: orderDetails.breakfast_names || '',
-          breakfast_quantities: orderDetails.breakfast_quantities || '',
-          breakfast_images: orderDetails.breakfast_images || '',
-          breakfast_option_ids: orderDetails.breakfast_option_ids || '',
-          breakfast_option_names: orderDetails.breakfast_option_names || '',
-          breakfast_option_prices: orderDetails.breakfast_option_prices || '',
-          total_price: orderDetails.total_price || 0,
-          order_type: orderDetails.order_type || 'local',
-          table_number: orderDetails.table_number || null,
-          delivery_address: orderDetails.delivery_address || null,
-          created_at: orderDetails.created_at || new Date().toISOString(),
-        },
+  const handleOrderApproved = useCallback(
+    ({ orderId, status, orderDetails }) => {
+      console.log('StaffDashboard a reçu une commande approuvée:', { orderId, status, orderDetails });
+      if (!orderId) {
+        console.error('Données de commande approuvée invalides:', { orderId, orderDetails });
+        return;
+      }
+      setOrders((prev) => {
+        const updatedOrders = prev
+          .map((order) =>
+            order.id === parseInt(orderId)
+              ? processOrder({
+                  ...order,
+                  status: status || 'en préparation',
+                  ...orderDetails,
+                  approved: 1,
+                })
+              : order
+          )
+          .filter((order) => order !== null)
+          .filter((order) => (
+            approvedFilter === '' ||
+            (approvedFilter === '1' && order.approved === 1) ||
+            (approvedFilter === '0' && order.approved === 0)
+          ))
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        return updatedOrders;
       });
-    } else {
-      console.warn('Socket not connected, cannot emit orderCancelled event');
-      toast.warn('Real-time updates may be delayed due to connection issues');
-    }
-  }, [approvedFilter, getTimeAgo, socket]);
+      toast.info(`Commande #${orderId} approuvée`);
+      if (socket && socket.connected) {
+        socket.emit('orderApproved', {
+          orderId,
+          status: status || 'en préparation',
+          orderDetails: processOrder({
+            ...orderDetails,
+            approved: 1,
+            status: status || 'en préparation',
+          }),
+        });
+      } else {
+        console.warn('Socket non connecté, impossible d\'émettre l\'événement orderApproved');
+        toast.warn('Les mises à jour en temps réel peuvent être retardées en raison de problèmes de connexion');
+      }
+    },
+    [approvedFilter, processOrder, socket]
+  );
+
+  const handleOrderCancelled = useCallback(
+    ({ orderId, status, orderDetails }) => {
+      console.log('StaffDashboard a reçu une commande annulée:', { orderId, status, orderDetails });
+      if (!orderId) {
+        console.error('Données de commande annulée invalides:', { orderId, orderDetails });
+        return;
+      }
+      setOrders((prev) => {
+        const updatedOrders = prev
+          .map((order) =>
+            order.id === parseInt(orderId)
+              ? processOrder({
+                  ...order,
+                  status: status || 'annulée',
+                  ...orderDetails,
+                  approved: 0,
+                })
+              : order
+          )
+          .filter((order) => order !== null)
+          .filter((order) => (
+            approvedFilter === '' ||
+            (approvedFilter === '1' && order.approved === 1) ||
+            (approvedFilter === '0' && order.approved === 0)
+          ))
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        return updatedOrders;
+      });
+      toast.info(`Commande #${orderId} annulée`);
+      if (socket && socket.connected) {
+        socket.emit('orderCancelled', {
+          orderId,
+          status: status || 'annulée',
+          orderDetails: processOrder({
+            ...orderDetails,
+            approved: 0,
+            status: status || 'annulée',
+          }),
+        });
+      } else {
+        console.warn('Socket non connecté, impossible d\'émettre l\'événement orderCancelled');
+        toast.warn('Les mises à jour en temps réel peuvent être retardées en raison de problèmes de connexion');
+      }
+    },
+    [approvedFilter, processOrder, socket]
+  );
 
   useEffect(() => {
     if (!user || !handleNewNotification || !socket) {
-      setError('Missing user, notification handler, or socket');
+      setError('Utilisateur, gestionnaire de notifications ou socket manquant');
       setIsLoading(false);
       return;
     }
@@ -350,41 +349,47 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
       socket.off('orderUpdate', handleOrderUpdate);
       socket.off('orderApproved', handleOrderApproved);
       socket.off('orderCancelled', handleOrderCancelled);
-      console.log('StaffDashboard socket listeners cleaned up');
+      console.log('Nettoyage des écouteurs de socket de StaffDashboard');
     };
   }, [user, handleNewNotification, socket, fetchOrders, handleNewOrder, handleOrderUpdate, handleOrderApproved, handleOrderCancelled]);
 
-  const approveOrder = useCallback(async (orderId) => {
-    if (!orderId || isNaN(orderId)) {
-      console.error('Invalid orderId:', orderId);
-      toast.error('Invalid order ID');
-      return;
-    }
-    try {
-      const response = await api.approveOrder(orderId);
-      const orderDetails = response.data.order || { approved: 1, status: 'preparing' };
-      handleOrderApproved({ orderId, status: 'preparing', orderDetails });
-    } catch (error) {
-      console.error('Error approving order:', error);
-      toast.error(error.response?.data?.error || 'Failed to approve order');
-    }
-  }, [handleOrderApproved]);
+  const approveOrder = useCallback(
+    async (orderId) => {
+      if (!orderId || isNaN(orderId)) {
+        console.error('ID de commande invalide:', orderId);
+        toast.error('ID de commande invalide');
+        return;
+      }
+      try {
+        const response = await api.approveOrder(orderId, {});
+        const orderDetails = response.data.order || { approved: 1, status: 'en préparation' };
+        handleOrderApproved({ orderId, status: 'en préparation', orderDetails });
+      } catch (error) {
+        console.error('Erreur lors de l\'approbation de la commande:', error);
+        toast.error(error.response?.data?.error || 'Échec de l\'approbation de la commande');
+      }
+    },
+    [handleOrderApproved]
+  );
 
-  const cancelOrder = useCallback(async (orderId, restoreStock = false) => {
-    if (!orderId || isNaN(orderId)) {
-      console.error('Invalid orderId:', orderId);
-      toast.error('Invalid order ID');
-      return;
-    }
-    try {
-      const response = await api.cancelOrder(orderId, { restoreStock });
-      const orderDetails = response.data.order || { approved: 0, status: 'cancelled' };
-      handleOrderCancelled({ orderId, status: 'cancelled', orderDetails });
-    } catch (error) {
-      console.error('Error cancelling order:', error);
-      toast.error(error.response?.data?.error || 'Failed to cancel order');
-    }
-  }, [handleOrderCancelled]);
+  const cancelOrder = useCallback(
+    async (orderId, { restoreStock = false }) => {
+      if (!orderId || isNaN(orderId)) {
+        console.error('ID de commande invalide:', orderId);
+        toast.error('ID de commande invalide');
+        return;
+      }
+      try {
+        const response = await api.cancelOrder(orderId, { restoreStock });
+        const orderDetails = response.data.order || { approved: 0, status: 'annulée' };
+        handleOrderCancelled({ orderId, status: 'annulée', orderDetails });
+      } catch (error) {
+        console.error('Erreur lors de l\'annulation de la commande:', error);
+        toast.error(error.response?.data?.error || 'Échec de l\'annulation de la commande');
+      }
+    },
+    [handleOrderCancelled]
+  );
 
   const queryParams = new URLSearchParams(location.search);
   const expandOrderId = parseInt(queryParams.get('expandOrder'));
@@ -393,22 +398,22 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
 
   const orderStats = useMemo(() => {
     const totalOrders = memoizedOrders.length;
-    const approvedOrders = memoizedOrders.filter(order => order.approved === 1).length;
-    const cancelledOrders = memoizedOrders.filter(order => order.status === 'cancelled').length;
-    const notApprovedOrders = memoizedOrders.filter(order => order.approved === 0 && order.status !== 'cancelled').length;
+    const approvedOrders = memoizedOrders.filter((order) => order.approved === 1).length;
+    const cancelledOrders = memoizedOrders.filter((order) => order.status === 'annulée').length;
+    const notApprovedOrders = memoizedOrders.filter((order) => order.approved === 0 && order.status !== 'annulée').length;
     return { totalOrders, approvedOrders, notApprovedOrders, cancelledOrders };
   }, [memoizedOrders]);
 
   return (
-    <Box className="staff-dashboard-container">
+    <Box className="staff-dashboard-container" role="main">
       <Box className="staff-dashboard-header">
         <Box className="staff-dashboard-header-content">
           <Typography variant="h4" className="staff-dashboard-title">
             <Assignment className="staff-dashboard-title-icon" />
-            Staff Dashboard
+            Tableau de bord du personnel
           </Typography>
           <Typography className="staff-dashboard-subtitle">
-            Manage and approve orders in real-time, {user?.name || 'Staff'}
+            Gérer et approuver les commandes en temps réel, {user?.name || 'Personnel'}
           </Typography>
         </Box>
       </Box>
@@ -416,19 +421,19 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
         <Box className="staff-dashboard-info">
           <Typography className="staff-dashboard-info-item">
             <Receipt />
-            Total Orders: <span>{orderStats.totalOrders}</span>
+            Total des commandes: <span>{orderStats.totalOrders}</span>
           </Typography>
           <Typography className="staff-dashboard-info-item">
             <CheckCircle />
-            Approved: <span>{orderStats.approvedOrders}</span>
+            Approuvées: <span>{orderStats.approvedOrders}</span>
           </Typography>
           <Typography className="staff-dashboard-info-item">
             <Cancel />
-            Not Approved: <span>{orderStats.notApprovedOrders}</span>
+            Non approuvées: <span>{orderStats.notApprovedOrders}</span>
           </Typography>
           <Typography className="staff-dashboard-info-item">
             <Cancel />
-            Cancelled: <span>{orderStats.cancelledOrders}</span>
+            Annulées: <span>{orderStats.cancelledOrders}</span>
           </Typography>
         </Box>
       </Box>
@@ -436,37 +441,37 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
         <Box className="staff-dashboard-filter-header">
           <Typography className="staff-dashboard-filter-title">
             <Assignment />
-            Filters
+            Filtres
           </Typography>
         </Box>
         <Grid container spacing={2} className="staff-dashboard-filters debug-border">
           <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
             <FormControl fullWidth className="staff-dashboard-filter-select">
-              <InputLabel id="time-range-label">Time Range</InputLabel>
+              <InputLabel id="time-range-label">Plage temporelle</InputLabel>
               <Select
                 labelId="time-range-label"
                 value={timeRange}
                 onChange={(e) => setTimeRange(e.target.value)}
-                label="Time Range"
+                label="Plage temporelle"
               >
-                <MenuItem value="hour">Last Hour</MenuItem>
-                <MenuItem value="day">Today</MenuItem>
-                <MenuItem value="all">All Orders</MenuItem>
+                <MenuItem value="hour">Dernière heure</MenuItem>
+                <MenuItem value="day">Aujourd'hui</MenuItem>
+                <MenuItem value="all">Toutes les commandes</MenuItem>
               </Select>
             </FormControl>
           </Grid>
           <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
             <FormControl fullWidth className="staff-dashboard-filter-select">
-              <InputLabel id="approval-status-label">Approval Status</InputLabel>
+              <InputLabel id="approval-status-label">Statut d'approbation</InputLabel>
               <Select
                 labelId="approval-status-label"
                 value={approvedFilter}
                 onChange={(e) => setApprovedFilter(e.target.value)}
-                label="Approval Status"
+                label="Statut d'approbation"
               >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="1">Approved</MenuItem>
-                <MenuItem value="0">Not Approved</MenuItem>
+                <MenuItem value="">Toutes</MenuItem>
+                <MenuItem value="1">Approuvées</MenuItem>
+                <MenuItem value="0">Non approuvées</MenuItem>
               </Select>
             </FormControl>
           </Grid>
@@ -478,7 +483,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
               fullWidth
             >
               <Refresh />
-              Refresh Orders
+              Rafraîchir les commandes
             </Button>
           </Grid>
         </Grid>
@@ -486,7 +491,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
       {isLoading ? (
         <Box className="staff-dashboard-loading">
           <CircularProgress />
-          <Typography className="staff-dashboard-loading-text">Loading Orders...</Typography>
+          <Typography className="staff-dashboard-loading-text">Chargement des commandes...</Typography>
         </Box>
       ) : error ? (
         <Box className="staff-dashboard-error glass-card">
@@ -500,20 +505,20 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
             onClick={fetchOrders}
           >
             <Refresh />
-            Retry Loading
+            Réessayer le chargement
           </Button>
         </Box>
       ) : memoizedOrders.length === 0 ? (
         <Box className="staff-dashboard-empty glass-card">
           <Typography className="staff-dashboard-empty-text">
             <ShoppingCart className="staff-dashboard-empty-icon" />
-            No orders to display.
+            Aucune commande à afficher.
           </Typography>
         </Box>
       ) : (
         <>
           <Typography className="staff-dashboard-order-count">
-            Showing {memoizedOrders.length} order{memoizedOrders.length !== 1 ? 's' : ''}
+            Affichage de {memoizedOrders.length} commande{memoizedOrders.length !== 1 ? 's' : ''}
           </Typography>
           <Grid container spacing={1.5} className="staff-dashboard-orders-grid">
             {memoizedOrders.map((order) => (
@@ -529,7 +534,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
                 <Box className="staff-dashboard-order-header">
                   <ShoppingCart className="staff-dashboard-order-icon" />
                   <Typography className="staff-dashboard-order-title">
-                    Order #{order.id}
+                    Commande #{order.id}
                   </Typography>
                 </Box>
                 <OrderCard
@@ -538,7 +543,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
                   onCancelOrder={cancelOrder}
                   timeAgo={order.timeAgo}
                   isExpanded={order.id === expandOrderId}
-                  className={`staff-dashboard-order-content ${order.status === 'cancelled' ? 'cancelled' : order.approved ? 'approved' : 'not-approved'} ${order.id === expandOrderId ? 'expanded' : ''}`}
+                  className={`staff-dashboard-order-content ${order.status === 'annulée' ? 'annulée' : order.approved ? 'approuvée' : 'non-approuvée'} ${order.id === expandOrderId ? 'expanded' : ''}`}
                 />
               </Grid>
             ))}
@@ -548,5 +553,19 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     </Box>
   );
 }
+
+StaffDashboard.propTypes = {
+  user: PropTypes.shape({
+    role: PropTypes.string,
+    name: PropTypes.string,
+  }),
+  handleNewNotification: PropTypes.func.isRequired,
+  socket: PropTypes.shape({
+    on: PropTypes.func.isRequired,
+    off: PropTypes.func.isRequired,
+    emit: PropTypes.func.isRequired,
+    connected: PropTypes.bool,
+  }).isRequired,
+};
 
 export default StaffDashboard;
