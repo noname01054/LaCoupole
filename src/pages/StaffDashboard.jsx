@@ -531,12 +531,6 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
                 className="staff-dashboard-order-card glass-card"
                 ref={(el) => (orderRefs.current[order.id] = el)}
               >
-                <Box className="staff-dashboard-order-header">
-                  <ShoppingCart className="staff-dashboard-order-icon" />
-                  <Typography className="staff-dashboard-order-title">
-                    Commande #{order.id}
-                  </Typography>
-                </Box>
                 <OrderCard
                   order={order}
                   onApproveOrder={approveOrder}
