@@ -330,7 +330,7 @@ function OrderCard({
               lineHeight: '1.2',
             }}
           >
-            #{order.id}
+            Commande #{order.id}
           </h3>
           <div 
             style={{
