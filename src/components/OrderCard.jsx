@@ -11,6 +11,7 @@ import {
   Schedule,
   Note,
   Cancel,
+  Phone,
 } from '@mui/icons-material';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
@@ -41,18 +42,27 @@ const getOrderStatus = (approved, status) => {
   if (status === 'cancelled') {
     return {
       color: '#ef4444',
-      bgColor: '#fee2e2',
+      bgColor: '#fef2f2',
       icon: Cancel,
       label: 'Annulée',
       urgency: 'high',
     };
   }
+  if (approved) {
+    return {
+      color: '#10b981',
+      bgColor: '#ecfdf5',
+      icon: Check,
+      label: 'Approuvée',
+      urgency: 'none',
+    };
+  }
   return {
-    color: approved ? '#10b981' : '#f59e0b',
-    bgColor: approved ? '#d1fae5' : '#fef3c7',
-    icon: approved ? Check : AccessTime,
-    label: approved ? 'Approuvée' : 'En attente',
-    urgency: approved ? 'none' : 'high',
+    color: '#f59e0b',
+    bgColor: '#fffbeb',
+    icon: AccessTime,
+    label: 'En attente',
+    urgency: 'high',
   };
 };
 
@@ -61,23 +71,27 @@ const getOrderTypeDisplay = (orderType, tableNumber) => {
   switch (orderType) {
     case 'local':
       return {
-        text: `Tableau ${tableNumber || 'N/A'}`,
+        text: `Table ${tableNumber || 'N/A'}`,
         icon: TableRestaurant,
+        color: '#3b82f6',
       };
     case 'delivery':
       return {
         text: 'Livraison',
         icon: LocalShipping,
+        color: '#f59e0b',
       };
     case 'imported':
       return {
         text: 'À emporter',
         icon: Restaurant,
+        color: '#10b981',
       };
     default:
       return {
         text: 'Inconnu',
         icon: Restaurant,
+        color: '#6b7280',
       };
   }
 };
@@ -133,7 +147,7 @@ function OrderCard({
           options: [],
         };
       }
-      acc[key].quantity = quantity; // Set quantity directly to avoid accumulation
+      acc[key].quantity = quantity;
     });
 
     // Process breakfast items
@@ -163,7 +177,7 @@ function OrderCard({
           options: [],
         };
       }
-      acc[key].quantity = quantity; // Set quantity directly to avoid accumulation
+      acc[key].quantity = quantity;
 
       // Add options for breakfast items
       const optionsPerItem = breakfastIds.length ? Math.floor(optionIds.length / breakfastIds.length) : 0;
@@ -172,28 +186,24 @@ function OrderCard({
       const itemOptionNames = optionNames[index] || [];
       const itemOptionPrices = optionPrices[index] || [];
 
-      // Handle optionNames as either an array of names or a pipe-separated string
       const names = Array.isArray(itemOptionNames)
         ? itemOptionNames
         : typeof itemOptionNames === 'string' && itemOptionNames
         ? itemOptionNames.split('|').map((name) => name?.trim() || 'Option inconnue')
         : [];
 
-      // Handle optionPrices as either an array of prices or a pipe-separated string
       const prices = Array.isArray(itemOptionPrices)
         ? itemOptionPrices.map((price) => safeParseFloat(price, 0))
         : typeof itemOptionPrices === 'string' && itemOptionPrices
         ? itemOptionPrices.split('|').map((price) => safeParseFloat(price, 0))
         : [];
 
-      // Ensure options are added only for valid indices
       for (let i = 0; i < Math.min(names.length, prices.length); i++) {
         acc[key].options.push({
           name: names[i] || 'Option inconnue',
           price: prices[i] || 0,
         });
       }
-      // Remove duplicates
       acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
     });
 
@@ -201,18 +211,19 @@ function OrderCard({
   }, [order]);
 
   const statusConfig = getOrderStatus(order.approved, order.status);
+  const orderTypeConfig = getOrderTypeDisplay(order.order_type, order.table_number);
   const IconComponent = statusConfig.icon;
-  const OrderTypeIcon = getOrderTypeDisplay(order.order_type, order.table_number).icon;
+  const OrderTypeIcon = orderTypeConfig.icon;
 
   // Event handlers
   const handleApproveOrder = async () => {
     setIsApproving(true);
     try {
       await onApproveOrder?.(order.id);
-      toast.success('Order approved successfully');
+      toast.success('Commande approuvée avec succès');
     } catch (error) {
       console.error('Error approving order:', error.response?.data || error.message);
-      toast.error(error.response?.data?.error || 'Failed to approve order');
+      toast.error(error.response?.data?.error || 'Échec de l\'approbation de la commande');
     } finally {
       setIsApproving(false);
     }
@@ -229,11 +240,11 @@ function OrderCard({
         setShowCancelPopup(true);
       } else {
         await onCancelOrder?.(order.id, { restoreStock: false });
-        toast.success('Order cancelled successfully');
+        toast.success('Commande annulée avec succès');
       }
     } catch (error) {
       console.error('Error checking order status:', error.response?.data || error.message);
-      toast.error(error.response?.data?.error || 'Failed to check order status');
+      toast.error(error.response?.data?.error || 'Échec de la vérification du statut de la commande');
     } finally {
       setIsCancelling(false);
     }
@@ -243,13 +254,13 @@ function OrderCard({
     setIsCancelling(true);
     try {
       await onCancelOrder?.(cancelOrderId, { restoreStock });
-      toast.success(`Order ${restoreStock ? 'cancelled with stock restoration' : 'cancelled without stock restoration'}`);
+      toast.success(`Commande ${restoreStock ? 'annulée avec restauration du stock' : 'annulée sans restauration du stock'}`);
       setShowCancelPopup(false);
       setCancelOrderId(null);
       setIsOrderApproved(false);
     } catch (error) {
       console.error('Error cancelling order:', error.response?.data || error.message);
-      toast.error(error.response?.data?.error || 'Failed to cancel order');
+      toast.error(error.response?.data?.error || 'Échec de l\'annulation de la commande');
     } finally {
       setIsCancelling(false);
     }
@@ -262,376 +273,230 @@ function OrderCard({
   // Calculate total with safe parsing
   const orderTotal = safeParseFloat(order.total_price, 0);
 
-  // Optimized styles
-  const cardStyle = {
-    maxWidth: '600px',
-    margin: '0 auto 16px',
-    backgroundColor: '#ffffff',
-    borderRadius: '16px',
-    border: `2px solid ${statusConfig.color}20`,
-    boxShadow: statusConfig.urgency === 'high' 
-      ? `0 4px 20px ${statusConfig.color}30` 
-      : '0 2px 12px rgba(0, 0, 0, 0.08)',
-    overflow: 'hidden',
-    transition: 'box-shadow 0.2s ease',
-    position: 'relative',
-  };
-
-  const headerStyle = {
-    background: `linear-gradient(135deg, ${statusConfig.color}10, ${statusConfig.bgColor})`,
-    padding: '20px',
-    borderBottom: `1px solid ${statusConfig.color}20`,
-  };
-
-  const orderInfoStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-  };
-
-  const orderNumberStyle = {
-    fontSize: '24px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-    margin: 0,
-  };
-
-  const statusBadgeStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    backgroundColor: statusConfig.color,
-    color: 'white',
-    padding: '8px 16px',
-    borderRadius: '20px',
-    fontSize: '14px',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  };
-
-  const quickInfoStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
-    gap: '12px',
-  };
-
-  const infoChipStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '8px 12px',
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    borderRadius: '8px',
-    fontSize: '13px',
-    color: '#555',
-    border: '1px solid rgba(0, 0, 0, 0.05)',
-  };
-
-  const bodyStyle = {
-    padding: '20px',
-  };
-
-  const deliveryAlertStyle = order.delivery_address ? {
-    backgroundColor: '#fef3c7',
-    border: '1px solid #f59e0b',
-    borderRadius: '12px',
-    padding: '12px',
-    marginBottom: '16px',
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
-  } : { display: 'none' };
-
-  const notesAlertStyle = order.notes ? {
-    backgroundColor: '#e6f3ff',
-    border: '1px solid #3b82f6',
-    borderRadius: '12px',
-    padding: '12px',
-    marginBottom: '16px',
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
-  } : { display: 'none' };
-
-  const expandButtonStyle = {
-    width: '100%',
-    padding: '12px',
-    backgroundColor: 'transparent',
-    border: '1px solid #e5e7eb',
-    borderRadius: '8px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    color: '#374151',
-    marginBottom: isExpanded ? '20px' : '0',
-    transition: 'all 0.2s ease',
-  };
-
-  const itemsListStyle = {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    marginBottom: '16px',
-  };
-
-  const itemRowStyle = {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '12px',
-    backgroundColor: '#f9fafb',
-    borderRadius: '8px',
-    gap: '12px',
-  };
-
-  const itemImageStyle = {
-    width: '48px',
-    height: '48px',
-    borderRadius: '6px',
-    objectFit: 'cover',
-    flexShrink: 0,
-  };
-
-  const itemDetailsStyle = {
-    flex: 1,
-    minWidth: 0,
-  };
-
-  const itemNameStyle = {
-    fontSize: '15px',
-    fontWeight: '600',
-    color: '#1a1a1a',
-    marginBottom: '4px',
-    display: 'block',
-  };
-
-  const itemOptionStyle = {
-    fontSize: '13px',
-    color: '#6b7280',
-    display: 'block',
-    marginBottom: '2px',
-  };
-
-  const quantityBadgeStyle = {
-    backgroundColor: '#e5e7eb',
-    color: '#374151',
-    padding: '4px 8px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '600',
-    minWidth: '24px',
-    textAlign: 'center',
-  };
-
-  const totalSectionStyle = {
-    borderTop: '1px solid #e5e7eb',
-    paddingTop: '16px',
-    marginTop: '16px',
-  };
-
-  const totalRowStyle = {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#1a1a1a',
-    padding: '12px',
-    backgroundColor: '#f9fafb',
-    borderRadius: '8px',
-  };
-
-  const totalValueStyle = {
-    color: '#059669',
-    fontSize: '20px',
-  };
-
-  const actionSectionStyle = {
-    marginTop: '16px',
-    display: 'flex',
-    gap: '12px',
-  };
-
-  const approveButtonStyle = {
-    flex: 1,
-    padding: '16px 20px',
-    backgroundColor: order.approved && order.status !== 'cancelled' ? '#10b981' : '#059669',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    fontSize: '16px',
-    fontWeight: '700',
-    cursor: (order.approved && order.status !== 'cancelled') || isApproving ? 'default' : 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    opacity: (order.approved && order.status !== 'cancelled') || isApproving ? 0.7 : 1,
-    transform: isApproving ? 'scale(0.98)' : 'scale(1)',
-    transition: 'all 0.1s ease',
-    boxShadow: (order.approved && order.status !== 'cancelled') || isApproving ? 'none' : '0 4px 12px rgba(5, 150, 105, 0.3)',
-  };
-
-  const cancelButtonStyle = {
-    flex: 1,
-    padding: '16px 20px',
-    backgroundColor: order.status === 'cancelled' ? '#ef4444' : '#dc2626',
-    color: 'white',
-    border: 'none',
-    borderRadius: '12px',
-    fontSize: '16px',
-    fontWeight: '700',
-    cursor: order.status === 'cancelled' || isCancelling ? 'default' : 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    opacity: order.status === 'cancelled' || isCancelling ? 0.7 : 1,
-    transform: isCancelling ? 'scale(0.98)' : 'scale(1)',
-    transition: 'all 0.1s ease',
-    boxShadow: order.status === 'cancelled' || isCancelling ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.3)',
-  };
-
-  const popupStyle = {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  };
-
-  const popupContentStyle = {
-    backgroundColor: '#ffffff',
-    padding: '24px',
-    borderRadius: '8px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    maxWidth: '400px',
-    width: '90%',
-  };
-
-  const popupTitleStyle = {
-    fontSize: '20px',
-    fontWeight: '600',
-    marginBottom: '16px',
-    color: '#1a1a1a',
-  };
-
-  const popupTextStyle = {
-    fontSize: '14px',
-    color: '#374151',
-    marginBottom: '16px',
-  };
-
-  const popupButtonContainerStyle = {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '12px',
-  };
-
-  const popupButtonStyle = {
-    padding: '10px 16px',
-    borderRadius: '6px',
-    fontSize: '14px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    border: 'none',
-  };
-
-  const cancelWithoutStockButtonStyle = {
-    ...popupButtonStyle,
-    backgroundColor: '#6b7280',
-    color: 'white',
-  };
-
-  const cancelWithStockButtonStyle = {
-    ...popupButtonStyle,
-    backgroundColor: '#3b82f6',
-    color: 'white',
-  };
-
-  const closeButtonStyle = {
-    ...popupButtonStyle,
-    backgroundColor: '#ef4444',
-    color: 'white',
-  };
-
   return (
-    <div style={cardStyle} ref={cardRef} role="region" aria-label={`Order ${order.id}`}>
+    <div 
+      ref={cardRef} 
+      className="order-card"
+      style={{
+        width: 'calc(390px - 16px)',
+        maxWidth: 'calc(100vw - 16px)',
+        margin: '0 0 12px 0',
+        backgroundColor: '#ffffff',
+        borderRadius: '12px',
+        border: `1px solid ${statusConfig.color}40`,
+        boxShadow: statusConfig.urgency === 'high' 
+          ? `0 2px 8px ${statusConfig.color}25` 
+          : '0 1px 3px rgba(0, 0, 0, 0.1)',
+        overflow: 'hidden',
+        position: 'relative',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        boxSizing: 'border-box',
+      }}
+      role="region" 
+      aria-label={`Commande ${order.id}`}
+    >
+      {/* Status Bar */}
+      <div 
+        style={{
+          height: '4px',
+          backgroundColor: statusConfig.color,
+          width: '100%',
+        }}
+      />
+
       {/* Header */}
-      <div style={headerStyle}>
-        <div style={orderInfoStyle}>
-          <h3 style={orderNumberStyle}>Commande #{order.id}</h3>
-          <div style={statusBadgeStyle} role="status">
-            <IconComponent sx={{ fontSize: 16 }} />
+      <div 
+        style={{
+          padding: '20px',
+          backgroundColor: statusConfig.bgColor,
+          borderBottom: `1px solid ${statusConfig.color}20`,
+        }}
+      >
+        {/* Top Row - Order ID and Status */}
+        <div 
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '12px',
+          }}
+        >
+          <h3 
+            style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1f2937',
+              margin: 0,
+              lineHeight: '1.2',
+            }}
+          >
+            #{order.id}
+          </h3>
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: statusConfig.color,
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '600',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+            }}
+            role="status"
+          >
+            <IconComponent sx={{ fontSize: 14 }} />
             {statusConfig.label}
           </div>
         </div>
 
-        <div style={quickInfoStyle}>
-          {order.order_type === 'local' && (
-            <div style={infoChipStyle}>
-              <TableRestaurant sx={{ fontSize: 16 }} />
-              <span>Tableau {order.table_number || 'N/A'}</span>
-            </div>
-          )}
-          {order.order_type === 'delivery' && (
-            <div style={infoChipStyle}>
-              <LocalShipping sx={{ fontSize: 16 }} />
-              <span>Livraison</span>
-            </div>
-          )}
-          {order.order_type === 'imported' && (
-            <div style={infoChipStyle}>
-              <Restaurant sx={{ fontSize: 16 }} />
-              <span>À emporter</span>
-            </div>
-          )}
-          <div style={infoChipStyle}>
-            <AccessTime sx={{ fontSize: 16 }} />
+        {/* Info Chips */}
+        <div 
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '8px',
+            alignItems: 'center',
+          }}
+        >
+          {/* Order Type */}
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              padding: '6px 10px',
+              borderRadius: '16px',
+              fontSize: '12px',
+              fontWeight: '500',
+              color: orderTypeConfig.color,
+              border: `1px solid ${orderTypeConfig.color}30`,
+            }}
+          >
+            <OrderTypeIcon sx={{ fontSize: 14 }} />
+            <span>{orderTypeConfig.text}</span>
+          </div>
+
+          {/* Time */}
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              padding: '6px 10px',
+              borderRadius: '16px',
+              fontSize: '12px',
+              fontWeight: '500',
+              color: '#6b7280',
+              border: '1px solid #e5e7eb',
+            }}
+          >
+            <AccessTime sx={{ fontSize: 14 }} />
             <span>{timeAgo}</span>
           </div>
-          <div style={infoChipStyle}>
-            <Schedule sx={{ fontSize: 16 }} />
-            <span>{order.status?.charAt(0).toUpperCase() + order.status?.slice(1) || 'Reçue'}</span>
+
+          {/* Total */}
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#059669',
+              color: 'white',
+              padding: '6px 10px',
+              borderRadius: '16px',
+              fontSize: '12px',
+              fontWeight: '600',
+              marginLeft: 'auto',
+            }}
+          >
+            <span>{orderTotal.toFixed(2)} DT</span>
           </div>
         </div>
       </div>
 
       {/* Body */}
-      <div style={bodyStyle}>
-        {/* Delivery Alert */}
+      <div style={{ padding: '20px' }}>
+        {/* Alerts */}
         {order.delivery_address && (
-          <div style={deliveryAlertStyle} role="alert">
-            <LocationOn sx={{ fontSize: 18, color: '#f59e0b' }} />
-            <div>
-              <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '2px' }}>
-                Commande de livraison
+          <div 
+            style={{
+              backgroundColor: '#fef3c7',
+              border: '1px solid #f59e0b',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+            }}
+            role="alert"
+          >
+            <LocationOn sx={{ fontSize: 16, color: '#f59e0b', flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div 
+                style={{
+                  fontWeight: '600',
+                  color: '#92400e',
+                  fontSize: '13px',
+                  marginBottom: '4px',
+                }}
+              >
+                Adresse de livraison
               </div>
-              <div style={{ fontSize: '13px', color: '#92400e' }}>
+              <div 
+                style={{
+                  fontSize: '12px',
+                  color: '#92400e',
+                  lineHeight: '1.4',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {order.delivery_address}
               </div>
             </div>
           </div>
         )}
 
-        {/* Notes Alert */}
         {order.notes && (
-          <div style={notesAlertStyle} role="alert">
-            <Note sx={{ fontSize: 18, color: '#3b82f6' }} />
-            <div>
-              <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '2px' }}>
+          <div 
+            style={{
+              backgroundColor: '#e6f3ff',
+              border: '1px solid #3b82f6',
+              borderRadius: '8px',
+              padding: '12px',
+              marginBottom: '12px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+            }}
+            role="alert"
+          >
+            <Note sx={{ fontSize: 16, color: '#3b82f6', flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div 
+                style={{
+                  fontWeight: '600',
+                  color: '#1e40af',
+                  fontSize: '13px',
+                  marginBottom: '4px',
+                }}
+              >
                 Instructions spéciales
               </div>
-              <div style={{ fontSize: '13px', color: '#1e40af' }}>
+              <div 
+                style={{
+                  fontSize: '12px',
+                  color: '#1e40af',
+                  lineHeight: '1.4',
+                  wordBreak: 'break-word',
+                }}
+              >
                 {order.notes}
               </div>
             </div>
@@ -640,13 +505,30 @@ function OrderCard({
 
         {/* Expand Button */}
         <button
-          style={expandButtonStyle}
+          style={{
+            width: '100%',
+            padding: '14px',
+            backgroundColor: 'transparent',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            cursor: 'pointer',
+            fontSize: '15px',
+            fontWeight: '500',
+            color: '#374151',
+            marginBottom: isExpanded ? '16px' : '0',
+            transition: 'all 0.2s ease',
+            WebkitTapHighlightColor: 'transparent',
+          }}
           onClick={handleExpandToggle}
           aria-expanded={isExpanded}
           aria-controls={`order-details-${order.id}`}
         >
           <Receipt sx={{ fontSize: 16 }} />
-          <span>{isExpanded ? 'Masquer les détails' : `Voir les articles (${groupedItems.length})`}</span>
+          <span>{isExpanded ? 'Masquer les détails' : `Articles (${groupedItems.length})`}</span>
           <ExpandMore
             sx={{
               fontSize: 16,
@@ -660,7 +542,7 @@ function OrderCard({
         {isExpanded && (
           <div id={`order-details-${order.id}`}>
             {/* Items List */}
-            <div style={itemsListStyle}>
+            <div style={{ marginBottom: '16px' }}>
               {groupedItems.length > 0 ? (
                 groupedItems.map((item, index) => {
                   const imageUrl = item.imageUrl || FALLBACK_IMAGE;
@@ -668,70 +550,195 @@ function OrderCard({
                   return (
                     <div
                       key={`${item.type}-${item.id}-${index}`}
-                      style={itemRowStyle}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '12px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        marginBottom: '8px',
+                        gap: '12px',
+                      }}
                       role="listitem"
                     >
                       <img
                         src={imageUrl}
                         alt={item.name}
-                        style={itemImageStyle}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '6px',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          backgroundColor: '#f3f4f6',
+                        }}
                         onError={(e) => {
                           console.error('Error loading order item image:', imageUrl);
                           e.target.src = FALLBACK_IMAGE;
                         }}
                         loading="lazy"
                       />
-                      <div style={itemDetailsStyle}>
-                        <span style={itemNameStyle}>{item.name}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div 
+                          style={{
+                            fontSize: '14px',
+                            fontWeight: '600',
+                            color: '#1f2937',
+                            marginBottom: '4px',
+                            lineHeight: '1.3',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {item.name}
+                        </div>
                         {item.supplementName && (
-                          <span style={itemOptionStyle}>
+                          <div 
+                            style={{
+                              fontSize: '12px',
+                              color: '#6b7280',
+                              lineHeight: '1.3',
+                            }}
+                          >
                             + {item.supplementName}
-                          </span>
+                          </div>
                         )}
                         {(item.options || []).map((opt, optIdx) => (
-                          <span key={optIdx} style={itemOptionStyle}>
+                          <div 
+                            key={optIdx}
+                            style={{
+                              fontSize: '12px',
+                              color: '#6b7280',
+                              lineHeight: '1.3',
+                            }}
+                          >
                             + {opt.name}
-                          </span>
+                          </div>
                         ))}
                       </div>
-                      <span style={quantityBadgeStyle}>{item.quantity}</span>
+                      <div 
+                        style={{
+                          backgroundColor: '#e5e7eb',
+                          color: '#374151',
+                          padding: '6px 10px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          minWidth: '32px',
+                          textAlign: 'center',
+                          flexShrink: 0,
+                        }}
+                      >
+                        {item.quantity}
+                      </div>
                     </div>
                   );
                 })
               ) : (
-                <div style={itemRowStyle}>
-                  <div style={itemDetailsStyle}>Aucun article à afficher</div>
+                <div 
+                  style={{
+                    padding: '20px',
+                    textAlign: 'center',
+                    color: '#6b7280',
+                    fontSize: '14px',
+                  }}
+                >
+                  Aucun article à afficher
                 </div>
               )}
             </div>
 
             {/* Total Section */}
-            <div style={totalSectionStyle}>
-              <div style={totalRowStyle}>
-                <span>Montant total</span>
-                <span style={totalValueStyle}>{orderTotal.toFixed(2)} DT</span>
+            <div 
+              style={{
+                borderTop: '1px solid #e5e7eb',
+                paddingTop: '16px',
+                marginBottom: '16px',
+              }}
+            >
+              <div 
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#1f2937',
+                  padding: '12px',
+                  backgroundColor: '#f9fafb',
+                  borderRadius: '8px',
+                }}
+              >
+                <span>Total</span>
+                <span style={{ color: '#059669', fontSize: '18px' }}>
+                  {orderTotal.toFixed(2)} DT
+                </span>
               </div>
             </div>
 
-            {/* Action Section */}
-            <div style={actionSectionStyle}>
+            {/* Action Buttons */}
+            <div 
+              style={{
+                display: 'flex',
+                gap: '12px',
+                flexDirection: window.innerWidth < 480 ? 'column' : 'row',
+              }}
+            >
               <button
-                style={approveButtonStyle}
+                style={{
+                  flex: 1,
+                  padding: '16px 20px',
+                  backgroundColor: order.approved && order.status !== 'cancelled' ? '#10b981' : '#059669',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: (order.approved && order.status !== 'cancelled') || isApproving ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  opacity: (order.approved && order.status !== 'cancelled') || isApproving ? 0.7 : 1,
+                  transform: isApproving ? 'scale(0.98)' : 'scale(1)',
+                  transition: 'all 0.1s ease',
+                  WebkitTapHighlightColor: 'transparent',
+                  minHeight: '52px',
+                }}
                 onClick={handleApproveOrder}
                 disabled={isApproving || (order.approved && order.status !== 'cancelled')}
-                aria-label="Approve order"
+                aria-label="Approuver la commande"
               >
-                <Check sx={{ fontSize: 18 }} />
-                {isApproving ? 'Approbation...' : 'Accepter la commande'}
+                <Check sx={{ fontSize: 16 }} />
+                {isApproving ? 'Approbation...' : order.approved && order.status !== 'cancelled' ? 'Approuvée' : 'Approuver'}
               </button>
+              
               <button
-                style={cancelButtonStyle}
+                style={{
+                  flex: 1,
+                  padding: '16px 20px',
+                  backgroundColor: order.status === 'cancelled' ? '#ef4444' : '#dc2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  cursor: order.status === 'cancelled' || isCancelling ? 'default' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  opacity: order.status === 'cancelled' || isCancelling ? 0.7 : 1,
+                  transform: isCancelling ? 'scale(0.98)' : 'scale(1)',
+                  transition: 'all 0.1s ease',
+                  WebkitTapHighlightColor: 'transparent',
+                  minHeight: '52px',
+                }}
                 onClick={handleCancelOrder}
                 disabled={isCancelling || order.status === 'cancelled'}
-                aria-label="Cancel order"
+                aria-label="Annuler la commande"
               >
-                <Cancel sx={{ fontSize: 18 }} />
-                {isCancelling ? 'Annulation...' : 'Annuler la commande'}
+                <Cancel sx={{ fontSize: 16 }} />
+                {isCancelling ? 'Annulation...' : order.status === 'cancelled' ? 'Annulée' : 'Annuler'}
               </button>
             </div>
           </div>
@@ -740,42 +747,127 @@ function OrderCard({
 
       {/* Cancellation Popup */}
       {showCancelPopup && (
-        <div style={popupStyle} role="dialog" aria-labelledby="cancel-popup-title">
-          <div style={popupContentStyle}>
-            <h2 id="cancel-popup-title" style={popupTitleStyle}>
-              Cancel Order
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '16px',
+          }}
+          role="dialog" 
+          aria-labelledby="cancel-popup-title"
+        >
+          <div 
+            style={{
+              backgroundColor: '#ffffff',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.25)',
+              maxWidth: '400px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+          >
+            <h2 
+              id="cancel-popup-title"
+              style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                marginBottom: '16px',
+                color: '#1f2937',
+                textAlign: 'center',
+              }}
+            >
+              Annuler la commande
             </h2>
-            <p style={popupTextStyle}>
-              This order has been approved. Would you like to restore the stock for the cancelled order?
+            <p 
+              style={{
+                fontSize: '14px',
+                color: '#6b7280',
+                marginBottom: '24px',
+                lineHeight: '1.5',
+                textAlign: 'center',
+              }}
+            >
+              Cette commande a été approuvée. Voulez-vous restaurer le stock pour la commande annulée ?
             </p>
-            <div style={popupButtonContainerStyle}>
+            <div 
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+              }}
+            >
               <button
-                style={cancelWithoutStockButtonStyle}
-                onClick={() => confirmCancelOrder(false)}
-                disabled={isCancelling}
-                aria-label="Cancel order without restoring stock"
-              >
-                Cancel Without Restoring Stock
-              </button>
-              <button
-                style={cancelWithStockButtonStyle}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: '#3b82f6',
+                  color: 'white',
+                  transition: 'background-color 0.2s ease',
+                  minHeight: '44px',
+                }}
                 onClick={() => confirmCancelOrder(true)}
                 disabled={isCancelling}
-                aria-label="Cancel order and restore stock"
+                aria-label="Annuler et restaurer le stock"
               >
-                Cancel and Restore Stock
+                Annuler et restaurer le stock
               </button>
+              
               <button
-                style={closeButtonStyle}
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: 'none',
+                  backgroundColor: '#6b7280',
+                  color: 'white',
+                  transition: 'background-color 0.2s ease',
+                  minHeight: '44px',
+                }}
+                onClick={() => confirmCancelOrder(false)}
+                disabled={isCancelling}
+                aria-label="Annuler sans restaurer le stock"
+              >
+                Annuler sans restaurer le stock
+              </button>
+              
+              <button
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: 'white',
+                  color: '#374151',
+                  transition: 'background-color 0.2s ease',
+                  minHeight: '44px',
+                }}
                 onClick={() => {
                   setShowCancelPopup(false);
                   setCancelOrderId(null);
                   setIsOrderApproved(false);
                 }}
                 disabled={isCancelling}
-                aria-label="Close cancellation popup"
+                aria-label="Fermer"
               >
-                Close
+                Annuler
               </button>
             </div>
           </div>
