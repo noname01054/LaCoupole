@@ -5,8 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { initSocket } from '../services/socket';
 import './css/OrderManagement.css';
 
-const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
-const FALLBACK_IMAGE = 'https://via.placeholder.com/48?text=No+Image';
+const FALLBACK_IMAGE = 'https://via.placeholder.com/40?text=Aucune+Image';
 
 function OrderManagement() {
   const [user, setUser] = useState(null);
@@ -16,6 +15,24 @@ function OrderManagement() {
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [dateFilter, setDateFilter] = useState('all');
   const navigate = useNavigate();
+
+  // Helper function to safely parse integers
+  const safeParseInt = (value, defaultValue = 0) => {
+    if (value == null || value === '' || value === 'NULL') {
+      return defaultValue;
+    }
+    const parsed = typeof value === 'string' ? parseInt(value, 10) : Number(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+  };
+
+  // Helper function to safely parse floats
+  const safeParseFloat = (value, defaultValue = 0) => {
+    if (value == null || value === '' || value === 'NULL') {
+      return defaultValue;
+    }
+    const parsed = typeof value === 'string' ? parseFloat(value) : Number(value);
+    return isNaN(parsed) ? defaultValue : parsed;
+  };
 
   useEffect(() => {
     async function checkAuth() {
@@ -39,55 +56,134 @@ function OrderManagement() {
         const query = dateFilter !== 'all' ? `?time_range=${dateFilter}` : '';
         const res = await api.get(`/orders${query}`);
         const ordersArray = Array.isArray(res.data.data) ? res.data.data : [];
-        const processedOrders = ordersArray.map(order => ({
-          ...order,
-          item_ids: order.item_ids
-            ? order.item_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          item_names: order.item_names
-            ? order.item_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          image_urls: order.image_urls
-            ? order.image_urls.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
-            : [],
-          quantities: order.menu_quantities
-            ? order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
-            : [],
-          unit_prices: order.unit_prices
-            ? order.unit_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
-            : [],
-          supplement_ids: order.supplement_ids
-            ? order.supplement_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          supplement_names: order.supplement_names
-            ? order.supplement_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          supplement_prices: order.supplement_prices
-            ? order.supplement_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
-            : [],
-          breakfast_ids: order.breakfast_ids
-            ? order.breakfast_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          breakfast_names: order.breakfast_names
-            ? order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          breakfast_images: order.breakfast_images
-            ? order.breakfast_images.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
-            : [],
-          breakfast_quantities: order.breakfast_quantities
-            ? order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
-            : [],
-          breakfast_option_ids: order.breakfast_option_ids
-            ? order.breakfast_option_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          breakfast_option_names: order.breakfast_option_names
-            ? order.breakfast_option_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          breakfast_option_prices: order.breakfast_option_prices
-            ? order.breakfast_option_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
-            : [],
-          status: order.status || (order.approved ? 'preparing' : 'pending'),
-        }));
+        const processedOrders = ordersArray.map(order => {
+          // Process menu items
+          const itemIds = Array.isArray(order.item_ids)
+            ? order.item_ids
+            : (order.item_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
+          const itemNames = Array.isArray(order.item_names)
+            ? order.item_names
+            : order.item_names?.split(',') || [];
+          const unitPrices = Array.isArray(order.unit_prices)
+            ? order.unit_prices
+            : order.unit_prices?.split(',') || [];
+          const menuQuantities = Array.isArray(order.menu_quantities)
+            ? order.menu_quantities
+            : (order.menu_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim());
+          const supplementIds = Array.isArray(order.supplement_ids)
+            ? order.supplement_ids
+            : order.supplement_ids?.split(',') || [];
+          const supplementNames = Array.isArray(order.supplement_names)
+            ? order.supplement_names
+            : order.supplement_names?.split(',') || [];
+          const supplementPrices = Array.isArray(order.supplement_prices)
+            ? order.supplement_prices
+            : order.supplement_prices?.split(',') || [];
+          const imageUrls = Array.isArray(order.image_urls)
+            ? order.image_urls
+            : order.image_urls?.split(',') || [];
+
+          // Process breakfast items
+          const breakfastIds = Array.isArray(order.breakfast_ids)
+            ? order.breakfast_ids
+            : (order.breakfast_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
+          const breakfastNames = Array.isArray(order.breakfast_names)
+            ? order.breakfast_names
+            : order.breakfast_names?.split(',') || [];
+          const breakfastQuantities = Array.isArray(order.breakfast_quantities)
+            ? order.breakfast_quantities
+            : (order.breakfast_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim());
+          const breakfastImages = Array.isArray(order.breakfast_images)
+            ? order.breakfast_images
+            : order.breakfast_images?.split(',') || [];
+          const optionIds = Array.isArray(order.breakfast_option_ids)
+            ? order.breakfast_option_ids
+            : (order.breakfast_option_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
+          const optionNames = Array.isArray(order.breakfast_option_names)
+            ? order.breakfast_option_names
+            : order.breakfast_option_names?.split(',') || [];
+          const optionPrices = Array.isArray(order.breakfast_option_prices)
+            ? order.breakfast_option_prices
+            : order.breakfast_option_prices?.split(',') || [];
+
+          // Group items similar to OrderCard
+          const acc = {};
+          itemIds.forEach((id, idx) => {
+            if (idx >= menuQuantities.length || idx >= itemNames.length || idx >= unitPrices.length) return;
+            const supplementId = supplementIds[idx]?.trim() || null;
+            const key = `${id.trim()}_${supplementId || 'none'}`;
+            const quantity = safeParseInt(menuQuantities[idx], 1);
+            const unitPrice = safeParseFloat(unitPrices[idx], 0);
+            const supplementPrice = supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0;
+
+            if (!acc[key]) {
+              acc[key] = {
+                id: safeParseInt(id, 0),
+                type: 'menu',
+                name: itemNames[idx]?.trim() || 'Article inconnu',
+                quantity: 0,
+                unitPrice,
+                supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
+                supplementPrice,
+                imageUrl: imageUrls[idx]?.trim() || FALLBACK_IMAGE,
+                options: [],
+              };
+            }
+            acc[key].quantity = quantity;
+          });
+
+          breakfastIds.forEach((id, index) => {
+            if (index >= breakfastQuantities.length || index >= breakfastNames.length) return;
+            const key = id.trim();
+            const quantity = safeParseInt(breakfastQuantities[index], 1);
+            const unitPrice = safeParseFloat(unitPrices[index], 0);
+
+            if (!acc[key]) {
+              acc[key] = {
+                id: safeParseInt(id, 0),
+                type: 'breakfast',
+                name: breakfastNames[index]?.trim() || 'Petit-déjeuner inconnu',
+                quantity: 0,
+                unitPrice,
+                imageUrl: breakfastImages[index]?.trim() || FALLBACK_IMAGE,
+                options: [],
+              };
+            }
+            acc[key].quantity = quantity;
+
+            const optionsPerItem = breakfastIds.length ? Math.floor(optionIds.length / breakfastIds.length) : 0;
+            const startIdx = index * optionsPerItem;
+            const endIdx = (index + 1) * optionsPerItem;
+            const itemOptionNames = optionNames[index] || [];
+            const itemOptionPrices = optionPrices[index] || [];
+
+            const names = Array.isArray(itemOptionNames)
+              ? itemOptionNames
+              : typeof itemOptionNames === 'string' && itemOptionNames
+              ? itemOptionNames.split('|').map(name => name?.trim() || 'Option inconnue')
+              : [];
+            const prices = Array.isArray(itemOptionPrices)
+              ? itemOptionPrices.map(price => safeParseFloat(price, 0))
+              : typeof itemOptionPrices === 'string' && itemOptionPrices
+              ? itemOptionPrices.split('|').map(price => safeParseFloat(price, 0))
+              : [];
+
+            for (let i = 0; i < Math.min(names.length, prices.length); i++) {
+              acc[key].options.push({
+                name: names[i] || 'Option inconnue',
+                price: prices[i] || 0,
+              });
+            }
+            acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
+          });
+
+          return {
+            ...order,
+            groupedItems: Object.values(acc).filter(item => item.quantity > 0),
+            status: order.status || (order.approved ? 'preparing' : 'pending'),
+            total_price: safeParseFloat(order.total_price, 0),
+          };
+        });
         setOrders(processedOrders);
       } catch (err) {
         console.error('Failed to load orders:', err.response?.data || err.message);
@@ -102,54 +198,128 @@ function OrderManagement() {
 
     const socketCleanup = initSocket(
       (order) => {
+        const itemIds = Array.isArray(order.item_ids)
+          ? order.item_ids
+          : (order.item_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
+        const itemNames = Array.isArray(order.item_names)
+          ? order.item_names
+          : order.item_names?.split(',') || [];
+        const unitPrices = Array.isArray(order.unit_prices)
+          ? order.unit_prices
+          : order.unit_prices?.split(',') || [];
+        const menuQuantities = Array.isArray(order.menu_quantities)
+          ? order.menu_quantities
+          : (order.menu_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim());
+        const supplementIds = Array.isArray(order.supplement_ids)
+          ? order.supplement_ids
+          : order.supplement_ids?.split(',') || [];
+        const supplementNames = Array.isArray(order.supplement_names)
+          ? order.supplement_names
+          : order.supplement_names?.split(',') || [];
+        const supplementPrices = Array.isArray(order.supplement_prices)
+          ? order.supplement_prices
+          : order.supplement_prices?.split(',') || [];
+        const imageUrls = Array.isArray(order.image_urls)
+          ? order.image_urls
+          : order.image_urls?.split(',') || [];
+
+        const breakfastIds = Array.isArray(order.breakfast_ids)
+          ? order.breakfast_ids
+          : (order.breakfast_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
+        const breakfastNames = Array.isArray(order.breakfast_names)
+          ? order.breakfast_names
+          : order.breakfast_names?.split(',') || [];
+        const breakfastQuantities = Array.isArray(order.breakfast_quantities)
+          ? order.breakfast_quantities
+          : (order.breakfast_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim());
+        const breakfastImages = Array.isArray(order.breakfast_images)
+          ? order.breakfast_images
+          : order.breakfast_images?.split(',') || [];
+        const optionIds = Array.isArray(order.breakfast_option_ids)
+          ? order.breakfast_option_ids
+          : (order.breakfast_option_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
+        const optionNames = Array.isArray(order.breakfast_option_names)
+          ? order.breakfast_option_names
+          : order.breakfast_option_names?.split(',') || [];
+        const optionPrices = Array.isArray(order.breakfast_option_prices)
+          ? order.breakfast_option_prices
+          : order.breakfast_option_prices?.split(',') || [];
+
+        const acc = {};
+        itemIds.forEach((id, idx) => {
+          if (idx >= menuQuantities.length || idx >= itemNames.length || idx >= unitPrices.length) return;
+          const supplementId = supplementIds[idx]?.trim() || null;
+          const key = `${id.trim()}_${supplementId || 'none'}`;
+          const quantity = safeParseInt(menuQuantities[idx], 1);
+          const unitPrice = safeParseFloat(unitPrices[idx], 0);
+          const supplementPrice = supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0;
+
+          if (!acc[key]) {
+            acc[key] = {
+              id: safeParseInt(id, 0),
+              type: 'menu',
+              name: itemNames[idx]?.trim() || 'Article inconnu',
+              quantity: 0,
+              unitPrice,
+              supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
+              supplementPrice,
+              imageUrl: imageUrls[idx]?.trim() || FALLBACK_IMAGE,
+              options: [],
+            };
+          }
+          acc[key].quantity = quantity;
+        });
+
+        breakfastIds.forEach((id, index) => {
+          if (index >= breakfastQuantities.length || index >= breakfastNames.length) return;
+          const key = id.trim();
+          const quantity = safeParseInt(breakfastQuantities[index], 1);
+          const unitPrice = safeParseFloat(unitPrices[index], 0);
+
+          if (!acc[key]) {
+            acc[key] = {
+              id: safeParseInt(id, 0),
+              type: 'breakfast',
+              name: breakfastNames[index]?.trim() || 'Petit-déjeuner inconnu',
+              quantity: 0,
+              unitPrice,
+              imageUrl: breakfastImages[index]?.trim() || FALLBACK_IMAGE,
+              options: [],
+            };
+          }
+          acc[key].quantity = quantity;
+
+          const optionsPerItem = breakfastIds.length ? Math.floor(optionIds.length / breakfastIds.length) : 0;
+          const startIdx = index * optionsPerItem;
+          const endIdx = (index + 1) * optionsPerItem;
+          const itemOptionNames = optionNames[index] || [];
+          const itemOptionPrices = optionPrices[index] || [];
+
+          const names = Array.isArray(itemOptionNames)
+            ? itemOptionNames
+            : typeof itemOptionNames === 'string' && itemOptionNames
+            ? itemOptionNames.split('|').map(name => name?.trim() || 'Option inconnue')
+            : [];
+          const prices = Array.isArray(itemOptionPrices)
+            ? itemOptionPrices.map(price => safeParseFloat(price, 0))
+            : typeof itemOptionPrices === 'string' && itemOptionPrices
+            ? itemOptionPrices.split('|').map(price => safeParseFloat(price, 0))
+            : [];
+
+          for (let i = 0; i < Math.min(names.length, prices.length); i++) {
+            acc[key].options.push({
+              name: names[i] || 'Option inconnue',
+              price: prices[i] || 0,
+            });
+          }
+          acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
+        });
+
         const processedOrder = {
           ...order,
-          item_ids: order.item_ids
-            ? order.item_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          item_names: order.item_names
-            ? order.item_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          image_urls: order.image_urls
-            ? order.image_urls.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
-            : [],
-          quantities: order.menu_quantities
-            ? order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
-            : [],
-          unit_prices: order.unit_prices
-            ? order.unit_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
-            : [],
-          supplement_ids: order.supplement_ids
-            ? order.supplement_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          supplement_names: order.supplement_names
-            ? order.supplement_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          supplement_prices: order.supplement_prices
-            ? order.supplement_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
-            : [],
-          breakfast_ids: order.breakfast_ids
-            ? order.breakfast_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          breakfast_names: order.breakfast_names
-            ? order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          breakfast_images: order.breakfast_images
-            ? order.breakfast_images.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
-            : [],
-          breakfast_quantities: order.breakfast_quantities
-            ? order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
-            : [],
-          breakfast_option_ids: order.breakfast_option_ids
-            ? order.breakfast_option_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
-            : [],
-          breakfast_option_names: order.breakfast_option_names
-            ? order.breakfast_option_names.split(',').map(name => name.trim()).filter(Boolean)
-            : [],
-          breakfast_option_prices: order.breakfast_option_prices
-            ? order.breakfast_option_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
-            : [],
+          groupedItems: Object.values(acc).filter(item => item.quantity > 0),
           status: order.status || (order.approved ? 'preparing' : 'pending'),
+          total_price: safeParseFloat(order.total_price, 0),
         };
         setOrders(prev => [processedOrder, ...prev]);
         toast.success(`New order #${order.id} received`);
@@ -158,7 +328,11 @@ function OrderManagement() {
         setOrders(prev =>
           prev.map(order =>
             order.id === parseInt(updatedOrder.orderId)
-              ? { ...order, status: updatedOrder.status || (updatedOrder.approved ? 'preparing' : 'pending'), approved: Number(updatedOrder.orderDetails.approved) }
+              ? {
+                  ...order,
+                  status: updatedOrder.status || (updatedOrder.approved ? 'preparing' : 'pending'),
+                  approved: Number(updatedOrder.orderDetails.approved),
+                }
               : order
           )
         );
@@ -230,11 +404,11 @@ function OrderManagement() {
     switch (status) {
       case 'preparing':
       case 'Approved':
-        return { backgroundColor: '#dcfce7', color: '#166534' };
+        return { backgroundColor: '#ecfdf5', color: '#10b981' };
       case 'cancelled':
-        return { backgroundColor: '#fee2e2', color: '#991b1b' };
+        return { backgroundColor: '#fef2f2', color: '#ef4444' };
       default:
-        return { backgroundColor: '#fed7aa', color: '#9a3412' };
+        return { backgroundColor: '#fffbeb', color: '#f59e0b' };
     }
   };
 
@@ -277,23 +451,8 @@ function OrderManagement() {
           ) : (
             <div className="order-management-grid">
               {orders.map((order, index) => {
-                const formattedPrice = parseFloat(order.total_price).toFixed(2);
-                const combinedItems = [
-                  ...(order.item_names || []).map((name, idx) => ({
-                    name,
-                    image: order.image_urls[idx],
-                    quantity: order.quantities[idx],
-                    supplement: order.supplement_names[idx],
-                    type: 'menu',
-                  })),
-                  ...(order.breakfast_names || []).map((name, idx) => ({
-                    name,
-                    image: order.breakfast_images[idx],
-                    quantity: order.breakfast_quantities[idx],
-                    option: order.breakfast_option_names[idx],
-                    type: 'breakfast',
-                  })),
-                ].slice(0, 3);
+                const formattedPrice = safeParseFloat(order.total_price, 0).toFixed(2);
+                const combinedItems = order.groupedItems.slice(0, 3);
                 return (
                   <div
                     key={order.id}
@@ -318,34 +477,45 @@ function OrderManagement() {
 
                     <div className="order-management-items">
                       {combinedItems.map((item, idx) => (
-                        <div key={idx} className="order-management-item">
+                        <div key={`${item.type}-${item.id}-${idx}`} className="order-management-item">
                           <img
-                            src={item.image || FALLBACK_IMAGE}
+                            src={item.imageUrl || FALLBACK_IMAGE}
                             alt={item.name}
                             className="order-management-item-image"
-                            onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                            onError={(e) => {
+                              console.error(`Failed to load image for ${item.type} item "${item.name}": ${e.target.src}`);
+                              e.target.src = FALLBACK_IMAGE;
+                            }}
                             loading="lazy"
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '6px',
+                              objectFit: 'cover',
+                              flexShrink: 0,
+                              backgroundColor: '#f3f4f6',
+                            }}
                           />
                           <div className="order-management-item-details">
                             <span className="order-management-item-name">{item.name}</span>
-                            {item.supplement && (
-                              <span className="order-management-item-supplement">+ {item.supplement}</span>
+                            {item.supplementName && (
+                              <span className="order-management-item-supplement">+ {item.supplementName}</span>
                             )}
-                            {item.option && (
-                              <span className="order-management-item-option">+ {item.option}</span>
-                            )}
+                            {(item.options || []).map((opt, optIdx) => (
+                              <span key={optIdx} className="order-management-item-option">+ {opt.name}</span>
+                            ))}
                           </div>
                         </div>
                       ))}
-                      {combinedItems.length < ((order.item_names?.length || 0) + (order.breakfast_names?.length || 0)) && (
+                      {combinedItems.length < order.groupedItems.length && (
                         <div className="order-management-more-items">
-                          +{((order.item_names?.length || 0) + (order.breakfast_names?.length || 0)) - 3} more
+                          +{order.groupedItems.length - 3} more
                         </div>
                       )}
                     </div>
 
                     <div className="order-management-footer">
-                      <span className="order-management-price">${formattedPrice}</span>
+                      <span className="order-management-price">{formattedPrice} DT</span>
                       <div className="order-management-arrow">→</div>
                     </div>
                   </div>
@@ -382,50 +552,44 @@ function OrderManagement() {
               <div className="order-management-items-section">
                 <h3 className="order-management-section-title">Items Ordered</h3>
                 <div className="order-management-items-list">
-                  {(selectedOrder?.item_names || []).map((name, index) => (
-                    <div key={`menu-${index}`} className="order-management-item-detail">
+                  {(selectedOrder?.groupedItems || []).map((item, index) => (
+                    <div key={`${item.type}-${item.id}-${index}`} className="order-management-item-detail">
                       <img
-                        src={selectedOrder.image_urls[index] || FALLBACK_IMAGE}
-                        alt={name}
+                        src={item.imageUrl || FALLBACK_IMAGE}
+                        alt={item.name}
                         className="order-management-item-detail-image"
-                        onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                        onError={(e) => {
+                          console.error(`Failed to load image for ${item.type} item "${item.name}": ${e.target.src}`);
+                          e.target.src = FALLBACK_IMAGE;
+                        }}
                         loading="lazy"
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '6px',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          backgroundColor: '#f3f4f6',
+                        }}
                       />
                       <div className="order-management-item-detail-info">
-                        <p className="order-management-item-detail-name">{name} (Menu Item)</p>
+                        <p className="order-management-item-detail-name">{item.name} ({item.type === 'menu' ? 'Menu Item' : 'Breakfast'})</p>
                         <p className="order-management-item-detail-quantity">
-                          Quantity: {selectedOrder.quantities[index] || 0}
+                          Quantity: {item.quantity || 0}
                         </p>
-                        {selectedOrder.supplement_names[index] && (
+                        {item.supplementName && (
                           <p className="order-management-item-detail-supplement">
-                            Supplement: {selectedOrder.supplement_names[index]} (+${selectedOrder.supplement_prices[index]?.toFixed(2) || '0.00'})
+                            Supplement: {item.supplementName} (+{item.supplementPrice?.toFixed(2) || '0.00'} DT)
                           </p>
                         )}
+                        {(item.options || []).map((opt, optIdx) => (
+                          <p key={optIdx} className="order-management-item-detail-options">
+                            Option: {opt.name} (+{opt.price?.toFixed(2) || '0.00'} DT)
+                          </p>
+                        ))}
                         <p className="order-management-item-detail-price">
-                          Unit Price: ${selectedOrder.unit_prices[index]?.toFixed(2) || '0.00'}
+                          Unit Price: {item.unitPrice?.toFixed(2) || '0.00'} DT
                         </p>
-                      </div>
-                    </div>
-                  ))}
-                  {(selectedOrder?.breakfast_names || []).map((name, index) => (
-                    <div key={`breakfast-${index}`} className="order-management-item-detail">
-                      <img
-                        src={selectedOrder.breakfast_images[index] || FALLBACK_IMAGE}
-                        alt={name}
-                        className="order-management-item-detail-image"
-                        onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
-                        loading="lazy"
-                      />
-                      <div className="order-management-item-detail-info">
-                        <p className="order-management-item-detail-name">{name} (Breakfast)</p>
-                        <p className="order-management-item-detail-quantity">
-                          Quantity: {selectedOrder.breakfast_quantities[index] || 0}
-                        </p>
-                        {selectedOrder.breakfast_option_names[index] && (
-                          <p className="order-management-item-detail-options">
-                            Options: {selectedOrder.breakfast_option_names[index]} (+${selectedOrder.breakfast_option_prices[index]?.toFixed(2) || '0.00'})
-                          </p>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -460,7 +624,7 @@ function OrderManagement() {
               <div className="order-management-total-section">
                 <span className="order-management-total-label">Total Amount</span>
                 <span className="order-management-total-amount">
-                  ${parseFloat(selectedOrder?.total_price || 0).toFixed(2)}
+                  {safeParseFloat(selectedOrder?.total_price, 0).toFixed(2)} DT
                 </span>
               </div>
             </div>
