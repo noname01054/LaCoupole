@@ -5,6 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { initSocket } from '../services/socket';
 import './css/OrderManagement.css';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.13:5000';
+const FALLBACK_IMAGE = 'https://via.placeholder.com/48?text=No+Image';
+
 function OrderManagement() {
   const [user, setUser] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -13,8 +16,6 @@ function OrderManagement() {
   const [showOrderDetail, setShowOrderDetail] = useState(false);
   const [dateFilter, setDateFilter] = useState('all');
   const navigate = useNavigate();
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-  const placeholderImage = 'https://via.placeholder.com/48?text=No+Image';
 
   useEffect(() => {
     async function checkAuth() {
@@ -47,7 +48,7 @@ function OrderManagement() {
             ? order.item_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           image_urls: order.image_urls
-            ? order.image_urls.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.image_urls.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
             : [],
           quantities: order.menu_quantities
             ? order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
@@ -71,7 +72,7 @@ function OrderManagement() {
             ? order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           breakfast_images: order.breakfast_images
-            ? order.breakfast_images.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.breakfast_images.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
             : [],
           breakfast_quantities: order.breakfast_quantities
             ? order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
@@ -110,7 +111,7 @@ function OrderManagement() {
             ? order.item_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           image_urls: order.image_urls
-            ? order.image_urls.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.image_urls.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
             : [],
           quantities: order.menu_quantities
             ? order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
@@ -134,7 +135,7 @@ function OrderManagement() {
             ? order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           breakfast_images: order.breakfast_images
-            ? order.breakfast_images.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.breakfast_images.split(',').map(url => url?.trim() ? `${BACKEND_URL}${url.trim()}` : FALLBACK_IMAGE).filter(Boolean)
             : [],
           breakfast_quantities: order.breakfast_quantities
             ? order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
@@ -318,18 +319,13 @@ function OrderManagement() {
                     <div className="order-management-items">
                       {combinedItems.map((item, idx) => (
                         <div key={idx} className="order-management-item">
-                          {item.image && item.image !== 'null' ? (
-                            <img
-                              src={`${baseUrl}${item.image}`.replace(/"/g, '')}
-                              alt={item.name}
-                              className="order-management-item-image"
-                              onError={(e) => { e.target.src = placeholderImage; }}
-                            />
-                          ) : (
-                            <div className="order-management-item-placeholder">
-                              {item.quantity}
-                            </div>
-                          )}
+                          <img
+                            src={item.image || FALLBACK_IMAGE}
+                            alt={item.name}
+                            className="order-management-item-image"
+                            onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                            loading="lazy"
+                          />
                           <div className="order-management-item-details">
                             <span className="order-management-item-name">{item.name}</span>
                             {item.supplement && (
@@ -388,16 +384,13 @@ function OrderManagement() {
                 <div className="order-management-items-list">
                   {(selectedOrder?.item_names || []).map((name, index) => (
                     <div key={`menu-${index}`} className="order-management-item-detail">
-                      {selectedOrder.image_urls[index] && selectedOrder.image_urls[index] !== 'null' ? (
-                        <img
-                          src={`${baseUrl}${selectedOrder.image_urls[index]}`.replace(/"/g, '')}
-                          alt={name}
-                          className="order-management-item-detail-image"
-                          onError={(e) => { e.target.src = placeholderImage; }}
-                        />
-                      ) : (
-                        <div className="order-management-item-detail-placeholder">No Img</div>
-                      )}
+                      <img
+                        src={selectedOrder.image_urls[index] || FALLBACK_IMAGE}
+                        alt={name}
+                        className="order-management-item-detail-image"
+                        onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                        loading="lazy"
+                      />
                       <div className="order-management-item-detail-info">
                         <p className="order-management-item-detail-name">{name} (Menu Item)</p>
                         <p className="order-management-item-detail-quantity">
@@ -416,16 +409,13 @@ function OrderManagement() {
                   ))}
                   {(selectedOrder?.breakfast_names || []).map((name, index) => (
                     <div key={`breakfast-${index}`} className="order-management-item-detail">
-                      {selectedOrder.breakfast_images[index] && selectedOrder.breakfast_images[index] !== 'null' ? (
-                        <img
-                          src={`${baseUrl}${selectedOrder.breakfast_images[index]}`.replace(/"/g, '')}
-                          alt={name}
-                          className="order-management-item-detail-image"
-                          onError={(e) => { e.target.src = placeholderImage; }}
-                        />
-                      ) : (
-                        <div className="order-management-item-detail-placeholder">No Img</div>
-                      )}
+                      <img
+                        src={selectedOrder.breakfast_images[index] || FALLBACK_IMAGE}
+                        alt={name}
+                        className="order-management-item-detail-image"
+                        onError={(e) => { e.target.src = FALLBACK_IMAGE; }}
+                        loading="lazy"
+                      />
                       <div className="order-management-item-detail-info">
                         <p className="order-management-item-detail-name">{name} (Breakfast)</p>
                         <p className="order-management-item-detail-quantity">
