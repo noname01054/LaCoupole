@@ -37,46 +37,55 @@ function OrderManagement() {
       try {
         const query = dateFilter !== 'all' ? `?time_range=${dateFilter}` : '';
         const res = await api.get(`/orders${query}`);
-        console.log('API response data:', res.data);
         const ordersArray = Array.isArray(res.data.data) ? res.data.data : [];
         const processedOrders = ordersArray.map(order => ({
           ...order,
+          item_ids: order.item_ids
+            ? order.item_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
+            : [],
           item_names: order.item_names
-            ? Array.isArray(order.item_names)
-              ? order.item_names.map(name => name.trim())
-              : order.item_names.split(',').map(name => name.trim()).filter(Boolean)
+            ? order.item_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           image_urls: order.image_urls
-            ? Array.isArray(order.image_urls)
-              ? order.image_urls.map(url => url.trim())
-              : order.image_urls.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.image_urls.split(',').map(url => url.trim()).filter(Boolean)
             : [],
           quantities: order.menu_quantities
-            ? Array.isArray(order.menu_quantities)
-              ? order.menu_quantities.map(qty => parseInt(qty, 10))
-              : order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            ? order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            : [],
+          unit_prices: order.unit_prices
+            ? order.unit_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
+            : [],
+          supplement_ids: order.supplement_ids
+            ? order.supplement_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
+            : [],
+          supplement_names: order.supplement_names
+            ? order.supplement_names.split(',').map(name => name.trim()).filter(Boolean)
+            : [],
+          supplement_prices: order.supplement_prices
+            ? order.supplement_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
+            : [],
+          breakfast_ids: order.breakfast_ids
+            ? order.breakfast_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
             : [],
           breakfast_names: order.breakfast_names
-            ? Array.isArray(order.breakfast_names)
-              ? order.breakfast_names.map(name => name.trim())
-              : order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
+            ? order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           breakfast_images: order.breakfast_images
-            ? Array.isArray(order.breakfast_images)
-              ? order.breakfast_images.map(url => url.trim())
-              : order.breakfast_images.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.breakfast_images.split(',').map(url => url.trim()).filter(Boolean)
             : [],
           breakfast_quantities: order.breakfast_quantities
-            ? Array.isArray(order.breakfast_quantities)
-              ? order.breakfast_quantities.map(qty => parseInt(qty, 10))
-              : order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            ? order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            : [],
+          breakfast_option_ids: order.breakfast_option_ids
+            ? order.breakfast_option_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
             : [],
           breakfast_option_names: order.breakfast_option_names
-            ? Array.isArray(order.breakfast_option_names)
-              ? order.breakfast_option_names.map(name => name.trim())
-              : order.breakfast_option_names.split(',').map(name => name.trim()).filter(Boolean)
+            ? order.breakfast_option_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
-          status: order.approved ? 'Approved' : 'Pending',
+          breakfast_option_prices: order.breakfast_option_prices
+            ? order.breakfast_option_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
+            : [],
+          status: order.status || (order.approved ? 'preparing' : 'pending'),
         }));
         setOrders(processedOrders);
       } catch (err) {
@@ -94,42 +103,52 @@ function OrderManagement() {
       (order) => {
         const processedOrder = {
           ...order,
+          item_ids: order.item_ids
+            ? order.item_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
+            : [],
           item_names: order.item_names
-            ? Array.isArray(order.item_names)
-              ? order.item_names.map(name => name.trim())
-              : order.item_names.split(',').map(name => name.trim()).filter(Boolean)
+            ? order.item_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           image_urls: order.image_urls
-            ? Array.isArray(order.image_urls)
-              ? order.image_urls.map(url => url.trim())
-              : order.image_urls.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.image_urls.split(',').map(url => url.trim()).filter(Boolean)
             : [],
           quantities: order.menu_quantities
-            ? Array.isArray(order.menu_quantities)
-              ? order.menu_quantities.map(qty => parseInt(qty, 10))
-              : order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            ? order.menu_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            : [],
+          unit_prices: order.unit_prices
+            ? order.unit_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
+            : [],
+          supplement_ids: order.supplement_ids
+            ? order.supplement_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
+            : [],
+          supplement_names: order.supplement_names
+            ? order.supplement_names.split(',').map(name => name.trim()).filter(Boolean)
+            : [],
+          supplement_prices: order.supplement_prices
+            ? order.supplement_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
+            : [],
+          breakfast_ids: order.breakfast_ids
+            ? order.breakfast_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
             : [],
           breakfast_names: order.breakfast_names
-            ? Array.isArray(order.breakfast_names)
-              ? order.breakfast_names.map(name => name.trim())
-              : order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
+            ? order.breakfast_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
           breakfast_images: order.breakfast_images
-            ? Array.isArray(order.breakfast_images)
-              ? order.breakfast_images.map(url => url.trim())
-              : order.breakfast_images.split(',').map(url => url.trim()).filter(Boolean)
+            ? order.breakfast_images.split(',').map(url => url.trim()).filter(Boolean)
             : [],
           breakfast_quantities: order.breakfast_quantities
-            ? Array.isArray(order.breakfast_quantities)
-              ? order.breakfast_quantities.map(qty => parseInt(qty, 10))
-              : order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            ? order.breakfast_quantities.split(',').map(qty => parseInt(qty, 10)).filter(qty => !isNaN(qty))
+            : [],
+          breakfast_option_ids: order.breakfast_option_ids
+            ? order.breakfast_option_ids.split(',').map(id => parseInt(id, 10)).filter(Boolean)
             : [],
           breakfast_option_names: order.breakfast_option_names
-            ? Array.isArray(order.breakfast_option_names)
-              ? order.breakfast_option_names.map(name => name.trim())
-              : order.breakfast_option_names.split(',').map(name => name.trim()).filter(Boolean)
+            ? order.breakfast_option_names.split(',').map(name => name.trim()).filter(Boolean)
             : [],
-          status: order.approved ? 'Approved' : 'Pending',
+          breakfast_option_prices: order.breakfast_option_prices
+            ? order.breakfast_option_prices.split(',').map(price => parseFloat(price)).filter(price => !isNaN(price))
+            : [],
+          status: order.status || (order.approved ? 'preparing' : 'pending'),
         };
         setOrders(prev => [processedOrder, ...prev]);
         toast.success(`New order #${order.id} received`);
@@ -138,11 +157,11 @@ function OrderManagement() {
         setOrders(prev =>
           prev.map(order =>
             order.id === parseInt(updatedOrder.orderId)
-              ? { ...order, status: updatedOrder.status || (updatedOrder.approved ? 'Approved' : 'Pending') }
+              ? { ...order, status: updatedOrder.status || (updatedOrder.approved ? 'preparing' : 'pending'), approved: Number(updatedOrder.orderDetails.approved) }
               : order
           )
         );
-        toast.info(`Order #${updatedOrder.orderId} updated to ${updatedOrder.status || (updatedOrder.approved ? 'Approved' : 'Pending')}`);
+        toast.info(`Order #${updatedOrder.orderId} updated to ${updatedOrder.status || (updatedOrder.approved ? 'preparing' : 'pending')}`);
       },
       () => {},
       () => {},
@@ -158,7 +177,7 @@ function OrderManagement() {
 
   const handleStatusUpdate = async (orderId, status) => {
     try {
-      const approved = status === 'Approved' ? 1 : 0;
+      const approved = status === 'preparing' || status === 'Approved' ? 1 : 0;
       await api.post(`/orders/${orderId}/approve`, { user_id: user.id, approved });
       setOrders(prev =>
         prev.map(order =>
@@ -169,6 +188,22 @@ function OrderManagement() {
     } catch (err) {
       console.error('Failed to update order:', err.response?.data || err.message);
       toast.error(err.response?.data?.error || 'Failed to update order status');
+    }
+  };
+
+  const handleCancelOrder = async (orderId) => {
+    try {
+      await api.post(`/orders/${orderId}/cancel`, { restoreStock: true });
+      setOrders(prev =>
+        prev.map(order =>
+          order.id === orderId ? { ...order, status: 'cancelled', approved: 0 } : order
+        )
+      );
+      toast.success('Order cancelled successfully');
+      closeOrderDetail();
+    } catch (err) {
+      console.error('Failed to cancel order:', err.response?.data || err.message);
+      toast.error(err.response?.data?.error || 'Failed to cancel order');
     }
   };
 
@@ -184,16 +219,22 @@ function OrderManagement() {
 
   const formatTime = (dateString) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleString('en-US', {
+      dateStyle: 'short',
+      timeStyle: 'short',
     });
   };
 
   const getStatusColor = (status) => {
-    return status === 'Approved' 
-      ? { backgroundColor: '#dcfce7', color: '#166534' }
-      : { backgroundColor: '#fed7aa', color: '#9a3412' };
+    switch (status) {
+      case 'preparing':
+      case 'Approved':
+        return { backgroundColor: '#dcfce7', color: '#166534' };
+      case 'cancelled':
+        return { backgroundColor: '#fee2e2', color: '#991b1b' };
+      default:
+        return { backgroundColor: '#fed7aa', color: '#9a3412' };
+    }
   };
 
   return (
@@ -224,7 +265,7 @@ function OrderManagement() {
               ))}
             </div>
             <p className="order-management-stats">
-              {orders.length} orders • {orders.filter(o => o.status === 'Pending').length} pending
+              {orders.length} orders • {orders.filter(o => o.status === 'pending').length} pending
             </p>
           </div>
 
@@ -241,12 +282,14 @@ function OrderManagement() {
                     name,
                     image: order.image_urls[idx],
                     quantity: order.quantities[idx],
+                    supplement: order.supplement_names[idx],
                     type: 'menu',
                   })),
                   ...(order.breakfast_names || []).map((name, idx) => ({
                     name,
                     image: order.breakfast_images[idx],
                     quantity: order.breakfast_quantities[idx],
+                    option: order.breakfast_option_names[idx],
                     type: 'breakfast',
                   })),
                 ].slice(0, 3);
@@ -263,9 +306,12 @@ function OrderManagement() {
                         <p className="order-management-order-info">
                           {order.table_number ? `Table ${order.table_number}` : order.order_type} • {order.created_at ? formatTime(order.created_at) : 'N/A'}
                         </p>
+                        {order.notes && (
+                          <p className="order-management-order-notes">Notes: {order.notes}</p>
+                        )}
                       </div>
                       <span className="order-management-status" style={getStatusColor(order.status)}>
-                        {order.status}
+                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
                       </span>
                     </div>
 
@@ -284,7 +330,15 @@ function OrderManagement() {
                               {item.quantity}
                             </div>
                           )}
-                          <span className="order-management-item-name">{item.name}</span>
+                          <div className="order-management-item-details">
+                            <span className="order-management-item-name">{item.name}</span>
+                            {item.supplement && (
+                              <span className="order-management-item-supplement">+ {item.supplement}</span>
+                            )}
+                            {item.option && (
+                              <span className="order-management-item-option">+ {item.option}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                       {combinedItems.length < ((order.item_names?.length || 0) + (order.breakfast_names?.length || 0)) && (
@@ -306,7 +360,7 @@ function OrderManagement() {
         </>
       )}
 
-      {showOrderDetail && (
+      {showOrderDetail && selectedOrder && (
         <div className="order-management-modal">
           <div className="order-management-modal-content">
             <div className="order-management-modal-header">
@@ -314,7 +368,14 @@ function OrderManagement() {
                 <h2 className="order-management-modal-title">Order #{selectedOrder?.id}</h2>
                 <p className="order-management-modal-info">
                   {selectedOrder?.table_number ? `Table ${selectedOrder.table_number}` : selectedOrder?.order_type}
+                  {selectedOrder?.delivery_address && ` • ${selectedOrder.delivery_address}`}
                 </p>
+                {selectedOrder?.notes && (
+                  <p className="order-management-modal-notes">Notes: {selectedOrder.notes}</p>
+                )}
+                {selectedOrder?.promotion_id && (
+                  <p className="order-management-modal-promotion">Promotion ID: {selectedOrder.promotion_id}</p>
+                )}
               </div>
               <button className="order-management-close-button" onClick={closeOrderDetail}>
                 ×
@@ -342,6 +403,14 @@ function OrderManagement() {
                         <p className="order-management-item-detail-quantity">
                           Quantity: {selectedOrder.quantities[index] || 0}
                         </p>
+                        {selectedOrder.supplement_names[index] && (
+                          <p className="order-management-item-detail-supplement">
+                            Supplement: {selectedOrder.supplement_names[index]} (+${selectedOrder.supplement_prices[index]?.toFixed(2) || '0.00'})
+                          </p>
+                        )}
+                        <p className="order-management-item-detail-price">
+                          Unit Price: ${selectedOrder.unit_prices[index]?.toFixed(2) || '0.00'}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -362,9 +431,9 @@ function OrderManagement() {
                         <p className="order-management-item-detail-quantity">
                           Quantity: {selectedOrder.breakfast_quantities[index] || 0}
                         </p>
-                        {selectedOrder.breakfast_option_names && selectedOrder.breakfast_option_names[index] && (
+                        {selectedOrder.breakfast_option_names[index] && (
                           <p className="order-management-item-detail-options">
-                            Options: {selectedOrder.breakfast_option_names[index]}
+                            Options: {selectedOrder.breakfast_option_names[index]} (+${selectedOrder.breakfast_option_prices[index]?.toFixed(2) || '0.00'})
                           </p>
                         )}
                       </div>
@@ -382,10 +451,20 @@ function OrderManagement() {
                     setSelectedOrder(prev => ({ ...prev, status: e.target.value }));
                   }}
                   className="order-management-status-select"
+                  disabled={selectedOrder?.status === 'cancelled'}
                 >
-                  <option value="Pending">Pending</option>
-                  <option value="Approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="cancelled">Cancelled</option>
                 </select>
+                {selectedOrder?.status !== 'cancelled' && (
+                  <button
+                    onClick={() => handleCancelOrder(selectedOrder.id)}
+                    className="order-management-cancel-button"
+                  >
+                    Cancel Order
+                  </button>
+                )}
               </div>
 
               <div className="order-management-total-section">
