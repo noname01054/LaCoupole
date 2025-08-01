@@ -278,7 +278,7 @@ function OrderCard({
       ref={cardRef} 
       className="order-card"
       style={{
-        width: 'calc(390px - 16px)',
+        width: 'calc(347px - 16px)',
         maxWidth: 'calc(100vw - 16px)',
         margin: '0 0 12px 0',
         backgroundColor: '#ffffff',
