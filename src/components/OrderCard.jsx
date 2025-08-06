@@ -133,6 +133,7 @@ function OrderCard({
       const quantity = safeParseInt(menuQuantities[idx], 1);
       const unitPrice = safeParseFloat(unitPrices[idx], 0);
       const supplementPrice = supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0;
+      const basePrice = unitPrice - supplementPrice;
 
       if (!acc[key]) {
         acc[key] = {
@@ -140,10 +141,11 @@ function OrderCard({
           type: 'menu',
           name: itemNames[idx]?.trim() || 'Article inconnu',
           quantity: 0,
+          basePrice,
           unitPrice,
           supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
           supplementPrice,
-          imageUrl: imageUrls[idx]?.trim() || null,
+          imageUrl: imageUrls[idx]?.trim() ? `${BACKEND_URL}${imageUrls[idx].startsWith('/') ? '' : '/'}${imageUrls[idx]}` : null,
           options: [],
         };
       }
@@ -160,11 +162,42 @@ function OrderCard({
     const optionPrices = Array.isArray(order.breakfast_option_prices) ? order.breakfast_option_prices : order.breakfast_option_prices?.split(',') || [];
 
     breakfastIds.forEach((id, index) => {
-      if (index >= breakfastQuantities.length || index >= breakfastNames.length || index >= unitPrices.length) return;
+      if (index >= breakfastQuantities.length || index >= breakfastNames.length) return;
 
-      const key = id.trim();
+      const key = `breakfast_${id.trim()}`;
       const quantity = safeParseInt(breakfastQuantities[index], 1);
-      const unitPrice = safeParseFloat(unitPrices[index], 0);
+      const imageUrl = index < breakfastImages.length ? (breakfastImages[index]?.trim() ? `${BACKEND_URL}${breakfastImages[index].startsWith('/') ? '' : '/'}${breakfastImages[index]}` : null) : null;
+
+      // Calculate options for this breakfast item
+      const options = [];
+      const optionsPerItem = breakfastIds.length ? Math.floor(optionIds.length / breakfastIds.length) : 0;
+      const startIdx = index * optionsPerItem;
+      const endIdx = (index + 1) * optionsPerItem;
+
+      let totalOptionPrice = 0;
+      for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
+        if (optionIds[i]) {
+          const optionPrice = safeParseFloat(optionPrices[i], 0);
+          totalOptionPrice += optionPrice;
+          let optionName = 'Option inconnue';
+          if (i < optionNames.length) {
+            const name = optionNames[i];
+            if (typeof name === 'string') {
+              optionName = name.trim() || 'Option inconnue';
+            } else if (Array.isArray(name)) {
+              optionName = name.join(', ').trim() || 'Option inconnue';
+            }
+          }
+          options.push({
+            name: optionName,
+            price: optionPrice,
+          });
+        }
+      }
+
+      // Get breakfast unit price
+      const breakfastUnitPrice = unitPrices.length > itemIds.length ? safeParseFloat(unitPrices[itemIds.length + index], 0) : 0;
+      const basePrice = breakfastUnitPrice - totalOptionPrice;
 
       if (!acc[key]) {
         acc[key] = {
@@ -172,39 +205,15 @@ function OrderCard({
           type: 'breakfast',
           name: breakfastNames[index]?.trim() || 'Petit-déjeuner inconnu',
           quantity: 0,
-          unitPrice,
-          imageUrl: breakfastImages[index]?.trim() || null,
-          options: [],
+          basePrice,
+          unitPrice: breakfastUnitPrice,
+          imageUrl,
+          options,
+          supplementName: null,
+          supplementPrice: 0,
         };
       }
       acc[key].quantity = quantity;
-
-      // Add options for breakfast items
-      const optionsPerItem = breakfastIds.length ? Math.floor(optionIds.length / breakfastIds.length) : 0;
-      const startIdx = index * optionsPerItem;
-      const endIdx = (index + 1) * optionsPerItem;
-      const itemOptionNames = optionNames[index] || [];
-      const itemOptionPrices = optionPrices[index] || [];
-
-      const names = Array.isArray(itemOptionNames)
-        ? itemOptionNames
-        : typeof itemOptionNames === 'string' && itemOptionNames
-        ? itemOptionNames.split('|').map((name) => name?.trim() || 'Option inconnue')
-        : [];
-
-      const prices = Array.isArray(itemOptionPrices)
-        ? itemOptionPrices.map((price) => safeParseFloat(price, 0))
-        : typeof itemOptionPrices === 'string' && itemOptionPrices
-        ? itemOptionPrices.split('|').map((price) => safeParseFloat(price, 0))
-        : [];
-
-      for (let i = 0; i < Math.min(names.length, prices.length); i++) {
-        acc[key].options.push({
-          name: names[i] || 'Option inconnue',
-          price: prices[i] || 0,
-        });
-      }
-      acc[key].options = Array.from(new Set(acc[key].options.map(opt => JSON.stringify(opt))), JSON.parse);
     });
 
     return Object.values(acc).filter(item => item.quantity > 0);
@@ -546,13 +555,14 @@ function OrderCard({
               {groupedItems.length > 0 ? (
                 groupedItems.map((item, index) => {
                   const imageUrl = item.imageUrl || FALLBACK_IMAGE;
+                  const totalItemPrice = item.unitPrice * item.quantity;
 
                   return (
                     <div
                       key={`${item.type}-${item.id}-${index}`}
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
+                        alignItems: 'flex-start',
                         padding: '12px',
                         backgroundColor: '#f9fafb',
                         borderRadius: '8px',
@@ -591,7 +601,8 @@ function OrderCard({
                         >
                           {item.name}
                         </div>
-                        {item.supplementName && (
+                        {/* Price breakdown */}
+                        <div style={{ marginBottom: '4px' }}>
                           <div 
                             style={{
                               fontSize: '12px',
@@ -599,21 +610,49 @@ function OrderCard({
                               lineHeight: '1.3',
                             }}
                           >
-                            + {item.supplementName}
+                            {item.basePrice.toFixed(2)} DT
                           </div>
-                        )}
-                        {(item.options || []).map((opt, optIdx) => (
+                          {/* Supplement for menu items */}
+                          {item.type === 'menu' && item.supplementName && item.supplementPrice > 0 && (
+                            <div 
+                              style={{
+                                fontSize: '12px',
+                                color: '#6b7280',
+                                lineHeight: '1.3',
+                              }}
+                            >
+                              + {item.supplementName}: {item.supplementPrice.toFixed(2)} DT
+                            </div>
+                          )}
+                          {/* Options for breakfast items */}
+                          {item.type === 'breakfast' && item.options && item.options.length > 0 && (
+                            <div>
+                              {item.options.map((opt, optIdx) => (
+                                <div 
+                                  key={optIdx}
+                                  style={{
+                                    fontSize: '12px',
+                                    color: '#6b7280',
+                                    lineHeight: '1.3',
+                                  }}
+                                >
+                                  + {opt.name}: {opt.price.toFixed(2)} DT
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {/* Total calculation */}
                           <div 
-                            key={optIdx}
                             style={{
-                              fontSize: '12px',
-                              color: '#6b7280',
-                              lineHeight: '1.3',
+                              fontSize: '13px',
+                              color: '#1f2937',
+                              fontWeight: '600',
+                              marginTop: '2px',
                             }}
                           >
-                            + {opt.name}
+                            {item.unitPrice.toFixed(2)} DT × {item.quantity} = {totalItemPrice.toFixed(2)} DT
                           </div>
-                        ))}
+                        </div>
                       </div>
                       <div 
                         style={{
