@@ -145,7 +145,7 @@ function OrderCard({
           unitPrice,
           supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
           supplementPrice,
-          imageUrl: imageUrls[idx]?.trim() || null,
+          imageUrl: idx < imageUrls.length ? imageUrls[idx]?.trim() || null : null,
           options: [],
         };
       }
