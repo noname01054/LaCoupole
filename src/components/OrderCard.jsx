@@ -145,7 +145,7 @@ function OrderCard({
           unitPrice,
           supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
           supplementPrice,
-          imageUrl: imageUrls[idx]?.trim() ? `${BACKEND_URL}${imageUrls[idx].startsWith('/') ? '' : '/'}${imageUrls[idx]}` : null,
+          imageUrl: imageUrls[idx]?.trim() || null,
           options: [],
         };
       }
@@ -166,7 +166,7 @@ function OrderCard({
 
       const key = `breakfast_${id.trim()}`;
       const quantity = safeParseInt(breakfastQuantities[index], 1);
-      const imageUrl = index < breakfastImages.length ? (breakfastImages[index]?.trim() ? `${BACKEND_URL}${breakfastImages[index].startsWith('/') ? '' : '/'}${breakfastImages[index]}` : null) : null;
+      const imageUrl = index < breakfastImages.length ? breakfastImages[index]?.trim() || null : null;
 
       // Calculate options for this breakfast item
       const options = [];
