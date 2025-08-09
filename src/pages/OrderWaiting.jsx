@@ -44,9 +44,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
   const isMounted = useRef(false);
 
-  // Base image URL for hosted environment
-  const baseImageUrl = api.defaults.baseURL.replace('/api', '');
-
   // Preload audio and validate
   useEffect(() => {
     const audioPath = '/assets/notification1.mp3';
@@ -741,9 +738,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <div className="order-waiting-items">
             {groupedItems.length > 0 ? (
               groupedItems.map((item, index) => {
-                const imageUrl = item.imageUrl
-                  ? `${baseImageUrl}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
-                  : '/placeholder.jpg';
+                const imageUrl = item.imageUrl && item.imageUrl !== 'null' ? item.imageUrl : '/placeholder.jpg';
                 const totalItemPrice = item.unitPrice * item.quantity;
 
                 return (
