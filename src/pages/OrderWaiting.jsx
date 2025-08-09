@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 import { debounce } from 'lodash';
 import { LocationOn, Note } from '@mui/icons-material';
+import html2canvas from 'html2canvas';
 import './css/OrderWaiting.css';
 
 // Helper function to safely parse numbers
@@ -39,6 +40,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const audioRef = useRef(null);
   const hasPlayedSound = useRef(false);
   const hasInteracted = useRef(false);
+  const factureRef = useRef(null);
 
   // Prioritize session ID from navigation state
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
@@ -464,6 +466,25 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     document.body.removeChild(tempInput);
   };
 
+  const handleDownloadFacture = () => {
+    if (!factureRef.current) {
+      toast.error('Impossible de générer la facture.');
+      return;
+    }
+
+    html2canvas(factureRef.current, { scale: 2 }).then((canvas) => {
+      const link = document.createElement('a');
+      link.download = `facture-commande-${orderId}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      link.click();
+      console.log(`Facture téléchargée pour la commande #${orderId}`, { timestamp: new Date().toISOString() });
+      toast.success('Facture téléchargée avec succès !', { autoClose: 3000 });
+    }).catch((err) => {
+      console.error('Erreur lors de la génération de la facture :', err, { timestamp: new Date().toISOString() });
+      toast.error('Échec du téléchargement de la facture.');
+    });
+  };
+
   const groupedItems = (() => {
     if (!orderDetails) {
       console.log('No order details available for grouping');
@@ -669,6 +690,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   };
 
   const currentUrl = window.location.href;
+  const orderTime = new Date(orderDetails.created_at || Date.now()).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="order-waiting-container">
@@ -799,6 +821,43 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         </div>
       </div>
 
+      {/* Hidden Facture for Download */}
+      <div ref={factureRef} style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '400px', padding: '20px', backgroundColor: '#fff', fontFamily: 'Arial, sans-serif', color: '#000', border: '1px solid #000' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '10px' }}>Facture #{orderId}</h2>
+        <p style={{ marginBottom: '10px' }}>Heure: {orderTime}</p>
+        <hr style={{ border: 'none', borderTop: '1px dashed #000', margin: '10px 0' }} />
+        {groupedItems.map((item, index) => (
+          <div key={index} style={{ margin: '10px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>{item.quantity}x {item.name}</span>
+              <span>{(item.basePrice * item.quantity).toFixed(2)} DT</span>
+            </div>
+            {item.type === 'menu' && item.supplementName && item.supplementPrice > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginLeft: '20px', fontSize: '14px', color: '#555' }}>
+                <span>+ {item.supplementName}</span>
+                <span>{(item.supplementPrice * item.quantity).toFixed(2)} DT</span>
+              </div>
+            )}
+            {item.type === 'breakfast' && item.options && item.options.length > 0 && (
+              <div style={{ marginLeft: '20px', fontSize: '14px', color: '#555' }}>
+                {item.options.map((opt, optIdx) => (
+                  <div key={optIdx} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>+ {opt.name}</span>
+                    <span>{(opt.price * item.quantity).toFixed(2)} DT</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '5px' }}>
+              <span>Total</span>
+              <span>{(item.unitPrice * item.quantity).toFixed(2)} DT</span>
+            </div>
+          </div>
+        ))}
+        <hr style={{ border: 'none', borderTop: '1px dashed #000', margin: '10px 0' }} />
+        <p style={{ fontWeight: 'bold', textAlign: 'right' }}>TOTAL: {safeParseFloat(orderDetails.total_price || 0).toFixed(2)} DT</p>
+      </div>
+
       <div className="order-waiting-url-section">
         <p className="order-waiting-url-text">URL de la commande actuelle :</p>
         <p className="order-waiting-url-value" title={currentUrl}>{currentUrl}</p>
@@ -814,6 +873,16 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
           >
             Copier l'URL de la commande
+          </button>
+          <button
+            onClick={handleDownloadFacture}
+            className="order-waiting-button"
+            style={{ marginLeft: '10px' }}
+            onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
+            onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
+            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
+          >
+            Télécharger la facture
           </button>
         </center>
       </div>
