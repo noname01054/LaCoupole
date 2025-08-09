@@ -44,6 +44,9 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
   const isMounted = useRef(false);
 
+  // Base image URL for hosted environment
+  const baseImageUrl = api.defaults.baseURL.replace('/api', '');
+
   // Preload audio and validate
   useEffect(() => {
     const audioPath = '/assets/notification1.mp3';
@@ -489,6 +492,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
       const key = `${id.trim()}_${supplementId || 'none'}`;
       const quantity = menuQuantities[idx];
       const unitPrice = safeParseFloat(unitPrices[idx], 0);
+      const supplementPrice = supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0;
+      const basePrice = unitPrice - supplementPrice;
 
       if (!acc[key]) {
         acc[key] = {
@@ -496,49 +501,54 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           type: 'menu',
           name: itemNames[idx]?.trim() || 'Article inconnu',
           quantity: 0,
+          basePrice: basePrice,
           unitPrice: unitPrice,
-          baseUnitPrice: unitPrice,
           supplementName: supplementId ? supplementNames[idx]?.trim() || 'Supplément inconnu' : null,
-          supplementPrice: supplementId ? safeParseFloat(supplementPrices[idx], 0) : 0,
+          supplementPrice: supplementPrice,
           imageUrl: imageUrls[idx]?.trim() || null,
           options: [],
         };
       }
       acc[key].quantity = quantity;
-      console.log(`Processed menu item: id=${id}, supplementId=${supplementId}, quantity=${quantity}, key=${key}`);
+      console.log(`Processed menu item: id=${id}, supplementId=${supplementId}, quantity=${quantity}, basePrice=${basePrice}, supplementPrice=${supplementPrice}, key=${key}`);
     });
 
     // Process breakfast items
     const breakfastIds = (orderDetails.breakfast_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
     const breakfastNames = orderDetails.breakfast_names?.split(',') || [];
     const breakfastQuantities = (orderDetails.breakfast_quantities?.split(',') || []).filter(q => q !== 'NULL' && q?.trim()).map(q => safeParseInt(q, 1));
-    const unitPricesBreakfast = orderDetails.unit_prices?.split(',').map(price => safeParseFloat(price)) || [];
     const breakfastImages = orderDetails.breakfast_images?.split(',') || [];
     const optionIds = (orderDetails.breakfast_option_ids?.split(',') || []).filter(id => id?.trim() && !isNaN(parseInt(id)));
     const optionNames = orderDetails.breakfast_option_names?.split(',') || [];
     const optionPrices = orderDetails.breakfast_option_prices?.split(',').map(price => safeParseFloat(price)) || [];
 
     breakfastIds.forEach((id, idx) => {
-      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length || idx >= unitPricesBreakfast.length) return;
+      if (idx >= breakfastQuantities.length || idx >= breakfastNames.length) return;
 
       const quantity = breakfastQuantities[idx] || 1;
-      const unitPrice = safeParseFloat(unitPricesBreakfast[idx], 0);
       const imageUrl = idx < breakfastImages.length ? breakfastImages[idx]?.trim() || null : null;
       const options = [];
       const optionsPerItem = Math.floor(optionIds.length / (breakfastIds.length || 1));
       const startIdx = idx * optionsPerItem;
       const endIdx = (idx + 1) * optionsPerItem;
 
+      let totalOptionPrice = 0;
       for (let i = startIdx; i < endIdx && i < optionIds.length; i++) {
         if (optionIds[i]) {
+          const optionPrice = safeParseFloat(optionPrices[i], 0);
+          totalOptionPrice += optionPrice;
           options.push({
             name: i < optionNames.length ? optionNames[i]?.trim() || 'Option inconnue' : 'Option inconnue',
-            price: i < optionPrices.length ? safeParseFloat(optionPrices[i], 0) : 0,
+            price: optionPrice,
           });
         }
       }
 
       const key = `${id.trim()}_${options.map(opt => opt.name).join('-') || 'no-options'}`;
+
+      // Get breakfast unit price from unit_prices (offset by menu items length)
+      const breakfastUnitPrice = unitPrices.length > itemIds.length ? safeParseFloat(unitPrices[itemIds.length + idx], 0) : 0;
+      const basePrice = breakfastUnitPrice - totalOptionPrice;
 
       if (!acc[key]) {
         acc[key] = {
@@ -546,15 +556,16 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           type: 'breakfast',
           name: breakfastNames[idx]?.trim() || 'Petit-déjeuner inconnu',
           quantity: 0,
-          unitPrice: unitPrice,
-          baseUnitPrice: unitPrice,
+          basePrice: basePrice,
+          unitPrice: breakfastUnitPrice,
           imageUrl: imageUrl,
           options: options,
           supplementName: null,
+          supplementPrice: 0,
         };
       }
       acc[key].quantity = quantity;
-      console.log(`Processed breakfast item: id=${id}, quantity=${quantity}, options=${JSON.stringify(options)}, key=${key}`);
+      console.log(`Processed breakfast item: id=${id}, quantity=${quantity}, basePrice=${basePrice}, totalOptionPrice=${totalOptionPrice}, options=${JSON.stringify(options)}, key=${key}`);
     });
 
     const items = Object.values(acc).filter(item => item.quantity > 0);
@@ -730,7 +741,11 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <div className="order-waiting-items">
             {groupedItems.length > 0 ? (
               groupedItems.map((item, index) => {
-                const imageUrl = item.imageUrl && item.imageUrl !== 'null' ? item.imageUrl : '/placeholder.jpg';
+                const imageUrl = item.imageUrl
+                  ? `${baseImageUrl}${item.imageUrl.startsWith('/') ? '' : '/'}${item.imageUrl}`
+                  : '/placeholder.jpg';
+                const totalItemPrice = item.unitPrice * item.quantity;
+
                 return (
                   <div
                     key={`${item.type}-${item.id}-${index}`}
@@ -748,16 +763,28 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                     />
                     <div className="order-waiting-item-details">
                       <span className="order-waiting-item-name">{item.name}</span>
-                      {item.supplementName && (
-                        <span className="order-waiting-item-option">
-                          + {item.supplementName} {safeParseFloat(item.supplementPrice, 0) > 0 && `(+${safeParseFloat(item.supplementPrice, 0).toFixed(2)} DT)`}
-                        </span>
-                      )}
-                      {(item.options || []).map((opt, optIdx) => (
-                        <span key={optIdx} className="order-waiting-item-option">
-                          + {opt.name} {safeParseFloat(opt.price, 0) > 0 && `(+${safeParseFloat(opt.price, 0).toFixed(2)} DT)`}
-                        </span>
-                      ))}
+                      <div className="order-waiting-item-price-breakdown">
+                        <div className="order-waiting-base-price">
+                          {item.basePrice.toFixed(2)} DT
+                        </div>
+                        {item.type === 'menu' && item.supplementName && item.supplementPrice > 0 && (
+                          <div className="order-waiting-supplement-price">
+                            + {item.supplementName}: {item.supplementPrice.toFixed(2)} DT
+                          </div>
+                        )}
+                        {item.type === 'breakfast' && item.options && item.options.length > 0 && (
+                          <div className="order-waiting-breakfast-options">
+                            {item.options.map((opt, optIdx) => (
+                              <div key={optIdx} className="order-waiting-option-price">
+                                + {opt.name}: {opt.price.toFixed(2)} DT
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <div className="order-waiting-item-total">
+                          {item.unitPrice.toFixed(2)} DT × {item.quantity} = {totalItemPrice.toFixed(2)} DT
+                        </div>
+                      </div>
                     </div>
                     <span className="order-waiting-quantity-badge">{item.quantity}</span>
                   </div>
