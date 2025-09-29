@@ -25,6 +25,7 @@ import {
   useMediaQuery,
   Slide,
   Badge,
+  Divider,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -209,7 +210,7 @@ const Header = memo(
     const renderDesktopNavItems = useCallback(() => {
       const links = user?.role === 'admin' ? adminLinks : user?.role === 'server' ? staffLinks : publicLinks.slice(0, 4);
       return (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '16px' }}>
           {user?.role === 'admin' && (
             <>
               {links.map((link) => (
@@ -218,17 +219,20 @@ const Header = memo(
                   component={Link}
                   to={link.to}
                   startIcon={link.icon}
-                  variant={link.primary ? 'contained' : 'outlined'}
+                  variant={link.primary ? 'contained' : 'text'}
+                  fullWidth
                   sx={{
-                    borderRadius: '8px',
+                    borderRadius: '12px',
                     textTransform: 'none',
-                    fontWeight: 500,
-                    padding: '6px 12px',
+                    fontWeight: link.primary ? 600 : 500,
+                    padding: '12px 16px',
+                    justifyContent: 'flex-start',
                     backgroundColor: link.primary ? 'var(--primary-color)' : 'transparent',
-                    color: '#000',
-                    borderColor: '#000',
+                    color: link.primary ? 'var(--text-color)' : '#1a1a1a',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.2)',
+                      backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.05)',
+                      transform: 'translateX(4px)',
                     },
                   }}
                   onClick={() => setIsDesktopMenuOpen(false)}
@@ -236,44 +240,51 @@ const Header = memo(
                   {link.label}
                 </Button>
               ))}
+              <Divider sx={{ my: 1 }} />
               <Button
                 onClick={() => setExpandedSection(expandedSection === 'stock' ? '' : 'stock')}
                 startIcon={<InventoryIcon />}
+                endIcon={expandedSection === 'stock' ? <ExpandLess /> : <ExpandMore />}
+                fullWidth
                 sx={{
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   textTransform: 'none',
                   fontWeight: 500,
-                  padding: '6px 12px',
+                  padding: '12px 16px',
+                  justifyContent: 'space-between',
                   backgroundColor: 'transparent',
-                  color: '#000',
-                  borderColor: '#000',
+                  color: '#1a1a1a',
+                  transition: 'all 0.2s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
                   },
                 }}
               >
                 Stock Management
-                {expandedSection === 'stock' ? <ExpandLess /> : <ExpandMore />}
               </Button>
-              <Collapse in={expandedSection === 'stock'} timeout={100}>
-                <Box sx={{ paddingLeft: '12px' }}>
+              <Collapse in={expandedSection === 'stock'} timeout={200}>
+                <Box sx={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {stockManagementLinks.map((link) => (
                     <Button
                       key={link.to}
                       component={Link}
                       to={link.to}
                       startIcon={link.icon}
-                      variant="outlined"
+                      variant="text"
+                      fullWidth
                       sx={{
-                        borderRadius: '8px',
+                        borderRadius: '10px',
                         textTransform: 'none',
                         fontWeight: 500,
-                        padding: '6px 12px',
+                        padding: '10px 16px',
+                        justifyContent: 'flex-start',
                         backgroundColor: 'transparent',
-                        color: '#000',
-                        borderColor: '#000',
+                        color: '#1a1a1a',
+                        fontSize: '0.9rem',
+                        transition: 'all 0.2s ease',
                         '&:hover': {
-                          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                          backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                          transform: 'translateX(4px)',
                         },
                       }}
                       onClick={() => setIsDesktopMenuOpen(false)}
@@ -291,17 +302,20 @@ const Header = memo(
               component={Link}
               to={link.to}
               startIcon={link.icon}
-              variant={link.primary ? 'contained' : 'outlined'}
+              variant={link.primary ? 'contained' : 'text'}
+              fullWidth
               sx={{
-                borderRadius: '8px',
+                borderRadius: '12px',
                 textTransform: 'none',
-                fontWeight: 500,
-                padding: '6px 12px',
+                fontWeight: link.primary ? 600 : 500,
+                padding: '12px 16px',
+                justifyContent: 'flex-start',
                 backgroundColor: link.primary ? 'var(--primary-color)' : 'transparent',
-                color: '#000',
-                borderColor: '#000',
+                color: link.primary ? 'var(--text-color)' : '#1a1a1a',
+                transition: 'all 0.2s ease',
                 '&:hover': {
-                  backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.2)',
+                  backgroundColor: link.primary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.05)',
+                  transform: 'translateX(4px)',
                 },
               }}
               onClick={() => setIsDesktopMenuOpen(false)}
@@ -316,7 +330,18 @@ const Header = memo(
     const renderMenuSection = useCallback(
       (title, links, isPrimary = false) => (
         <Box className="header-menu-section" key={title}>
-          <ListSubheader sx={{ backgroundColor: 'transparent', color: '#000', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', paddingLeft: '20px', paddingBottom: '6px' }}>
+          <ListSubheader 
+            sx={{ 
+              backgroundColor: 'transparent', 
+              color: '#666', 
+              fontSize: '11px', 
+              fontWeight: 700, 
+              textTransform: 'uppercase', 
+              paddingLeft: '20px', 
+              paddingBottom: '8px',
+              letterSpacing: '0.5px'
+            }}
+          >
             {title}
           </ListSubheader>
           {links.map((link) => (
@@ -334,7 +359,7 @@ const Header = memo(
       return (
         <Box className="header-drawer-content" sx={{ backgroundColor: 'var(--background-color)' }}>
           {(!isAdmin && !isStaff) && (
-            <Box className="header-search-box" sx={{ margin: '12px 20px' }}>
+            <Box className="header-search-box" sx={{ margin: '16px 16px 8px 16px' }}>
               <TextField
                 fullWidth
                 size="small"
@@ -345,59 +370,73 @@ const Header = memo(
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
-                      <SearchIcon sx={{ color: '#8E8E93' }} />
+                      <SearchIcon sx={{ color: '#999' }} />
                     </InputAdornment>
                   ),
                 }}
                 sx={{
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: '8px',
-                    backgroundColor: '#fff',
-                    border: '1px solid rgba(0, 0, 0, 0.06)',
-                    '&:hover': { borderColor: 'rgba(0, 0, 0, 0.1)' },
-                    '&.Mui-focused': { borderColor: 'var(--primary-color)' },
+                    borderRadius: '12px',
+                    backgroundColor: '#f5f5f5',
+                    border: 'none',
+                    '& fieldset': { border: 'none' },
+                    '&:hover': { backgroundColor: '#efefef' },
+                    '&.Mui-focused': { 
+                      backgroundColor: '#fff',
+                      boxShadow: '0 0 0 2px var(--primary-color)',
+                    },
                   },
                 }}
               />
             </Box>
           )}
 
-          <Box className="header-menu-container" sx={{ paddingBottom: '80px' }}>
+          <Box className="header-menu-container" sx={{ paddingBottom: '100px', overflowY: 'auto' }}>
             {isAdmin ? (
               <>
                 {renderMenuSection('Administrative Panel', adminLinks.filter((link) => link.primary))}
                 <ListItemButton
                   onClick={() => setExpandedSection(expandedSection === 'management' ? '' : 'management')}
-                  sx={{ margin: '2px 12px', borderRadius: '8px' }}
+                  sx={{ 
+                    margin: '4px 12px', 
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                  }}
                 >
-                  <ListItemIcon sx={{ color: 'var(--primary-color)', minWidth: '36px' }}>
+                  <ListItemIcon sx={{ color: 'var(--primary-color)', minWidth: '40px' }}>
                     <CategoryIcon />
                   </ListItemIcon>
                   <ListItemText
                     primary="Management Tools"
-                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 500, color: '#000' }}
+                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}
                   />
-                  {expandedSection === 'management' ? <ExpandLess /> : <ExpandMore />}
+                  {expandedSection === 'management' ? <ExpandLess sx={{ color: '#999' }} /> : <ExpandMore sx={{ color: '#999' }} />}
                 </ListItemButton>
-                <Collapse in={expandedSection === 'management'} timeout={100}>
+                <Collapse in={expandedSection === 'management'} timeout={200}>
                   <Box sx={{ paddingLeft: '12px' }}>
                     {renderMenuSection('Tools', adminLinks.filter((link) => !link.primary))}
                   </Box>
                 </Collapse>
                 <ListItemButton
                   onClick={() => setExpandedSection(expandedSection === 'stock' ? '' : 'stock')}
-                  sx={{ margin: '2px 12px', borderRadius: '8px' }}
+                  sx={{ 
+                    margin: '4px 12px', 
+                    borderRadius: '12px',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
+                  }}
                 >
-                  <ListItemIcon sx={{ color: 'var(--primary-color)', minWidth: '36px' }}>
+                  <ListItemIcon sx={{ color: 'var(--primary-color)', minWidth: '40px' }}>
                     <InventoryIcon />
                   </ListItemIcon>
                   <ListItemText
                     primary="Stock Management"
-                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 500, color: '#000' }}
+                    primaryTypographyProps={{ fontSize: '15px', fontWeight: 600, color: '#1a1a1a' }}
                   />
-                  {expandedSection === 'stock' ? <ExpandLess /> : <ExpandMore />}
+                  {expandedSection === 'stock' ? <ExpandLess sx={{ color: '#999' }} /> : <ExpandMore sx={{ color: '#999' }} />}
                 </ListItemButton>
-                <Collapse in={expandedSection === 'stock'} timeout={100}>
+                <Collapse in={expandedSection === 'stock'} timeout={200}>
                   <Box sx={{ paddingLeft: '12px' }}>
                     {renderMenuSection('Stock Tools', stockManagementLinks)}
                   </Box>
@@ -410,23 +449,42 @@ const Header = memo(
             )}
           </Box>
 
-          <Box className="header-user-section" sx={{ padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid rgba(0, 0, 0, 0.06)', marginTop: 'auto' }}>
+          <Box 
+            className="header-user-section" 
+            sx={{ 
+              position: 'fixed',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              width: isMobile ? '260px' : '280px',
+              padding: '20px', 
+              backgroundColor: '#fff', 
+              borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.05)',
+            }}
+          >
             {user && (
-              <Box className="header-user-info" sx={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <Avatar sx={{ width: '36px', height: '36px', backgroundColor: 'var(--primary-color)', fontSize: '16px' }}>
-                  {user.role === 'admin' ? '👑' : user.role === 'server' ? '👷' : '👤'}
+              <Box className="header-user-info" sx={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                <Avatar sx={{ width: '44px', height: '44px', backgroundColor: 'var(--primary-color)', fontSize: '18px', fontWeight: 600 }}>
+                  {user.name?.charAt(0).toUpperCase() || 'U'}
                 </Avatar>
-                <Box>
+                <Box sx={{ flex: 1 }}>
                   <Typography
                     variant="subtitle1"
-                    sx={{ fontWeight: 600, color: '#000', marginBottom: '4px' }}
+                    sx={{ fontWeight: 600, color: '#1a1a1a', marginBottom: '2px', fontSize: '15px' }}
                   >
                     {user.name || 'User'}
                   </Typography>
                   <Chip
-                    label={`${user.role.charAt(0).toUpperCase() + user.role.slice(1)} Account`}
+                    label={`${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`}
                     size="small"
-                    sx={{ backgroundColor: 'var(--secondary-color)', color: 'var(--primary-color)', fontSize: '11px', fontWeight: 500 }}
+                    sx={{ 
+                      backgroundColor: 'var(--primary-color)', 
+                      color: 'var(--text-color)', 
+                      fontSize: '11px', 
+                      fontWeight: 600,
+                      height: '22px'
+                    }}
                   />
                 </Box>
               </Box>
@@ -438,12 +496,17 @@ const Header = memo(
                 startIcon={<LogoutIcon />}
                 onClick={handleLogout}
                 sx={{
-                  borderRadius: '8px',
-                  borderColor: 'var(--primary-color)',
-                  color: '#000',
+                  borderRadius: '12px',
+                  borderColor: 'rgba(0, 0, 0, 0.2)',
+                  color: '#1a1a1a',
                   textTransform: 'none',
-                  fontWeight: 500,
-                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.06)' },
+                  fontWeight: 600,
+                  padding: '10px',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    borderColor: 'rgba(0, 0, 0, 0.3)',
+                  },
                 }}
               >
                 Sign Out
@@ -459,12 +522,18 @@ const Header = memo(
                   setIsDesktopMenuOpen(false);
                 }}
                 sx={{
-                  borderRadius: '8px',
+                  borderRadius: '12px',
                   backgroundColor: 'var(--primary-color)',
-                  color: '#000',
+                  color: 'var(--text-color)',
                   textTransform: 'none',
-                  fontWeight: 500,
-                  '&:hover': { backgroundColor: 'var(--secondary-color)' },
+                  fontWeight: 600,
+                  padding: '10px',
+                  boxShadow: 'none',
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: 'var(--secondary-color)',
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  },
                 }}
               >
                 Staff Login
@@ -473,7 +542,7 @@ const Header = memo(
           </Box>
         </Box>
       );
-    }, [user, searchQuery, expandedSection, categories, handleLogout, navigate]);
+    }, [user, searchQuery, expandedSection, categories, handleLogout, navigate, isMobile]);
 
     return (
       <>
@@ -482,29 +551,39 @@ const Header = memo(
           elevation={0}
           sx={{
             background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
-            borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
             color: 'var(--text-color)',
-            minHeight: { xs: '64px', md: '56px' },
+            backdropFilter: 'blur(10px)',
           }}
         >
-          <Toolbar sx={{ minHeight: { xs: '64px', md: '56px' }, padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Toolbar sx={{ 
+            minHeight: { xs: '64px', md: '68px' }, 
+            padding: { xs: '0 12px', md: '0 20px' }, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between' 
+          }}>
             <IconButton
               edge="start"
-              onClick={() => setIsMobileMenuOpen(true)}
-              sx={{ width: { xs: '44px', md: '40px' }, height: { xs: '44px', md: '40px' }, borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }, display: { xs: 'flex', md: 'none' } }}
+              onClick={() => (isMobile ? setIsMobileMenuOpen(true) : setIsDesktopMenuOpen(true))}
+              sx={{ 
+                width: { xs: '44px', md: '44px' }, 
+                height: { xs: '44px', md: '44px' }, 
+                borderRadius: '12px', 
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                transition: 'all 0.2s ease',
+                '&:hover': { 
+                  backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                  transform: 'scale(1.05)',
+                }
+              }}
             >
-              <MenuIcon />
-            </IconButton>
-            <IconButton
-              edge="start"
-              onClick={() => setIsDesktopMenuOpen(true)}
-              sx={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' }, display: { xs: 'none', md: 'flex' } }}
-            >
-              <MenuIcon />
+              <MenuIcon sx={{ color: 'var(--text-color)' }} />
             </IconButton>
 
-            <Typography
+            <Box
               component={Link}
               to={user?.role === 'admin' ? '/admin' : user?.role === 'server' ? '/staff' : '/'}
               sx={{
@@ -513,34 +592,44 @@ const Header = memo(
                 transform: 'translateX(-50%)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                justifyContent: 'center',
                 textDecoration: 'none',
                 color: 'var(--text-color)',
-                fontWeight: 600,
-                fontSize: { xs: '16px', md: '18px' },
+                height: '48px',
+                transition: 'all 0.2s ease',
+                '&:hover': { 
+                  transform: 'translateX(-50%) scale(1.05)',
+                },
               }}
             >
               {customTheme?.logo_url ? (
                 <img
                   src={customTheme.logo_url}
                   alt="Café Logo"
-                  style={{ maxHeight: '40px', maxWidth: '100px' }}
+                  style={{ 
+                    maxHeight: '48px', 
+                    maxWidth: '140px',
+                    width: 'auto',
+                    height: 'auto',
+                    objectFit: 'contain',
+                  }}
                   onError={(e) => {
                     console.error('Error loading logo image:', customTheme.logo_url);
-                    e.target.src = '/placeholder.jpg';
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = '<span style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px;"><svg style="width: 24px; height: 24px;" viewBox="0 0 24 24"><path fill="currentColor" d="M8.1,13.34L3.91,9.16C2.35,7.59 2.35,5.06 3.91,3.5L10.93,10.5L8.1,13.34M14.88,11.53C14.58,11.24 14.58,10.76 14.88,10.47L18.59,6.76C18.88,6.47 19.36,6.47 19.65,6.76L22.47,9.59L14.88,11.53M8.83,15.17L6.24,17.76C4.78,19.22 2.39,19.22 0.93,17.76L3.74,14.95L8.83,15.17M17.05,14.88L14.24,17.69C13.94,17.99 13.94,18.47 14.24,18.76L17.05,21.57C17.35,21.87 17.83,21.87 18.12,21.57L21.88,17.81L17.05,14.88Z" /></svg>Café Local</span>';
                   }}
                 />
               ) : (
-                <>
-                  <RestaurantIcon sx={{ fontSize: { xs: '16px', md: '22px' }, color: 'var(--text-color)' }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: { xs: '18px', md: '20px' } }}>
+                  <RestaurantIcon sx={{ fontSize: '24px', color: 'var(--text-color)' }} />
                   Café Local
-                </>
+                </Box>
               )}
-            </Typography>
+            </Box>
 
-            <Box sx={{ display: 'flex', gap: '6px', marginLeft: 'auto' }}>
+            <Box sx={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
               {['admin', 'server'].includes(user?.role) && (
-                <Suspense fallback={<Box sx={{ width: '40px', height: '40px' }} />}>
+                <Suspense fallback={<Box sx={{ width: '44px', height: '44px' }} />}>
                   <NotificationBell
                     user={user}
                     navigate={navigate}
@@ -553,25 +642,36 @@ const Header = memo(
               {(!user?.role || !['admin', 'server'].includes(user?.role)) && (
                 <IconButton
                   onClick={() => setIsCartOpen(true)}
-                  sx={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
+                  sx={{ 
+                    width: '44px', 
+                    height: '44px', 
+                    borderRadius: '12px', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(10px)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { 
+                      backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                      transform: 'scale(1.05)',
+                    }
+                  }}
                 >
                   <Badge
                     badgeContent={(cart || []).reduce((acc, item) => acc + (item.quantity || 0), 0)}
-                    max={300}
+                    max={99}
                     sx={{
                       '& .MuiBadge-badge': {
-                        backgroundColor: 'var(--primary-color)',
-                        color: 'var(--text-color)',
-                        fontSize: { xs: '11px', md: '12px' },
-                        fontWeight: 600,
-                        minWidth: { xs: '16px', md: '18px' },
-                        height: { xs: '16px', md: '18px' },
-                        borderRadius: '9px',
-                        border: '1.5px solid var(--text-color)',
+                        backgroundColor: '#fff',
+                        color: 'var(--primary-color)',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        minWidth: '20px',
+                        height: '20px',
+                        borderRadius: '10px',
+                        border: '2px solid var(--primary-color)',
                       },
                     }}
                   >
-                    <ShoppingCartIcon sx={{ color: 'var(--text-color)', fontSize: { xs: '20px', md: '24px' } }} />
+                    <ShoppingCartIcon sx={{ color: 'var(--text-color)', fontSize: '24px' }} />
                   </Badge>
                 </IconButton>
               )}
@@ -585,42 +685,66 @@ const Header = memo(
           onClose={() => setIsMobileMenuOpen(false)}
           sx={{
             '& .MuiDrawer-paper': {
-              width: { xs: '260px', md: '280px' },
+              width: '260px',
               backgroundColor: 'var(--background-color)',
-              borderTopRightRadius: '16px',
-              borderBottomRightRadius: '16px',
-              boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
+              boxShadow: '4px 0 24px rgba(0, 0, 0, 0.12)',
             },
-            '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
+            '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.4)' },
           }}
         >
-          <Slide direction="right" in={isMobileMenuOpen} timeout={100}>
+          <Slide direction="right" in={isMobileMenuOpen} timeout={250}>
             <Box>
-              <Box sx={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', backgroundColor: '#fff' }}>
-                <Typography
-                  variant="h6"
-                  sx={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: { xs: '16px', md: '18px' } }}
+              <Box sx={{ 
+                padding: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                borderBottom: '1px solid rgba(0, 0, 0, 0.08)', 
+                backgroundColor: '#fff',
+                minHeight: '76px'
+              }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1,
+                    height: '48px',
+                  }}
                 >
                   {customTheme?.logo_url ? (
                     <img
                       src={customTheme.logo_url}
                       alt="Café Logo"
-                      style={{ maxHeight: '40px', maxWidth: '100px' }}
+                      style={{ 
+                        maxHeight: '48px', 
+                        maxWidth: '180px',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                      }}
                       onError={(e) => {
                         console.error('Error loading logo image:', customTheme.logo_url);
                         e.target.src = '/placeholder.jpg';
                       }}
                     />
                   ) : (
-                    <>
-                      <RestaurantIcon sx={{ fontSize: { xs: '20px', md: '24px' }, color: 'var(--primary-color)' }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '18px', color: 'var(--primary-color)' }}>
+                      <RestaurantIcon sx={{ fontSize: '24px' }} />
                       Café Local
-                    </>
+                    </Box>
                   )}
-                </Typography>
+                </Box>
                 <IconButton
                   onClick={() => setIsMobileMenuOpen(false)}
-                  sx={{ width: { xs: '44px', md: '40px' }, height: { xs: '44px', md: '40px' }, borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
+                  sx={{ 
+                    width: '44px', 
+                    height: '44px', 
+                    borderRadius: '12px', 
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' }
+                  }}
                 >
                   <CloseIcon />
                 </IconButton>
@@ -638,94 +762,179 @@ const Header = memo(
           sx={{
             display: { xs: 'none', md: 'block' },
             '& .MuiDrawer-paper': {
-              width: '280px',
+              width: '320px',
               backgroundColor: 'var(--background-color)',
-              borderTopRightRadius: '16px',
-              borderBottomRightRadius: '16px',
-              boxShadow: '0px 8px 30px rgba(0, 0, 0, 0.1)',
+              boxShadow: '4px 0 24px rgba(0, 0, 0, 0.12)',
             },
-            '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.3)' },
+            '& .MuiBackdrop-root': { backgroundColor: 'rgba(0, 0, 0, 0.4)' },
           }}
         >
-          <Slide direction="right" in={isDesktopMenuOpen} timeout={100}>
-            <Box>
-              <Box sx={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', backgroundColor: '#fff' }}>
-                <Typography
-                  variant="h6"
-                  sx={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, fontSize: '18px' }}
+          <Slide direction="right" in={isDesktopMenuOpen} timeout={250}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+              <Box sx={{ 
+                padding: '20px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                borderBottom: '1px solid rgba(0, 0, 0, 0.08)', 
+                backgroundColor: '#fff',
+                minHeight: '88px'
+              }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flex: 1,
+                    height: '56px',
+                  }}
                 >
                   {customTheme?.logo_url ? (
                     <img
                       src={customTheme.logo_url}
                       alt="Café Logo"
-                      style={{ maxHeight: '40px', maxWidth: '100px' }}
+                      style={{ 
+                        maxHeight: '56px', 
+                        maxWidth: '220px',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                      }}
                       onError={(e) => {
                         console.error('Error loading logo image:', customTheme.logo_url);
                         e.target.src = '/placeholder.jpg';
                       }}
                     />
                   ) : (
-                    <>
-                      <RestaurantIcon sx={{ fontSize: '24px', color: 'var(--primary-color)' }} />
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: '10px', fontWeight: 600, fontSize: '20px', color: 'var(--primary-color)' }}>
+                      <RestaurantIcon sx={{ fontSize: '28px' }} />
                       Café Local
-                    </>
+                    </Box>
                   )}
-                </Typography>
+                </Box>
                 <IconButton
                   onClick={() => setIsDesktopMenuOpen(false)}
-                  sx={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'transparent', '&:hover': { backgroundColor: 'rgba(255, 255, 255, 0.2)' } }}
+                  sx={{ 
+                    width: '44px', 
+                    height: '44px', 
+                    borderRadius: '12px', 
+                    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                    transition: 'all 0.2s ease',
+                    '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.08)' }
+                  }}
                 >
                   <CloseIcon />
                 </IconButton>
               </Box>
-              <Box className="header-drawer-content" sx={{ backgroundColor: 'var(--background-color)', padding: '12px', height: 'calc(100vh - 72px)', overflowY: 'auto' }}>
+              
+              <Box sx={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                backgroundColor: 'var(--background-color)',
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '4px',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                  },
+                },
+              }}>
                 {renderDesktopNavItems()}
-                <Box className="header-user-section" sx={{ padding: '16px 20px', backgroundColor: '#fff', borderTop: '1px solid rgba(0, 0, 0, 0.06)', marginTop: 'auto' }}>
-                  {user ? (
-                    <Button
-                      fullWidth
-                      variant="outlined"
-                      startIcon={<LogoutIcon />}
-                      onClick={handleLogout}
-                      sx={{
-                        borderRadius: '8px',
-                        borderColor: 'var(--primary-color)',
-                        color: '#000',
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.06)' },
-                      }}
-                    >
-                      Sign Out
-                    </Button>
-                  ) : (
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={<PersonIcon />}
-                      onClick={() => {
-                        navigate('/login');
-                        setIsDesktopMenuOpen(false);
-                      }}
-                      sx={{
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--primary-color)',
-                        color: '#000',
-                        textTransform: 'none',
-                        fontWeight: 500,
-                        '&:hover': { backgroundColor: 'var(--secondary-color)' },
-                      }}
-                    >
-                      Staff Login
-                    </Button>
-                  )}
-                </Box>
+              </Box>
+
+              <Box sx={{ 
+                padding: '20px', 
+                backgroundColor: '#fff', 
+                borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+                boxShadow: '0 -4px 12px rgba(0, 0, 0, 0.05)',
+              }}>
+                {user && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                    <Avatar sx={{ width: '48px', height: '48px', backgroundColor: 'var(--primary-color)', fontSize: '20px', fontWeight: 600 }}>
+                      {user.name?.charAt(0).toUpperCase() || 'U'}
+                    </Avatar>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: 600, color: '#1a1a1a', marginBottom: '4px', fontSize: '16px' }}
+                      >
+                        {user.name || 'User'}
+                      </Typography>
+                      <Chip
+                        label={`${user.role.charAt(0).toUpperCase() + user.role.slice(1)}`}
+                        size="small"
+                        sx={{ 
+                          backgroundColor: 'var(--primary-color)', 
+                          color: 'var(--text-color)', 
+                          fontSize: '12px', 
+                          fontWeight: 600,
+                          height: '24px'
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+                {user ? (
+                  <Button
+                    fullWidth
+                    variant="outlined"
+                    startIcon={<LogoutIcon />}
+                    onClick={handleLogout}
+                    sx={{
+                      borderRadius: '12px',
+                      borderColor: 'rgba(0, 0, 0, 0.2)',
+                      color: '#1a1a1a',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      padding: '12px',
+                      transition: 'all 0.2s ease',
+                      '&:hover': { 
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                        borderColor: 'rgba(0, 0, 0, 0.3)',
+                      },
+                    }}
+                  >
+                    Sign Out
+                  </Button>
+                ) : (
+                  <Button
+                    fullWidth
+                    variant="contained"
+                    startIcon={<PersonIcon />}
+                    onClick={() => {
+                      navigate('/login');
+                      setIsDesktopMenuOpen(false);
+                    }}
+                    sx={{
+                      borderRadius: '12px',
+                      backgroundColor: 'var(--primary-color)',
+                      color: 'var(--text-color)',
+                      textTransform: 'none',
+                      fontWeight: 600,
+                      padding: '12px',
+                      boxShadow: 'none',
+                      transition: 'all 0.2s ease',
+                      '&:hover': { 
+                        backgroundColor: 'var(--secondary-color)',
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      },
+                    }}
+                  >
+                    Staff Login
+                  </Button>
+                )}
               </Box>
             </Box>
           </Slide>
         </Drawer>
 
-        <Box sx={{ height: { xs: '64px', md: '56px' } }} />
+        <Box sx={{ height: { xs: '64px', md: '68px' } }} />
       </>
     );
   },
@@ -745,21 +954,26 @@ const NavItem = memo(
       to={link.to}
       onClick={onClick}
       sx={{
-        margin: '2px 12px',
-        borderRadius: '8px',
+        margin: '3px 12px',
+        borderRadius: '12px',
         backgroundColor: isPrimary ? 'var(--primary-color)' : 'transparent',
-        color: '#000',
-        '&:hover': { backgroundColor: isPrimary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.06)' },
+        color: '#1a1a1a',
+        padding: '12px 16px',
+        transition: 'all 0.2s ease',
+        '&:hover': { 
+          backgroundColor: isPrimary ? 'var(--secondary-color)' : 'rgba(0, 0, 0, 0.04)',
+          transform: 'translateX(4px)',
+        },
       }}
     >
-      <ListItemIcon sx={{ color: isPrimary ? '#fff' : 'var(--primary-color)', minWidth: '36px' }}>
+      <ListItemIcon sx={{ color: isPrimary ? 'var(--text-color)' : 'var(--primary-color)', minWidth: '40px' }}>
         {link.icon}
       </ListItemIcon>
       <ListItemText
         primary={link.label}
-        primaryTypographyProps={{ fontSize: '15px', fontWeight: isPrimary ? 600 : 500, color: '#000' }}
+        primaryTypographyProps={{ fontSize: '15px', fontWeight: isPrimary ? 600 : 500, color: isPrimary ? 'var(--text-color)' : '#1a1a1a' }}
       />
-      {!isPrimary && <ChevronRightIcon sx={{ color: '#C7C7CC', fontSize: '16px' }} />}
+      {!isPrimary && <ChevronRightIcon sx={{ color: '#C7C7CC', fontSize: '18px' }} />}
     </ListItemButton>
   ),
   (prev, next) => prev.link.to === next.link.to && prev.isPrimary === next.isPrimary
