@@ -22,6 +22,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
   const isMobile = screenSize.width <= 768;
   const isSmallMobile = screenSize.width <= 375;
 
+  // Get dynamic currency from CSS custom property set by ThemeManagement
+  const currency = getComputedStyle(document.documentElement)
+    .getPropertyValue('--currency')
+    .trim() || 'DT';
+
   const handleResize = useCallback(
     debounce(() => {
       setScreenSize({
@@ -71,7 +76,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
     return item?.image_url &&
       item.image_url !== '/Uploads/undefined' &&
       item.image_url !== 'null'
-      ? item.image_url // Use image_url directly
+      ? item.image_url
       : '/placeholder.jpg';
   }, [item?.image_url]);
 
@@ -145,7 +150,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             option_ids: [],
             cartItemId: `${item.id}-${Date.now()}`,
             name: item.name,
-            image_url: item.image_url, // Pass image_url directly
+            image_url: item.image_url,
             type: 'breakfast',
             options: [],
           });
@@ -160,7 +165,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             supplement_price: 0,
             cartItemId: `${item.id}-${Date.now()}`,
             type: 'menuItem',
-            image_url: item.image_url, // Pass image_url directly
+            image_url: item.image_url,
           });
         }
       }
@@ -183,7 +188,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         quantity: 1,
         option_ids: selectedOptionIds,
         name: item.name,
-        image_url: item.image_url, // Pass image_url directly
+        image_url: item.image_url,
         type: 'breakfast',
         options: supplements.options
           .filter((opt) => selectedOptionIds.includes(opt.id))
@@ -205,7 +210,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         supplement_price: supplement ? parseFloat(supplement.additional_price || 0) : 0,
         cartItemId: `${item.id}-${Date.now()}`,
         type: 'menuItem',
-        image_url: item.image_url, // Pass image_url directly
+        image_url: item.image_url,
       });
     }
     setShowOptionPopup(false);
@@ -219,8 +224,6 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       e.stopPropagation();
       if (onView && item?.id) {
         onView(item.id, item?.type);
-      } else {
-        console.warn('La prop onView est manquante ou l\'ID de l\'article est invalide');
       }
     },
     [onView, item?.id, item?.type]
@@ -232,8 +235,6 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       e.stopPropagation();
       if (item?.id) {
         window.location.href = `/edit-product/${item.id}`;
-      } else {
-        console.warn('L\'ID de l\'article est invalide');
       }
     },
     [item?.id]
@@ -447,7 +448,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         cursor: 'not-allowed',
       },
       unavailableBadge: {
-        background: 'rgba(107, 114, 128, 0.9)',
+        background: 'rgba(107, 114,128,0.9)',
         color: 'var(--background-color)',
         padding: isSmallMobile ? '2px 5px' : '2px 6px',
         borderRadius: '8px',
@@ -565,7 +566,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         transform: 'translate(-50%, -50%)',
       },
       optionText: {
-        flexGrow: '1',
+        flexGrow: 1,
         fontSize: '12px',
         color: '#000000',
       },
@@ -631,7 +632,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         transition: 'transform 0.2s ease',
       },
     }),
-    [isHovered, isMobile, isSmallMobile, imageLoaded, selectedOptions, validationErrors]
+    [isHovered, isMobile, isSmallMobile, imageLoaded, selectedOptions, validationErrors, salePrice]
   );
 
   const animations = `
@@ -668,9 +669,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
     }
   `;
 
-  if (!item) {
-    return null;
-  }
+  if (!item) return null;
 
   return (
     <>
@@ -691,7 +690,6 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
             decoding="async"
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
-              console.error('Error loading menu item image:', item.image_url);
               e.target.src = '/placeholder.jpg';
               setImageLoaded(true);
             }}
@@ -705,37 +703,16 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           {!isMobile && (
             <div style={styles.actionButtons}>
               {isManager ? (
-                <button
-                  style={styles.editButton}
-                  className="action-btn"
-                  onClick={handleEditProduct}
-                  title="Modifier l'article"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--background-color)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ width: isSmallMobile ? '16px' : '18px', height: isSmallMobile ? '16px' : '18px' }}
-                  >
+                <button style={styles.editButton} className="action-btn" onClick={handleEditProduct} title="Modifier l'article">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--background-color)" strokeWidth="2" style={{ width: isSmallMobile ? '16px' : '18px', height: isSmallMobile ? '16px' : '18px' }}>
                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                   </svg>
                 </button>
               ) : (
                 <>
-                  <button
-                    style={styles.actionButton}
-                    className="action-btn"
-                    onClick={handleViewProduct}
-                    title="Voir les détails"
-                  >
-                    <RemoveRedEyeIcon
-                      sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
-                    />
+                  <button style={styles.actionButton} className="action-btn" onClick={handleViewProduct} title="Voir les détails">
+                    <RemoveRedEyeIcon sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }} />
                   </button>
                   <button
                     style={{
@@ -747,9 +724,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     title={item.availability ? 'Ajouter au panier' : 'Article indisponible'}
                     disabled={!item.availability}
                   >
-                    <ShoppingCartIcon
-                      sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
-                    />
+                    <ShoppingCartIcon sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }} />
                   </button>
                 </>
               )}
@@ -758,11 +733,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         </div>
 
         <div style={styles.content}>
-          {!item.availability && (
-            <div style={styles.unavailableBadge}>Indisponible</div>
-          )}
+          {!item.availability && <div style={styles.unavailableBadge}>Indisponible</div>}
 
-          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Petit-déjeuner' : 'Non catégorisé')}</div>
+          <div style={styles.category}>
+            {item.category_name || (item.type === 'breakfast' ? 'Petit-déjeuner' : 'Non catégorisé')}
+          </div>
 
           <h3 style={styles.title}>{item.name || 'Article inconnu'}</h3>
 
@@ -778,44 +753,27 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           <div style={styles.priceContainer}>
             <div style={styles.priceInfo}>
               <span style={styles.currentPrice}>
-                {displayPrice} DT
+                {displayPrice} {currency}
               </span>
               {salePrice && (
-                <span style={styles.originalPrice}>{regularPrice.toFixed(2)} DT</span>
+                <span style={styles.originalPrice}>
+                  {regularPrice.toFixed(2)} {currency}
+                </span>
               )}
             </div>
 
             {isMobile && (
               <div style={styles.mobileActionButtons}>
                 {isManager ? (
-                  <button
-                    style={styles.mobileEditButton}
-                    className="mobile-action-btn"
-                    onClick={handleEditProduct}
-                    title="Modifier l'article"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--background-color)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{ width: '14px', height: '14px' }}
-                    >
+                  <button style={styles.mobileEditButton} className="mobile-action-btn" onClick={handleEditProduct} title="Modifier l'article">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="var(--background-color)" strokeWidth="2" style={{ width: '14px', height: '14px' }}>
                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
                       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                     </svg>
                   </button>
                 ) : (
                   <>
-                    <button
-                      style={styles.mobileActionButton}
-                      className="mobile-action-btn"
-                      onClick={handleViewProduct}
-                      title="Voir les détails"
-                    >
+                    <button style={styles.mobileActionButton} className="mobile-action-btn" onClick={handleViewProduct} title="Voir les détails">
                       <RemoveRedEyeIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
                     </button>
                     <button
@@ -838,21 +796,20 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         </div>
       </div>
 
+      {/* Option Popup - Also uses dynamic currency */}
       {showOptionPopup && !isManager && (
         <>
-          <div
-            style={styles.overlay}
-            onClick={() => {
-              setShowOptionPopup(false);
-              setSelectedOptions({});
-              setValidationErrors({});
-            }}
-          />
+          <div style={styles.overlay} onClick={() => {
+            setShowOptionPopup(false);
+            setSelectedOptions({});
+            setValidationErrors({});
+          }} />
           <div style={styles.popup}>
             <h3 style={styles.popupTitle}>
-              Choisir {item.type === 'breakfast' ? 'les options' : 'le supplément'} pour<br />
-              {item.name}
+              Choisir {item.type === 'breakfast' ? 'les options' : 'le supplément'} pour<br />{item.name}
             </h3>
+
+            {/* Breakfast Options */}
             {item.type === 'breakfast' && supplements.optionGroups?.length > 0 && (
               <div style={styles.popupOptionsContainer}>
                 {supplements.optionGroups.map((group) => (
@@ -871,28 +828,21 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     {supplements.options
                       .filter((opt) => opt.group_id === group.id)
                       .map((opt) => (
-                        <label
-                          key={opt.id}
-                          style={styles.optionItem}
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <label key={opt.id} style={styles.optionItem} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
-                            name={`group-${item.id}-${group.id}`}
                             checked={selectedOptions[group.id]?.includes(opt.id)}
                             onChange={() => handleOptionChange(group.id, opt.id)}
                             disabled={!item.availability}
                             style={styles.checkboxInput}
                           />
-                          <span
-                            style={{
-                              ...styles.optionText,
-                              ...(selectedOptions[group.id]?.includes(opt.id) ? styles.optionSelected : {}),
-                            }}
-                          >
+                          <span style={{
+                            ...styles.optionText,
+                            ...(selectedOptions[group.id]?.includes(opt.id) ? styles.optionSelected : {}),
+                          }}>
                             {opt.option_name}{' '}
                             <span style={styles.optionPrice}>
-                              +{parseFloat(opt.additional_price || 0).toFixed(2)} DT
+                              +{parseFloat(opt.additional_price || 0).toFixed(2)} {currency}
                             </span>
                           </span>
                         </label>
@@ -901,6 +851,8 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                 ))}
               </div>
             )}
+
+            {/* Regular Supplements */}
             {item.type !== 'breakfast' && supplements.options.length > 0 && (
               <select
                 value={Object.values(selectedOptions)[0] || '0'}
@@ -910,20 +862,18 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
               >
                 <option value="0">Aucun supplément</option>
                 {supplements.options.map((supplement) => (
-                  <option
-                    key={supplement.supplement_id}
-                    value={supplement.supplement_id}
-                  >
-                    {supplement.name} (+{parseFloat(supplement.additional_price || 0).toFixed(2)} DT)
+                  <option key={supplement.supplement_id} value={supplement.supplement_id}>
+                    {supplement.name} (+{parseFloat(supplement.additional_price || 0).toFixed(2)} {currency})
                   </option>
                 ))}
               </select>
             )}
+
             <div style={styles.popupButtons}>
               <button
                 style={{ ...styles.popupButton, ...styles.addButton }}
                 className="popup-btn add-btn"
-                onClick={() => handleOptionSelection()}
+                onClick={handleOptionSelection}
                 disabled={
                   !item.availability ||
                   (item.type === 'breakfast' &&
