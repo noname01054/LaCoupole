@@ -275,6 +275,7 @@
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
   position: relative;
+  scroll-behavior: smooth;
 }
 
 .home-banner-container::-webkit-scrollbar {
