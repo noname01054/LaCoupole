@@ -42,8 +42,12 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
     const fetchTheme = async () => {
       try {
         const themeResponse = await api.getTheme();
+        console.log('Theme response:', themeResponse.data);
         if (themeResponse.data && themeResponse.data.currency) {
+          console.log('Setting currency to:', themeResponse.data.currency);
           setCurrency(themeResponse.data.currency);
+        } else {
+          console.log('No currency found in theme data');
         }
       } catch (error) {
         console.error('Error fetching theme for currency:', error);
