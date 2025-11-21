@@ -33,6 +33,7 @@ function ProductDetails({ addToCart }) {
   const [isSwiping, setIsSwiping] = useState(false);
   const containerRef = useRef(null);
   const [categories, setCategories] = useState([]);
+  const [currency, setCurrency] = useState('$');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -45,12 +46,13 @@ function ProductDetails({ addToCart }) {
           throw new Error('ID de produit invalide');
         }
 
-        const [productResponse, relatedResponse, supplementsResponse, ratingResponse, categoriesResponse] = await Promise.all([
+        const [productResponse, relatedResponse, supplementsResponse, ratingResponse, categoriesResponse, themeResponse] = await Promise.all([
           api.get(`/menu-items/${itemId}`),
           api.get(`/menu-items/${itemId}/related`),
           api.getSupplementsByMenuItem(itemId),
           api.getRatingsByItem(itemId),
           api.get('/categories'),
+          api.getTheme(),
         ]);
 
         const categoryResponse = await api.get(`/menu-items?category_id=${productResponse.data.category_id}`);
@@ -60,6 +62,11 @@ function ProductDetails({ addToCart }) {
         setSupplements(supplementsResponse.data || []);
         setCategoryProducts(categoryResponse.data || []);
         setCategories(categoriesResponse.data || []);
+        
+        if (themeResponse.data && themeResponse.data.currency) {
+          setCurrency(themeResponse.data.currency);
+        }
+        
         if (ratingResponse.data?.length > 0) {
           setIsRating(true);
           setRating(parseInt(ratingResponse.data[0].rating) || 0);
@@ -163,7 +170,7 @@ function ProductDetails({ addToCart }) {
       if (!isSwiping || window.innerWidth > 768) return;
       setTouchCurrentX(e.touches[0].clientX);
       const deltaX = touchCurrentX - touchStartX;
-      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150); // Limite la distance de glissement
+      const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
       if (containerRef.current) {
         containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
         containerRef.current.style.transition = 'none';
@@ -185,7 +192,6 @@ function ProductDetails({ addToCart }) {
     }
 
     if (deltaX > swipeThreshold) {
-      // Glissement de gauche à droite : aller au menu de la catégorie si premier produit, sinon produit précédent
       if (currentIndex === 0 && product?.category_id) {
         navigate(`/category/${product.category_id}`);
       } else if (currentIndex > 0) {
@@ -193,7 +199,6 @@ function ProductDetails({ addToCart }) {
         navigate(`/product/${prevProduct.id}`);
       }
     } else if (deltaX < -swipeThreshold) {
-      // Glissement de droite à gauche : produit suivant ou catégorie suivante non vide si dernier produit
       if (currentIndex < categoryProducts.length - 1) {
         const nextProduct = categoryProducts[currentIndex + 1];
         navigate(`/product/${nextProduct.id}`);
@@ -202,7 +207,6 @@ function ProductDetails({ addToCart }) {
         let currentCategoryIndex = categoryIds.indexOf(parseInt(product.category_id));
         let nextCategoryId = null;
 
-        // Trouver la prochaine catégorie non vide
         while (currentCategoryIndex < categoryIds.length - 1) {
           currentCategoryIndex += 1;
           const candidateCategoryId = categoryIds[currentCategoryIndex];
@@ -349,16 +353,16 @@ function ProductDetails({ addToCart }) {
           <div className="product-details-price-container">
             {salePrice ? (
               <>
-                <span className="product-details-original-price">{regularPrice.toFixed(2)} DT</span>
-                <span className="product-details-sale-price">{salePrice.toFixed(2)} DT</span>
-                <span className="product-details-save-badge">ÉCONOMISEZ {(regularPrice - salePrice).toFixed(2)} DT</span>
+                <span className="product-details-original-price">{regularPrice.toFixed(2)} {currency}</span>
+                <span className="product-details-sale-price">{salePrice.toFixed(2)} {currency}</span>
+                <span className="product-details-save-badge">ÉCONOMISEZ {(regularPrice - salePrice).toFixed(2)} {currency}</span>
               </>
             ) : (
-              <span className="product-details-regular-price-only">{regularPrice.toFixed(2)} DT</span>
+              <span className="product-details-regular-price-only">{regularPrice.toFixed(2)} {currency}</span>
             )}
           </div>
           <div className="product-details-total-price">
-            Total : <span className="product-details-total-amount">{calculateTotalPrice()} DT</span>
+            Total : <span className="product-details-total-amount">{calculateTotalPrice()} {currency}</span>
           </div>
         </div>
 
@@ -403,7 +407,7 @@ function ProductDetails({ addToCart }) {
                 <option value="0">Aucun</option>
                 {supplements.map((s) => (
                   <option key={s.supplement_id} value={s.supplement_id}>
-                    {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} DT)
+                    {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} {currency})
                   </option>
                 ))}
               </select>
@@ -467,7 +471,7 @@ function ProductDetails({ addToCart }) {
           disabled={!product.availability}
         >
           <ShoppingCartOutlined />
-          {product.availability ? `Ajouter au panier • ${calculateTotalPrice()} DT` : 'Indisponible'}
+          {product.availability ? `Ajouter au panier • ${calculateTotalPrice()} ${currency}` : 'Indisponible'}
         </button>
       </div>
 
