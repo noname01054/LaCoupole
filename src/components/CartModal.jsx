@@ -10,11 +10,13 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import CoffeeIcon from '@mui/icons-material/Coffee';
 import SearchIcon from '@mui/icons-material/Search';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
+import NotesIcon from '@mui/icons-material/Notes';
 import { v4 as uuidv4 } from 'uuid';
 import React from 'react';
 import './css/CartModal.css';
 
-const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, supplementSelections, handleQuantityChange, handleSupplementChange, api, currency }) => {
+const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, supplementSelections, handleQuantityChange, handleSupplementChange, currency }) => {
   const imageSrc = useMemo(() => {
     let src = '/placeholder.jpg';
     if (item.image_url && item.image_url !== '/Uploads/undefined' && item.image_url !== 'null') {
@@ -38,10 +40,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-image">
           <img
             src={imageSrc}
-            srcSet={`
-              ${imageSrc}?w=48 1x,
-              ${imageSrc}?w=96 2x
-            `}
+            srcSet={`${imageSrc}?w=64 1x, ${imageSrc}?w=128 2x`}
             alt={item.name || 'Article'}
             className="cart-modal-item-img"
             loading="lazy"
@@ -52,12 +51,12 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-details">
           <h4 className="cart-modal-item-name">{item.name || 'Article sans nom'}</h4>
           <div className="cart-modal-item-price">
-            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} {currency} x {item.quantity || 1} = {totalItemPrice.toFixed(2)} {currency}
+            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} {currency} × {item.quantity || 1} = {totalItemPrice.toFixed(2)} {currency}
             {supplementPrice > 0 && (
-              <span className="cart-modal-supplement-price">+{supplementPrice.toFixed(2)} {currency} (Supplément)</span>
+              <span className="cart-modal-supplement-price">+ {supplementPrice.toFixed(2)} {currency} supplément</span>
             )}
             {breakfastOptionPrices > 0 && (
-              <span className="cart-modal-supplement-price">+{breakfastOptionPrices.toFixed(2)} {currency} (Options)</span>
+              <span className="cart-modal-supplement-price">+ {breakfastOptionPrices.toFixed(2)} {currency} options</span>
             )}
           </div>
           {item.breakfast_id && item.option_ids && (
@@ -95,6 +94,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
             onClick={() => handleQuantityChange(item.cartItemId, item.quantity - 1)}
             disabled={item.quantity <= 1}
             className="cart-modal-quantity-button"
+            aria-label="Diminuer la quantité"
           >
             <RemoveIcon fontSize="small" />
           </button>
@@ -102,6 +102,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
           <button
             onClick={() => handleQuantityChange(item.cartItemId, item.quantity + 1)}
             className="cart-modal-quantity-button"
+            aria-label="Augmenter la quantité"
           >
             <AddIcon fontSize="small" />
           </button>
@@ -109,6 +110,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <button
           onClick={() => handleQuantityChange(item.cartItemId, 0)}
           className="cart-modal-delete-button"
+          aria-label="Supprimer l'article"
         >
           <DeleteIcon fontSize="small" />
         </button>
@@ -151,12 +153,8 @@ function CartModal({
     const fetchTheme = async () => {
       try {
         const themeResponse = await api.getTheme();
-        console.log('CartModal - Theme response:', themeResponse.data);
         if (themeResponse.data && themeResponse.data.currency) {
-          console.log('CartModal - Setting currency to:', themeResponse.data.currency);
           setCurrency(themeResponse.data.currency);
-        } else {
-          console.log('CartModal - No currency found in theme data');
         }
       } catch (error) {
         console.error('CartModal - Error fetching theme for currency:', error);
@@ -205,7 +203,7 @@ function CartModal({
             const res = await api.getBreakfastOptions(itemId);
             optionsData[itemId] = res.data?.filter(o => o.id && o.option_name && o.group_id) || [];
             const validOptionIds = res.data.map(o => o.id);
-            cart.forEach((item, index) => {
+            cart.forEach((item) => {
               if (item.breakfast_id === itemId && item.option_ids) {
                 const invalidOptions = item.option_ids.filter(id => !validOptionIds.includes(id));
                 if (invalidOptions.length > 0) {
@@ -505,22 +503,24 @@ function CartModal({
   if (!isOpen && !isClosing) return null;
 
   return (
-    <div className="cart-modal-overlay" style={{ '--animation': isClosing ? 'cart-modal-fadeOut 0.2s ease-out forwards' : 'cart-modal-fadeIn 0.2s ease-out' }}>
+    <div className={`cart-modal-overlay ${isClosing ? 'closing' : ''}`} onClick={(e) => e.target === e.currentTarget && handleClose()}>
       <div
         ref={modalRef}
-        className="cart-modal"
+        className={`cart-modal ${isClosing ? 'closing' : ''}`}
         style={{ transform: `translateY(${dragOffset}px)` }}
       >
         <div className="cart-modal-handle" />
+        
         <div className="cart-modal-header">
           <button
             onClick={handleClose}
             className="cart-modal-close-button"
+            aria-label="Fermer le panier"
           >
             <CloseIcon fontSize="small" />
           </button>
           <h3 className="cart-modal-title">Votre panier</h3>
-          <div className="cart-modal-badge">{itemCount} articles</div>
+          <div className="cart-modal-badge">{itemCount} {itemCount === 1 ? 'article' : 'articles'}</div>
         </div>
 
         <div ref={contentRef} className="cart-modal-content">
@@ -542,18 +542,17 @@ function CartModal({
                     supplementSelections={supplementSelections}
                     handleQuantityChange={handleQuantityChange}
                     handleSupplementChange={handleSupplementChange}
-                    api={api}
                     currency={currency}
                   />
                 ))}
               </ul>
 
               <div className="cart-modal-summary">
-                <div className="cart-modal-total-price">Total : {total} {currency}</div>
+                <div className="cart-modal-total-price">Total: {total} {currency}</div>
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
+                    <ShoppingBagIcon style={{ fontSize: '16px' }} />
                     Type de commande
                   </label>
                   <select
@@ -571,7 +570,7 @@ function CartModal({
                   <>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
+                        <SearchIcon style={{ fontSize: '16px' }} />
                         Rechercher une table
                       </label>
                       <div className="cart-modal-table-search-container">
@@ -587,7 +586,7 @@ function CartModal({
                     </div>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
+                        <RestaurantIcon style={{ fontSize: '16px' }} />
                         Sélectionner une table
                       </label>
                       <div className="cart-modal-table-list-container">
@@ -614,7 +613,7 @@ function CartModal({
                 {orderType === 'delivery' && (
                   <div className="cart-modal-form-group">
                     <label className="cart-modal-label">
-                      <LocalShippingIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
+                      <LocalShippingIcon style={{ fontSize: '16px' }} />
                       Adresse de livraison
                     </label>
                     <input
@@ -628,13 +627,13 @@ function CartModal({
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <RestaurantIcon style={{ fontSize: '14px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }} />
+                    <NotesIcon style={{ fontSize: '16px' }} />
                     Instructions spéciales
                   </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Ajoutez des instructions spéciales (par exemple, 'Sans Sucre')"
+                    placeholder="Ajoutez des instructions spéciales (ex: Sans Sucre)"
                     className="cart-modal-textarea"
                     rows="3"
                   />
@@ -642,24 +641,16 @@ function CartModal({
 
                 <button
                   onClick={handlePlaceOrder}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (orderType === 'local' && !tableId) || (orderType === 'delivery' && !deliveryAddress)}
                   className="cart-modal-place-order-button"
-                  style={{
-                    background: isSubmitting
-                      ? 'rgba(0, 0, 0, 0.3)'
-                      : 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
-                    opacity: isSubmitting ? 0.7 : 1,
-                    pointerEvents: isSubmitting ? 'none' : 'auto',
-                    color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)'
-                  }}
                 >
                   {isSubmitting ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'var(--background-color) === "#ffffff" ? "#333" : var(--text-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                       <div className="cart-modal-spinner"></div>
                       Commande en cours...
                     </div>
                   ) : (
-                    `Passer la commande - ${total} ${currency}`
+                    `Passer la commande · ${total} ${currency}`
                   )}
                 </button>
               </div>
