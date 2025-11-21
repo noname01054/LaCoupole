@@ -40,7 +40,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-image">
           <img
             src={imageSrc}
-            srcSet={`${imageSrc}?w=60 1x, ${imageSrc}?w=120 2x`}
+            srcSet={`${imageSrc}?w=56 1x, ${imageSrc}?w=112 2x`}
             alt={item.name || 'Article'}
             className="cart-modal-item-img"
             loading="lazy"
@@ -147,6 +147,8 @@ function CartModal({
   const modalRef = useRef(null);
   const contentRef = useRef(null);
   const touchStartY = useRef(null);
+  const lastTouchY = useRef(null);
+  const touchStartTime = useRef(null);
   const submissionLockRef = useRef(null);
   const navigate = useNavigate();
 
@@ -192,7 +194,8 @@ function CartModal({
     const fetchSupplementsAndOptions = async () => {
       const supplementsData = {};
       const optionsData = {};
-      const uniqueItemIds = [...new Set(cart.map((item) => item.item_id || item.breakfast_id))].slice(0, 5);
+      const uniqueItemIds = [...new Set(cart.map((item) => item.item_id || item.breakfast_id))];
+      
       for (const itemId of uniqueItemIds) {
         if (!itemId || isNaN(itemId)) continue;
         try {
@@ -203,18 +206,6 @@ function CartModal({
           } else if (itemType === 'breakfast') {
             const res = await api.getBreakfastOptions(itemId);
             optionsData[itemId] = res.data?.filter(o => o.id && o.option_name && o.group_id) || [];
-            const validOptionIds = res.data.map(o => o.id);
-            cart.forEach((item) => {
-              if (item.breakfast_id === itemId && item.option_ids) {
-                const invalidOptions = item.option_ids.filter(id => !validOptionIds.includes(id));
-                if (invalidOptions.length > 0) {
-                  console.warn(`Invalid option IDs for breakfast ${itemId}:`, invalidOptions);
-                  updateQuantity(item.cartItemId, item.quantity, {
-                    option_ids: item.option_ids.filter(id => validOptionIds.includes(id))
-                  });
-                }
-              }
-            });
           }
         } catch (error) {
           console.error(`Échec du chargement des données pour l'article ${itemId}:`, error);
@@ -227,7 +218,7 @@ function CartModal({
     };
 
     fetchSupplementsAndOptions();
-  }, [cart, isOpen, updateQuantity]);
+  }, [cart, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -328,17 +319,9 @@ function CartModal({
       if (!item.quantity || item.quantity <= 0) return `Quantité invalide pour ${item.name || 'article'}`;
       const basePrice = parseFloat(item.sale_price || item.unit_price || item.regular_price) || 0;
       if (basePrice <= 0) return `Prix invalide pour ${item.name || 'article'}`;
-      if (item.supplement_id && !item.supplement_name) return `Supplément invalide pour ${item.name || 'article'}`;
-      if (item.breakfast_id && item.option_ids) {
-        const options = breakfastOptions[item.breakfast_id] || [];
-        const invalidOptions = item.option_ids.filter(id => !options.some(o => o.id === id));
-        if (invalidOptions.length > 0) {
-          return `Options invalides pour ${item.name || 'article'}: [${invalidOptions.join(', ')}]`;
-        }
-      }
     }
     return null;
-  }, [cart, orderType, tableId, deliveryAddress, breakfastOptions]);
+  }, [cart, orderType, tableId, deliveryAddress]);
 
   const handlePlaceOrder = useCallback(async () => {
     if (submissionLockRef.current || isSubmitting) return;
@@ -405,7 +388,7 @@ function CartModal({
       const response = await api.submitOrder(orderData, {
         headers: { 'X-Session-Id': sessionId },
       });
-      if (!response.data?.orderId) throw new Error('Échec de la création de la commande: Aucun orderId retourné');
+      if (!response.data?.orderId) throw new Error('Échec de la création de la commande');
 
       socket.emit('newOrder', {
         id: response.data.orderId,
@@ -421,18 +404,12 @@ function CartModal({
       setTableSearch('');
       setDeliveryAddress('');
       setNotes('');
-      toast.success(`Commande passée avec succès ! ${orderType === 'imported' ? 'Veuillez procéder à la récupération.' : ''}`);
+      toast.success('Commande passée avec succès !');
 
       navigate(`/order-waiting/${response.data.orderId}`, { state: { sessionId } });
     } catch (error) {
       const message = error.response?.data?.error || error.message || 'Échec de la commande';
-      if (error.response?.status === 429) {
-        toast.error('Veuillez attendre avant de passer une autre commande.');
-      } else if (message.includes('Price mismatch')) {
-        toast.error('Incohérence de prix détectée. Veuillez actualiser et réessayer.');
-      } else {
-        toast.error(message);
-      }
+      toast.error(message);
     } finally {
       submissionLockRef.current = null;
       setIsSubmitting(false);
@@ -450,23 +427,25 @@ function CartModal({
       setIsDragging(false);
       setIsClosing(false);
       onClose();
-    }, 250);
+    }, 200);
   }, [onClose]);
 
   const handleTouchStart = useCallback((e) => {
     const content = contentRef.current;
     if (!content) return;
 
-    // Only allow drag from the top area (handle area)
-    const rect = content.getBoundingClientRect();
-    const touchY = e.touches[0].clientY - rect.top;
+    // Only initiate drag from handle area
+    const target = e.target;
+    const isHandleArea = target.closest('.cart-modal-handle-wrapper') || target.closest('.cart-modal-header');
     
-    if (touchY > 60 || content.scrollTop > 5) {
+    if (!isHandleArea || content.scrollTop > 10) {
       touchStartY.current = null;
       return;
     }
 
     touchStartY.current = e.touches[0].clientY;
+    lastTouchY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
     setIsDragging(false);
   }, []);
 
@@ -486,35 +465,49 @@ function CartModal({
       return;
     }
 
-    // Start dragging visual feedback
-    if (deltaY > 5 && !isDragging) {
+    // Start visual drag feedback earlier for better responsiveness
+    if (deltaY > 2 && !isDragging) {
       setIsDragging(true);
     }
 
     if (deltaY > 0) {
-      const maxDrag = 250;
-      const damping = 0.6; // Add resistance
+      const maxDrag = 300;
+      // Less damping for faster response
+      const damping = 0.85;
       const adjustedDelta = Math.min(deltaY * damping, maxDrag);
       
       setDragOffset(adjustedDelta);
-      e.preventDefault();
+      lastTouchY.current = touchY;
+      
+      // Prevent page scroll
+      if (deltaY > 10) {
+        e.preventDefault();
+      }
     }
   }, [isDragging]);
 
   const handleTouchEnd = useCallback(() => {
     if (!touchStartY.current) return;
 
-    const threshold = 120;
+    // Lower threshold for faster closing (80px instead of 120px)
+    const threshold = 80;
+    
+    // Calculate velocity for flick gesture
+    const touchDuration = Date.now() - touchStartTime.current;
+    const velocity = dragOffset / touchDuration;
 
-    if (dragOffset > threshold) {
+    // Close if dragged past threshold OR if fast flick detected
+    if (dragOffset > threshold || velocity > 0.5) {
       handleClose();
     } else {
-      // Smooth spring-back animation
+      // Quick spring-back
       setDragOffset(0);
       setIsDragging(false);
     }
     
     touchStartY.current = null;
+    lastTouchY.current = null;
+    touchStartTime.current = null;
   }, [dragOffset, handleClose]);
 
   useEffect(() => {
@@ -533,31 +526,31 @@ function CartModal({
 
   if (!isOpen && !isClosing) return null;
 
-  // Calculate drag progress for visual indicator (0 to 100%)
-  const dragProgress = Math.min((dragOffset / 120) * 100, 100);
-  const modalOpacity = Math.max(1 - (dragOffset / 300), 0.5);
+  // Faster progress calculation (threshold 80px)
+  const dragProgress = Math.min((dragOffset / 80) * 100, 100);
+  const overlayOpacity = Math.max(1 - (dragOffset / 250), 0.3);
 
   return (
     <div 
       className={`cart-modal-overlay ${isClosing ? 'closing' : ''}`} 
       onClick={(e) => e.target === e.currentTarget && handleClose()}
-      style={{ opacity: modalOpacity }}
+      style={{ opacity: overlayOpacity }}
     >
       <div
         ref={modalRef}
         className={`cart-modal ${isClosing ? 'closing' : ''} ${isDragging ? 'dragging' : ''}`}
         style={{ 
-          transform: `translateY(${dragOffset}px)`,
-          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease'
+          transform: `translate3d(0, ${dragOffset}px, 0)`,
+          transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
         }}
       >
-        {/* Drag progress indicator */}
+        {/* Fast visual feedback indicator */}
         <div 
           className="cart-modal-drag-indicator"
-          style={{ width: `${dragProgress}%` }}
+          style={{ transform: `scaleX(${dragProgress / 100})` }}
         />
 
-        {/* Handle for drag gesture */}
+        {/* Touch-optimized handle */}
         <div className="cart-modal-handle-wrapper">
           <div className="cart-modal-handle" />
         </div>
@@ -579,7 +572,7 @@ function CartModal({
             <div className="cart-modal-empty-cart">
               <CoffeeIcon className="cart-modal-empty-cart-icon" />
               <p className="cart-modal-empty-cart-text">Votre panier est vide</p>
-              <p className="cart-modal-empty-cart-subtext">Ajoutez quelques articles délicieux pour commencer !</p>
+              <p className="cart-modal-empty-cart-subtext">Ajoutez quelques articles délicieux !</p>
             </div>
           ) : (
             <>
@@ -603,7 +596,7 @@ function CartModal({
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <ShoppingBagIcon style={{ fontSize: '15px' }} />
+                    <ShoppingBagIcon style={{ fontSize: '14px' }} />
                     Type de commande
                   </label>
                   <select
@@ -621,7 +614,7 @@ function CartModal({
                   <>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <SearchIcon style={{ fontSize: '15px' }} />
+                        <SearchIcon style={{ fontSize: '14px' }} />
                         Rechercher une table
                       </label>
                       <div className="cart-modal-table-search-container">
@@ -630,14 +623,14 @@ function CartModal({
                           type="text"
                           value={tableSearch}
                           onChange={(e) => setTableSearch(e.target.value)}
-                          placeholder="Rechercher le numéro de table..."
+                          placeholder="Numéro de table..."
                           className="cart-modal-table-search-input"
                         />
                       </div>
                     </div>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <RestaurantIcon style={{ fontSize: '15px' }} />
+                        <RestaurantIcon style={{ fontSize: '14px' }} />
                         Sélectionner une table
                       </label>
                       <div className="cart-modal-table-list-container">
@@ -664,13 +657,13 @@ function CartModal({
                 {orderType === 'delivery' && (
                   <div className="cart-modal-form-group">
                     <label className="cart-modal-label">
-                      <LocalShippingIcon style={{ fontSize: '15px' }} />
+                      <LocalShippingIcon style={{ fontSize: '14px' }} />
                       Adresse de livraison
                     </label>
                     <input
                       value={deliveryAddress || ''}
                       onChange={(e) => setDeliveryAddress(e.target.value)}
-                      placeholder="Entrez votre adresse de livraison"
+                      placeholder="Entrez votre adresse"
                       className="cart-modal-input"
                     />
                   </div>
@@ -678,13 +671,13 @@ function CartModal({
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <NotesIcon style={{ fontSize: '15px' }} />
+                    <NotesIcon style={{ fontSize: '14px' }} />
                     Instructions spéciales
                   </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Ajoutez des instructions spéciales (ex: Sans Sucre)"
+                    placeholder="Ex: Sans Sucre, Bien cuit..."
                     className="cart-modal-textarea"
                     rows="3"
                   />
@@ -698,10 +691,10 @@ function CartModal({
                   {isSubmitting ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                       <div className="cart-modal-spinner"></div>
-                      Commande en cours...
+                      En cours...
                     </div>
                   ) : (
-                    `Passer la commande · ${total} ${currency}`
+                    `Commander · ${total} ${currency}`
                   )}
                 </button>
               </div>
