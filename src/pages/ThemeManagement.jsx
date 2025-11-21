@@ -20,6 +20,7 @@ function ThemeManagement() {
     logo_url: null,
     favicon_url: '/favicon.ico',
     site_title: 'Café Local',
+    currency: '$',
   });
   const [userId, setUserId] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -188,9 +189,10 @@ function ThemeManagement() {
       <Typography variant="h5" sx={{ mb: 3, fontWeight: 600, color: 'var(--text-color)' }}>
         Theme Management
       </Typography>
+      
       <Paper sx={{ p: 3, mb: 3, borderRadius: '12px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 500, color: 'var(--text-color)' }}>
-          Colors
+          Colors & Currency
         </Typography>
         <form onSubmit={handleThemeSubmit}>
           <TextField
@@ -229,6 +231,18 @@ function ThemeManagement() {
             fullWidth
             sx={{ mb: 2 }}
           />
+          <TextField
+            label="Currency Symbol"
+            name="currency"
+            type="text"
+            value={theme.currency}
+            onChange={handleInputChange}
+            fullWidth
+            placeholder="e.g., $, €, £, DT, ₹"
+            helperText="Enter your currency symbol or abbreviation (max 10 characters)"
+            inputProps={{ maxLength: 10 }}
+            sx={{ mb: 2 }}
+          />
           <Button
             type="submit"
             variant="contained"
@@ -243,10 +257,11 @@ function ThemeManagement() {
             }}
             fullWidth
           >
-            {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Theme Colors'}
+            {loading ? <CircularProgress size={24} color="inherit" /> : 'Save Theme & Currency'}
           </Button>
         </form>
       </Paper>
+
       <Paper sx={{ p: 3, borderRadius: '12px', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)' }}>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 500, color: 'var(--text-color)' }}>
           Branding
@@ -320,7 +335,7 @@ function ThemeManagement() {
             disabled={loading || (!logoFile && !faviconFile && !theme.site_title)}
             sx={{
               background: 'var(--primary-color)',
-              colorerville: '#fff',
+              color: '#fff',
               borderRadius: '8px',
               textTransform: 'none',
               fontWeight: 500,
