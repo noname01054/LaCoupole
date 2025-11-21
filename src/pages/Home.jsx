@@ -108,17 +108,15 @@ function Home({ addToCart }) {
     if (banners.length <= 1) return;
 
     const interval = setInterval(() => {
-      requestAnimationFrame(() => {
-        setCurrentBannerIndex((prevIndex) => {
-          const nextIndex = (prevIndex + 1) % banners.length;
-          if (bannerContainerRef.current) {
-            bannerContainerRef.current.scrollTo({
-              left: nextIndex * bannerContainerRef.current.offsetWidth,
-              behavior: 'auto',
-            });
-          }
-          return nextIndex;
-        });
+      setCurrentBannerIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % banners.length;
+        if (bannerContainerRef.current) {
+          bannerContainerRef.current.scrollTo({
+            left: nextIndex * bannerContainerRef.current.offsetWidth,
+            behavior: 'smooth',
+          });
+        }
+        return nextIndex;
       });
     }, 3000);
 
