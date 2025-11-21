@@ -40,7 +40,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-image">
           <img
             src={imageSrc}
-            srcSet={`${imageSrc}?w=64 1x, ${imageSrc}?w=128 2x`}
+            srcSet={`${imageSrc}?w=60 1x, ${imageSrc}?w=120 2x`}
             alt={item.name || 'Article'}
             className="cart-modal-item-img"
             loading="lazy"
@@ -141,6 +141,7 @@ function CartModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const [notes, setNotes] = useState('');
   const [currency, setCurrency] = useState('$');
   const modalRef = useRef(null);
@@ -446,20 +447,27 @@ function CartModal({
       setTableSearch('');
       setNotes('');
       setDragOffset(0);
+      setIsDragging(false);
       setIsClosing(false);
       onClose();
-    }, 200);
+    }, 250);
   }, [onClose]);
 
   const handleTouchStart = useCallback((e) => {
-    touchStartY.current = e.touches[0].clientY;
-    if (contentRef.current) {
-      const rect = contentRef.current.getBoundingClientRect();
-      const touchY = e.touches[0].clientY - rect.top;
-      if (touchY > 50) {
-        touchStartY.current = null;
-      }
+    const content = contentRef.current;
+    if (!content) return;
+
+    // Only allow drag from the top area (handle area)
+    const rect = content.getBoundingClientRect();
+    const touchY = e.touches[0].clientY - rect.top;
+    
+    if (touchY > 60 || content.scrollTop > 5) {
+      touchStartY.current = null;
+      return;
     }
+
+    touchStartY.current = e.touches[0].clientY;
+    setIsDragging(false);
   }, []);
 
   const handleTouchMove = useCallback((e) => {
@@ -469,20 +477,43 @@ function CartModal({
     const deltaY = touchY - touchStartY.current;
     const content = contentRef.current;
 
-    if (content && deltaY < 0 && content.scrollTop > 0) {
+    // Only allow downward dragging
+    if (deltaY < 0) return;
+
+    // Check if content is scrolled
+    if (content && content.scrollTop > 0) {
+      touchStartY.current = null;
       return;
-    } else if (content && deltaY > 0 && content.scrollTop === 0) {
-      setDragOffset(Math.min(deltaY, 300));
+    }
+
+    // Start dragging visual feedback
+    if (deltaY > 5 && !isDragging) {
+      setIsDragging(true);
+    }
+
+    if (deltaY > 0) {
+      const maxDrag = 250;
+      const damping = 0.6; // Add resistance
+      const adjustedDelta = Math.min(deltaY * damping, maxDrag);
+      
+      setDragOffset(adjustedDelta);
       e.preventDefault();
     }
-  }, []);
+  }, [isDragging]);
 
   const handleTouchEnd = useCallback(() => {
-    if (dragOffset > 150) {
+    if (!touchStartY.current) return;
+
+    const threshold = 120;
+
+    if (dragOffset > threshold) {
       handleClose();
     } else {
+      // Smooth spring-back animation
       setDragOffset(0);
+      setIsDragging(false);
     }
+    
     touchStartY.current = null;
   }, [dragOffset, handleClose]);
 
@@ -502,14 +533,34 @@ function CartModal({
 
   if (!isOpen && !isClosing) return null;
 
+  // Calculate drag progress for visual indicator (0 to 100%)
+  const dragProgress = Math.min((dragOffset / 120) * 100, 100);
+  const modalOpacity = Math.max(1 - (dragOffset / 300), 0.5);
+
   return (
-    <div className={`cart-modal-overlay ${isClosing ? 'closing' : ''}`} onClick={(e) => e.target === e.currentTarget && handleClose()}>
+    <div 
+      className={`cart-modal-overlay ${isClosing ? 'closing' : ''}`} 
+      onClick={(e) => e.target === e.currentTarget && handleClose()}
+      style={{ opacity: modalOpacity }}
+    >
       <div
         ref={modalRef}
-        className={`cart-modal ${isClosing ? 'closing' : ''}`}
-        style={{ transform: `translateY(${dragOffset}px)` }}
+        className={`cart-modal ${isClosing ? 'closing' : ''} ${isDragging ? 'dragging' : ''}`}
+        style={{ 
+          transform: `translateY(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease'
+        }}
       >
-        <div className="cart-modal-handle" />
+        {/* Drag progress indicator */}
+        <div 
+          className="cart-modal-drag-indicator"
+          style={{ width: `${dragProgress}%` }}
+        />
+
+        {/* Handle for drag gesture */}
+        <div className="cart-modal-handle-wrapper">
+          <div className="cart-modal-handle" />
+        </div>
         
         <div className="cart-modal-header">
           <button
@@ -552,7 +603,7 @@ function CartModal({
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <ShoppingBagIcon style={{ fontSize: '16px' }} />
+                    <ShoppingBagIcon style={{ fontSize: '15px' }} />
                     Type de commande
                   </label>
                   <select
@@ -570,7 +621,7 @@ function CartModal({
                   <>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <SearchIcon style={{ fontSize: '16px' }} />
+                        <SearchIcon style={{ fontSize: '15px' }} />
                         Rechercher une table
                       </label>
                       <div className="cart-modal-table-search-container">
@@ -586,7 +637,7 @@ function CartModal({
                     </div>
                     <div className="cart-modal-form-group">
                       <label className="cart-modal-label">
-                        <RestaurantIcon style={{ fontSize: '16px' }} />
+                        <RestaurantIcon style={{ fontSize: '15px' }} />
                         Sélectionner une table
                       </label>
                       <div className="cart-modal-table-list-container">
@@ -613,7 +664,7 @@ function CartModal({
                 {orderType === 'delivery' && (
                   <div className="cart-modal-form-group">
                     <label className="cart-modal-label">
-                      <LocalShippingIcon style={{ fontSize: '16px' }} />
+                      <LocalShippingIcon style={{ fontSize: '15px' }} />
                       Adresse de livraison
                     </label>
                     <input
@@ -627,7 +678,7 @@ function CartModal({
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
-                    <NotesIcon style={{ fontSize: '16px' }} />
+                    <NotesIcon style={{ fontSize: '15px' }} />
                     Instructions spéciales
                   </label>
                   <textarea
