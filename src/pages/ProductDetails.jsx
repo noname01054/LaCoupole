@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTransition } from '../contexts/TransitionContext';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { debounce } from 'lodash';
@@ -18,6 +20,8 @@ import './css/ProductDetails.css';
 function ProductDetails({ addToCart }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { transitionData, isTransitioning, endTransition } = useTransition();
+  
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
   const [supplements, setSupplements] = useState([]);
@@ -34,6 +38,7 @@ function ProductDetails({ addToCart }) {
   const containerRef = useRef(null);
   const [categories, setCategories] = useState([]);
   const [currency, setCurrency] = useState('$');
+  const [animationComplete, setAnimationComplete] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -62,25 +67,31 @@ function ProductDetails({ addToCart }) {
         setSupplements(supplementsResponse.data || []);
         setCategoryProducts(categoryResponse.data || []);
         setCategories(categoriesResponse.data || []);
-        
+
         if (themeResponse.data && themeResponse.data.currency) {
           setCurrency(themeResponse.data.currency);
         }
-        
+
         if (ratingResponse.data?.length > 0) {
           setIsRating(true);
           setRating(parseInt(ratingResponse.data[0].rating) || 0);
         }
+        
+        // Delay to allow animation to start
+        setTimeout(() => {
+          setLoading(false);
+          endTransition();
+        }, 100);
       } catch (error) {
         console.error('Erreur lors du chargement des détails du produit:', error);
         toast.error(error.response?.data?.error || 'Échec du chargement des détails du produit');
         setError('Échec du chargement des détails du produit');
-      } finally {
         setLoading(false);
+        endTransition();
       }
     };
     fetchData();
-  }, [id]);
+  }, [id, endTransition]);
 
   const debouncedRatingSubmit = useMemo(
     () =>
@@ -135,8 +146,8 @@ function ProductDetails({ addToCart }) {
       setSelectedSupplement('0');
       setQuantity(1);
     } catch (error) {
-      console.error('Erreur lors de l\'ajout au panier:', error);
-      toast.error(error.response?.data?.error || 'Échec de l\'ajout au panier');
+      console.error('Erreur lors de l'ajout au panier:', error);
+      toast.error(error.response?.data?.error || 'Échec de l'ajout au panier');
     }
   }, [product, quantity, selectedSupplement, supplements, addToCart]);
 
@@ -241,14 +252,87 @@ function ProductDetails({ addToCart }) {
     setTouchCurrentX(null);
   }, [id]);
 
+  // Animation variants
+  const pageVariants = {
+    initial: transitionData ? {
+      position: 'fixed',
+      top: transitionData.startPosition.top,
+      left: transitionData.startPosition.left,
+      width: transitionData.startPosition.width,
+      height: transitionData.startPosition.height,
+      borderRadius: '16px',
+      overflow: 'hidden',
+    } : {
+      opacity: 0,
+    },
+    animate: {
+      position: 'relative',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: 'auto',
+      opacity: 1,
+      borderRadius: '0px',
+      transition: {
+        duration: 0.6,
+        ease: [0.43, 0.13, 0.23, 0.96],
+        opacity: { duration: 0.3 },
+      },
+    },
+    exit: {
+      opacity: 0,
+      transition: { duration: 0.3 },
+    },
+  };
+
+  const contentVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: transitionData ? 0.35 : 0,
+        duration: 0.5,
+        ease: [0.43, 0.13, 0.23, 0.96],
+      },
+    },
+  };
+
+  const detailsVariants = {
+    initial: { opacity: 0, y: 30 },
+    animate: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: transitionData ? 0.45 : 0.1,
+        duration: 0.5,
+        ease: [0.43, 0.13, 0.23, 0.96],
+      },
+    },
+  };
+
+  const overlayVariants = {
+    initial: { opacity: 0 },
+    animate: {
+      opacity: 1,
+      transition: {
+        delay: 0.1,
+        duration: 0.4,
+      },
+    },
+  };
+
   if (error) {
     return (
-      <div
+      <motion.div
         className="product-details-container"
         ref={containerRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
       >
         <div className="product-details-error-container">
           <div className="product-details-error-icon">🍽️</div>
@@ -257,35 +341,40 @@ function ProductDetails({ addToCart }) {
             Réessayer
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (isLoading) {
     return (
-      <div
+      <motion.div
         className="product-details-container"
         ref={containerRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
       >
         <div className="product-details-loading-container">
           <div className="product-details-loading-spinner"></div>
           <p className="product-details-loading-text">Chargement...</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   if (!product) {
     return (
-      <div
+      <motion.div
         className="product-details-container"
         ref={containerRef}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
       >
         <div className="product-details-error-container">
           <div className="product-details-error-icon">🔍</div>
@@ -294,206 +383,278 @@ function ProductDetails({ addToCart }) {
             Retour à l'accueil
           </button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   const imageSrc = product.image_url && product.image_url !== 'null' ? product.image_url : '/placeholder.jpg';
-
   const regularPrice = parseFloat(product.regular_price) || 0;
   const salePrice = parseFloat(product.sale_price) || null;
   const averageRating = parseFloat(product.average_rating) || 0;
   const reviewCount = parseInt(product.review_count) || 0;
 
   return (
-    <div
-      className="product-details-container"
-      ref={containerRef}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="product-details-image-section">
-        <div className="product-details-image-container">
-          <img
-            src={imageSrc}
-            srcSet={`${imageSrc}?w=400 1x, ${imageSrc}?w=800 2x`}
-            alt={product.name || 'Produit'}
-            className="product-details-product-image"
-            loading="eager"
-            decoding="async"
-            onError={(e) => {
-              e.target.src = '/placeholder.jpg';
+    <>
+      {/* Background overlay that fades in */}
+      <AnimatePresence>
+        {isTransitioning && transitionData && (
+          <motion.div
+            variants={overlayVariants}
+            initial="initial"
+            animate="animate"
+            exit="initial"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.1)',
+              zIndex: 999,
+              pointerEvents: 'none',
             }}
           />
-        </div>
-      </div>
+        )}
+      </AnimatePresence>
 
-      <div className="product-details-details-section">
-        <h1 className="product-details-product-title">{product.name || 'Produit inconnu'}</h1>
-        
-        <div className="product-details-rating-container">
-          <div className="product-details-rating-stars">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={star <= Math.round(averageRating) ? 'product-details-rating-star-filled' : 'product-details-rating-star'}
-              />
-            ))}
+      <motion.div
+        className="product-details-container"
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        variants={pageVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        style={{
+          zIndex: isTransitioning ? 1000 : 'auto',
+        }}
+      >
+        <motion.div 
+          className="product-details-image-section"
+          layoutId={transitionData && transitionData.itemId === product.id ? `product-image-container-${product.id}` : undefined}
+        >
+          <div className="product-details-image-container">
+            <motion.img
+              layoutId={transitionData && transitionData.itemId === product.id ? `product-image-${product.id}` : undefined}
+              src={imageSrc}
+              srcSet={`${imageSrc}?w=400 1x, ${imageSrc}?w=800 2x`}
+              alt={product.name || 'Produit'}
+              className="product-details-product-image"
+              loading="eager"
+              decoding="async"
+              onError={(e) => {
+                e.target.src = '/placeholder.jpg';
+              }}
+            />
           </div>
-          <span className="product-details-rating-text">
-            {averageRating.toFixed(1)} ({reviewCount})
-          </span>
-        </div>
+        </motion.div>
 
-        <p className="product-details-product-description">
-          {product.description || 'Aucune description disponible.'}
-        </p>
+        <motion.div 
+          className="product-details-details-section"
+          variants={detailsVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <motion.h1 
+            className="product-details-product-title"
+            layoutId={transitionData && transitionData.itemId === product.id ? `product-title-${product.id}` : undefined}
+          >
+            {product.name || 'Produit inconnu'}
+          </motion.h1>
 
-        <div className="product-details-price-section">
-          <div className="product-details-price-container">
-            {salePrice ? (
-              <>
-                <span className="product-details-original-price">{regularPrice.toFixed(2)} {currency}</span>
-                <span className="product-details-sale-price">{salePrice.toFixed(2)} {currency}</span>
-                <span className="product-details-save-badge">-{(regularPrice - salePrice).toFixed(2)} {currency}</span>
-              </>
-            ) : (
-              <span className="product-details-regular-price-only">{regularPrice.toFixed(2)} {currency}</span>
-            )}
-          </div>
-          <div className="product-details-total-price">
-            <span className="product-details-total-label">Total</span>
-            <span className="product-details-total-amount">{calculateTotalPrice()} {currency}</span>
-          </div>
-        </div>
-
-        <div className="product-details-options-card">
-          <div className="product-details-option-row">
-            <div className="product-details-option-left">
-              <CheckCircleOutlined
-                style={{ fontSize: '18px' }}
-                className={product.availability ? 'text-green-500' : 'text-red-500'}
-              />
-              <span className="product-details-option-label">Disponibilité</span>
+          <motion.div 
+            className="product-details-rating-container"
+            layoutId={transitionData && transitionData.itemId === product.id ? `product-rating-${product.id}` : undefined}
+          >
+            <div className="product-details-rating-stars">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  className={star <= Math.round(averageRating) ? 'product-details-rating-star-filled' : 'product-details-rating-star'}
+                />
+              ))}
             </div>
-            <span className="product-details-option-value">
-              {product.availability ? 'En stock' : 'Rupture'}
+            <span className="product-details-rating-text">
+              {averageRating.toFixed(1)} ({reviewCount})
             </span>
-          </div>
+          </motion.div>
 
-          {product.dietary_tags && product.dietary_tags !== '[]' && (
+          <motion.p 
+            className="product-details-product-description"
+            variants={contentVariants}
+          >
+            {product.description || 'Aucune description disponible.'}
+          </motion.p>
+
+          <motion.div 
+            className="product-details-price-section"
+            variants={contentVariants}
+          >
+            <motion.div 
+              className="product-details-price-container"
+              layoutId={transitionData && transitionData.itemId === product.id ? `product-price-${product.id}` : undefined}
+            >
+              {salePrice ? (
+                <>
+                  <span className="product-details-original-price">{regularPrice.toFixed(2)} {currency}</span>
+                  <span className="product-details-sale-price">{salePrice.toFixed(2)} {currency}</span>
+                  <span className="product-details-save-badge">-{(regularPrice - salePrice).toFixed(2)} {currency}</span>
+                </>
+              ) : (
+                <span className="product-details-regular-price-only">{regularPrice.toFixed(2)} {currency}</span>
+              )}
+            </motion.div>
+            <div className="product-details-total-price">
+              <span className="product-details-total-label">Total</span>
+              <span className="product-details-total-amount">{calculateTotalPrice()} {currency}</span>
+            </div>
+          </motion.div>
+
+          <motion.div 
+            className="product-details-options-card"
+            variants={contentVariants}
+          >
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <RestaurantMenuOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
-                <span className="product-details-option-label">Régime</span>
+                <CheckCircleOutlined
+                  style={{ fontSize: '18px' }}
+                  className={product.availability ? 'text-green-500' : 'text-red-500'}
+                />
+                <span className="product-details-option-label">Disponibilité</span>
               </div>
               <span className="product-details-option-value">
-                {JSON.parse(product.dietary_tags || '[]').join(', ') || 'Aucune'}
+                {product.availability ? 'En stock' : 'Rupture'}
               </span>
             </div>
-          )}
 
-          {supplements.length > 0 && (
+            {product.dietary_tags && product.dietary_tags !== '[]' && (
+              <div className="product-details-option-row">
+                <div className="product-details-option-left">
+                  <RestaurantMenuOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
+                  <span className="product-details-option-label">Régime</span>
+                </div>
+                <span className="product-details-option-value">
+                  {JSON.parse(product.dietary_tags || '[]').join(', ') || 'Aucune'}
+                </span>
+              </div>
+            )}
+
+            {supplements.length > 0 && (
+              <div className="product-details-option-row">
+                <div className="product-details-option-left">
+                  <CategoryOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
+                  <span className="product-details-option-label">Supplément</span>
+                </div>
+                <select
+                  value={selectedSupplement}
+                  onChange={(e) => setSelectedSupplement(e.target.value)}
+                  className="product-details-supplement-select"
+                >
+                  <option value="0">Aucun</option>
+                  {supplements.map((s) => (
+                    <option key={s.supplement_id} value={s.supplement_id}>
+                      {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} {currency})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <CategoryOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
-                <span className="product-details-option-label">Supplément</span>
+                <Star style={{ fontSize: '18px' }} className="text-yellow-400" />
+                <span className="product-details-option-label">Votre avis</span>
               </div>
-              <select
-                value={selectedSupplement}
-                onChange={(e) => setSelectedSupplement(e.target.value)}
-                className="product-details-supplement-select"
-              >
-                <option value="0">Aucun</option>
-                {supplements.map((s) => (
-                  <option key={s.supplement_id} value={s.supplement_id}>
-                    {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} {currency})
-                  </option>
-                ))}
-              </select>
+              <div className="product-details-user-rating-container">
+                <div className="product-details-user-rating-stars">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={star <= rating ? 'product-details-user-rating-star-filled' : 'product-details-user-rating-star'}
+                      onClick={() => handleStarClick(star)}
+                    />
+                  ))}
+                </div>
+                {!isRatingSubmitted && rating > 0 && (
+                  <button
+                    className="product-details-rating-submit-button"
+                    onClick={() => debouncedRatingSubmit(rating)}
+                  >
+                    Soumettre
+                  </button>
+                )}
+                {isRatingSubmitted && <span className="product-details-rating-thank-you">Merci !</span>}
+              </div>
             </div>
-          )}
 
-          <div className="product-details-option-row">
-            <div className="product-details-option-left">
-              <Star style={{ fontSize: '18px' }} className="text-yellow-400" />
-              <span className="product-details-option-label">Votre avis</span>
-            </div>
-            <div className="product-details-user-rating-container">
-              <div className="product-details-user-rating-stars">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={star <= rating ? 'product-details-user-rating-star-filled' : 'product-details-user-rating-star'}
-                    onClick={() => handleStarClick(star)}
-                  />
-                ))}
+            <div className="product-details-option-row">
+              <div className="product-details-option-left">
+                <span className="product-details-option-label">Quantité</span>
               </div>
-              {!isRatingSubmitted && rating > 0 && (
+              <div className="product-details-quantity-container">
                 <button
-                  className="product-details-rating-submit-button"
-                  onClick={() => debouncedRatingSubmit(rating)}
+                  className="product-details-quantity-button"
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1 || !product.availability}
+                  aria-label="Diminuer la quantité"
                 >
-                  Soumettre
+                  <RemoveOutlined style={{ fontSize: '18px' }} />
                 </button>
-              )}
-              {isRatingSubmitted && <span className="product-details-rating-thank-you">Merci !</span>}
+                <span className="product-details-quantity-display">{quantity}</span>
+                <button
+                  className="product-details-quantity-button"
+                  onClick={() => setQuantity(quantity + 1)}
+                  disabled={!product.availability}
+                  aria-label="Augmenter la quantité"
+                >
+                  <AddOutlined style={{ fontSize: '18px' }} />
+                </button>
+              </div>
             </div>
-          </div>
+          </motion.div>
 
-          <div className="product-details-option-row">
-            <div className="product-details-option-left">
-              <span className="product-details-option-label">Quantité</span>
+          <motion.button
+            className="product-details-add-to-cart-button"
+            onClick={handleAddToCart}
+            disabled={!product.availability}
+            variants={contentVariants}
+            whileTap={{ scale: 0.97 }}
+          >
+            <ShoppingCartOutlined style={{ fontSize: '20px' }} />
+            {product.availability ? `Ajouter · ${calculateTotalPrice()} ${currency}` : 'Indisponible'}
+          </motion.button>
+        </motion.div>
+
+        {relatedProducts.length > 0 && (
+          <motion.div 
+            className="product-details-related-section"
+            variants={contentVariants}
+            initial="initial"
+            animate="animate"
+          >
+            <h2 className="product-details-section-title">Vous aimerez aussi</h2>
+            <div className="product-details-related-grid">
+              {relatedProducts.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 + index * 0.1 }}
+                >
+                  <MenuItemCard 
+                    item={item} 
+                    onAddToCart={addToCart} 
+                    onView={handleViewProduct} 
+                  />
+                </motion.div>
+              ))}
             </div>
-            <div className="product-details-quantity-container">
-              <button
-                className="product-details-quantity-button"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                disabled={quantity <= 1 || !product.availability}
-                aria-label="Diminuer la quantité"
-              >
-                <RemoveOutlined style={{ fontSize: '18px' }} />
-              </button>
-              <span className="product-details-quantity-display">{quantity}</span>
-              <button
-                className="product-details-quantity-button"
-                onClick={() => setQuantity(quantity + 1)}
-                disabled={!product.availability}
-                aria-label="Augmenter la quantité"
-              >
-                <AddOutlined style={{ fontSize: '18px' }} />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <button
-          className="product-details-add-to-cart-button"
-          onClick={handleAddToCart}
-          disabled={!product.availability}
-        >
-          <ShoppingCartOutlined style={{ fontSize: '20px' }} />
-          {product.availability ? `Ajouter · ${calculateTotalPrice()} ${currency}` : 'Indisponible'}
-        </button>
-      </div>
-
-      {relatedProducts.length > 0 && (
-        <div className="product-details-related-section">
-          <h2 className="product-details-section-title">Vous aimerez aussi</h2>
-          <div className="product-details-related-grid">
-            {relatedProducts.map((item) => (
-              <MenuItemCard
-                key={item.id}
-                item={item}
-                onAddToCart={addToCart}
-                onView={handleViewProduct}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </motion.div>
+    </>
   );
 }
 
