@@ -36,7 +36,7 @@ function ProductDetails({ addToCart }) {
   const [currency, setCurrency] = useState('$');
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const fetchData = async () => {
       try {
@@ -95,7 +95,7 @@ function ProductDetails({ addToCart }) {
             rating: parseInt(ratingValue),
           });
           setIsRating(true);
-          toast.success('Note soumise !');
+          toast.success('Note soumise avec succès !');
           const response = await api.get(`/menu-items/${id}`);
           setProduct(response.data);
         } catch (error) {
@@ -172,7 +172,7 @@ function ProductDetails({ addToCart }) {
       const deltaX = touchCurrentX - touchStartX;
       const boundedDeltaX = Math.max(Math.min(deltaX, 150), -150);
       if (containerRef.current) {
-        containerRef.current.style.transform = `translateX(${boundedDeltaX}px)`;
+        containerRef.current.style.transform = `translate3d(${boundedDeltaX}px, 0, 0)`;
         containerRef.current.style.transition = 'none';
       }
     },
@@ -187,8 +187,8 @@ function ProductDetails({ addToCart }) {
     const currentIndex = categoryProducts.findIndex((p) => p.id === parseInt(id));
 
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-      containerRef.current.style.transform = 'translateX(0)';
+      containerRef.current.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translate3d(0, 0, 0)';
     }
 
     if (deltaX > swipeThreshold) {
@@ -233,8 +233,8 @@ function ProductDetails({ addToCart }) {
 
   useEffect(() => {
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
-      containerRef.current.style.transform = 'translateX(0)';
+      containerRef.current.style.transition = 'transform 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+      containerRef.current.style.transform = 'translate3d(0, 0, 0)';
     }
     setIsSwiping(false);
     setTouchStartX(null);
@@ -317,12 +317,12 @@ function ProductDetails({ addToCart }) {
         <div className="product-details-image-container">
           <img
             src={imageSrc}
+            srcSet={`${imageSrc}?w=400 1x, ${imageSrc}?w=800 2x`}
             alt={product.name || 'Produit'}
             className="product-details-product-image"
-            loading="lazy"
+            loading="eager"
             decoding="async"
             onError={(e) => {
-              console.error('Erreur lors du chargement de l\'image du produit:', product.image_url);
               e.target.src = '/placeholder.jpg';
             }}
           />
@@ -330,7 +330,8 @@ function ProductDetails({ addToCart }) {
       </div>
 
       <div className="product-details-details-section">
-        <h2 className="product-details-product-title">{product.name || 'Produit inconnu'}</h2>
+        <h1 className="product-details-product-title">{product.name || 'Produit inconnu'}</h1>
+        
         <div className="product-details-rating-container">
           <div className="product-details-rating-stars">
             {[1, 2, 3, 4, 5].map((star) => (
@@ -341,7 +342,7 @@ function ProductDetails({ addToCart }) {
             ))}
           </div>
           <span className="product-details-rating-text">
-            {averageRating.toFixed(1)} ({reviewCount} avis)
+            {averageRating.toFixed(1)} ({reviewCount})
           </span>
         </div>
 
@@ -355,14 +356,15 @@ function ProductDetails({ addToCart }) {
               <>
                 <span className="product-details-original-price">{regularPrice.toFixed(2)} {currency}</span>
                 <span className="product-details-sale-price">{salePrice.toFixed(2)} {currency}</span>
-                <span className="product-details-save-badge">ÉCONOMISEZ {(regularPrice - salePrice).toFixed(2)} {currency}</span>
+                <span className="product-details-save-badge">-{(regularPrice - salePrice).toFixed(2)} {currency}</span>
               </>
             ) : (
               <span className="product-details-regular-price-only">{regularPrice.toFixed(2)} {currency}</span>
             )}
           </div>
           <div className="product-details-total-price">
-            Total : <span className="product-details-total-amount">{calculateTotalPrice()} {currency}</span>
+            <span className="product-details-total-label">Total</span>
+            <span className="product-details-total-amount">{calculateTotalPrice()} {currency}</span>
           </div>
         </div>
 
@@ -370,22 +372,21 @@ function ProductDetails({ addToCart }) {
           <div className="product-details-option-row">
             <div className="product-details-option-left">
               <CheckCircleOutlined
+                style={{ fontSize: '18px' }}
                 className={product.availability ? 'text-green-500' : 'text-red-500'}
               />
               <span className="product-details-option-label">Disponibilité</span>
             </div>
-            <span
-              className="product-details-option-value"
-            >
-              {product.availability ? 'En stock' : 'En rupture de stock'}
+            <span className="product-details-option-value">
+              {product.availability ? 'En stock' : 'Rupture'}
             </span>
           </div>
 
           {product.dietary_tags && product.dietary_tags !== '[]' && (
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <RestaurantMenuOutlined className="text-orange-500" />
-                <span className="product-details-option-label">Étiquettes diététiques</span>
+                <RestaurantMenuOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
+                <span className="product-details-option-label">Régime</span>
               </div>
               <span className="product-details-option-value">
                 {JSON.parse(product.dietary_tags || '[]').join(', ') || 'Aucune'}
@@ -396,8 +397,8 @@ function ProductDetails({ addToCart }) {
           {supplements.length > 0 && (
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <CategoryOutlined className="text-orange-500" />
-                <span className="product-details-option-label">Ajouter un supplément</span>
+                <CategoryOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
+                <span className="product-details-option-label">Supplément</span>
               </div>
               <select
                 value={selectedSupplement}
@@ -416,8 +417,8 @@ function ProductDetails({ addToCart }) {
 
           <div className="product-details-option-row">
             <div className="product-details-option-left">
-              <Star className="text-yellow-400" />
-              <span className="product-details-option-label">Noter cet article</span>
+              <Star style={{ fontSize: '18px' }} className="text-yellow-400" />
+              <span className="product-details-option-label">Votre avis</span>
             </div>
             <div className="product-details-user-rating-container">
               <div className="product-details-user-rating-stars">
@@ -450,16 +451,18 @@ function ProductDetails({ addToCart }) {
                 className="product-details-quantity-button"
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
                 disabled={quantity <= 1 || !product.availability}
+                aria-label="Diminuer la quantité"
               >
-                <RemoveOutlined />
+                <RemoveOutlined style={{ fontSize: '18px' }} />
               </button>
               <span className="product-details-quantity-display">{quantity}</span>
               <button
                 className="product-details-quantity-button"
                 onClick={() => setQuantity(quantity + 1)}
                 disabled={!product.availability}
+                aria-label="Augmenter la quantité"
               >
-                <AddOutlined />
+                <AddOutlined style={{ fontSize: '18px' }} />
               </button>
             </div>
           </div>
@@ -470,14 +473,14 @@ function ProductDetails({ addToCart }) {
           onClick={handleAddToCart}
           disabled={!product.availability}
         >
-          <ShoppingCartOutlined />
-          {product.availability ? `Ajouter au panier • ${calculateTotalPrice()} ${currency}` : 'Indisponible'}
+          <ShoppingCartOutlined style={{ fontSize: '20px' }} />
+          {product.availability ? `Ajouter · ${calculateTotalPrice()} ${currency}` : 'Indisponible'}
         </button>
       </div>
 
       {relatedProducts.length > 0 && (
         <div className="product-details-related-section">
-          <h3 className="product-details-section-title">Vous pourriez aussi aimer</h3>
+          <h2 className="product-details-section-title">Vous aimerez aussi</h2>
           <div className="product-details-related-grid">
             {relatedProducts.map((item) => (
               <MenuItemCard
