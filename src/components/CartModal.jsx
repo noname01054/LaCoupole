@@ -14,7 +14,7 @@ import { v4 as uuidv4 } from 'uuid';
 import React from 'react';
 import './css/CartModal.css';
 
-const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, supplementSelections, handleQuantityChange, handleSupplementChange, api }) => {
+const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, supplementSelections, handleQuantityChange, handleSupplementChange, api, currency }) => {
   const imageSrc = useMemo(() => {
     let src = '/placeholder.jpg';
     if (item.image_url && item.image_url !== '/Uploads/undefined' && item.image_url !== 'null') {
@@ -52,12 +52,12 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
         <div className="cart-modal-item-details">
           <h4 className="cart-modal-item-name">{item.name || 'Article sans nom'}</h4>
           <div className="cart-modal-item-price">
-            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} DT x {item.quantity || 1} = {totalItemPrice.toFixed(2)} DT
+            {(displayPrice + breakfastOptionPrices + supplementPrice).toFixed(2)} {currency} x {item.quantity || 1} = {totalItemPrice.toFixed(2)} {currency}
             {supplementPrice > 0 && (
-              <span className="cart-modal-supplement-price">+{supplementPrice.toFixed(2)} DT (Supplément)</span>
+              <span className="cart-modal-supplement-price">+{supplementPrice.toFixed(2)} {currency} (Supplément)</span>
             )}
             {breakfastOptionPrices > 0 && (
-              <span className="cart-modal-supplement-price">+{breakfastOptionPrices.toFixed(2)} DT (Options)</span>
+              <span className="cart-modal-supplement-price">+{breakfastOptionPrices.toFixed(2)} {currency} (Options)</span>
             )}
           </div>
           {item.breakfast_id && item.option_ids && (
@@ -66,7 +66,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
                 .filter(option => item.option_ids.includes(option.id))
                 .map(option => (
                   <span key={option.id} className="cart-modal-option-detail">
-                    {option.option_name} (+{parseFloat(option.additional_price || 0).toFixed(2)} DT)
+                    {option.option_name} (+{parseFloat(option.additional_price || 0).toFixed(2)} {currency})
                   </span>
                 ))}
             </div>
@@ -83,7 +83,7 @@ const CartItem = React.memo(({ item, itemSupplements, breakfastOptions, suppleme
           <option value="0">Aucun supplément</option>
           {itemSupplements.map((s) => (
             <option key={s.supplement_id} value={s.supplement_id}>
-              {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} DT)
+              {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} {currency})
             </option>
           ))}
         </select>
@@ -140,11 +140,30 @@ function CartModal({
   const [isClosing, setIsClosing] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const [notes, setNotes] = useState('');
+  const [currency, setCurrency] = useState('$');
   const modalRef = useRef(null);
   const contentRef = useRef(null);
   const touchStartY = useRef(null);
   const submissionLockRef = useRef(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchTheme = async () => {
+      try {
+        const themeResponse = await api.getTheme();
+        console.log('CartModal - Theme response:', themeResponse.data);
+        if (themeResponse.data && themeResponse.data.currency) {
+          console.log('CartModal - Setting currency to:', themeResponse.data.currency);
+          setCurrency(themeResponse.data.currency);
+        } else {
+          console.log('CartModal - No currency found in theme data');
+        }
+      } catch (error) {
+        console.error('CartModal - Error fetching theme for currency:', error);
+      }
+    };
+    fetchTheme();
+  }, []);
 
   useEffect(() => {
     if (!isOpen || orderType !== 'local') {
@@ -524,12 +543,13 @@ function CartModal({
                     handleQuantityChange={handleQuantityChange}
                     handleSupplementChange={handleSupplementChange}
                     api={api}
+                    currency={currency}
                   />
                 ))}
               </ul>
 
               <div className="cart-modal-summary">
-                <div className="cart-modal-total-price">Total : {total} DT</div>
+                <div className="cart-modal-total-price">Total : {total} {currency}</div>
 
                 <div className="cart-modal-form-group">
                   <label className="cart-modal-label">
@@ -639,7 +659,7 @@ function CartModal({
                       Commande en cours...
                     </div>
                   ) : (
-                    `Passer la commande - ${total} DT`
+                    `Passer la commande - ${total} ${currency}`
                   )}
                 </button>
               </div>
