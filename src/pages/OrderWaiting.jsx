@@ -37,6 +37,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   const [errorMessage, setErrorMessage] = useState(null);
   const [isVisible, setIsVisible] = useState(false);
   const [itemsVisible, setItemsVisible] = useState(false);
+  const [currency, setCurrency] = useState('$');
   const audioRef = useRef(null);
   const hasPlayedSound = useRef(false);
   const hasInteracted = useRef(false);
@@ -45,6 +46,25 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
   // Prioritize session ID from navigation state
   const sessionId = state?.sessionId || localStorage.getItem('sessionId') || propSessionId || `guest-${uuidv4()}`;
   const isMounted = useRef(false);
+
+  // Fetch currency from theme
+  useEffect(() => {
+    const fetchTheme = async () => {
+      try {
+        const themeResponse = await api.getTheme();
+        console.log('Theme response:', themeResponse.data);
+        if (themeResponse.data && themeResponse.data.currency) {
+          console.log('Setting currency to:', themeResponse.data.currency);
+          setCurrency(themeResponse.data.currency);
+        } else {
+          console.log('No currency found in theme data');
+        }
+      } catch (error) {
+        console.error('Error fetching theme for currency:', error);
+      }
+    };
+    fetchTheme();
+  }, []);
 
   // Preload audio and validate
   useEffect(() => {
@@ -782,24 +802,24 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                       <span className="order-waiting-item-name">{item.name}</span>
                       <div className="order-waiting-item-price-breakdown">
                         <div className="order-waiting-base-price">
-                          {item.basePrice.toFixed(2)} DT
+                          {item.basePrice.toFixed(2)} {currency}
                         </div>
                         {item.type === 'menu' && item.supplementName && item.supplementPrice > 0 && (
                           <div className="order-waiting-supplement-price">
-                            + {item.supplementName}: {item.supplementPrice.toFixed(2)} DT
+                            + {item.supplementName}: {item.supplementPrice.toFixed(2)} {currency}
                           </div>
                         )}
                         {item.type === 'breakfast' && item.options && item.options.length > 0 && (
                           <div className="order-waiting-breakfast-options">
                             {item.options.map((opt, optIdx) => (
                               <div key={optIdx} className="order-waiting-option-price">
-                                + {opt.name}: {opt.price.toFixed(2)} DT
+                                + {opt.name}: {opt.price.toFixed(2)} {currency}
                               </div>
                             ))}
                           </div>
                         )}
                         <div className="order-waiting-item-total">
-                          {item.unitPrice.toFixed(2)} DT × {item.quantity} = {totalItemPrice.toFixed(2)} DT
+                          {item.unitPrice.toFixed(2)} {currency} × {item.quantity} = {totalItemPrice.toFixed(2)} {currency}
                         </div>
                       </div>
                     </div>
@@ -816,7 +836,7 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         <div className="order-waiting-total-section">
           <div className="order-waiting-total-row">
             <span className="order-waiting-total-label">Total</span>
-            <span className="order-waiting-total-value">{safeParseFloat(orderDetails.total_price || 0).toFixed(2)} DT</span>
+            <span className="order-waiting-total-value">{safeParseFloat(orderDetails.total_price || 0).toFixed(2)} {currency}</span>
           </div>
         </div>
       </div>
@@ -830,12 +850,12 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           <div key={index} style={{ margin: '10px 0' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>{item.quantity}x {item.name}</span>
-              <span>{(item.basePrice * item.quantity).toFixed(2)} DT</span>
+              <span>{(item.basePrice * item.quantity).toFixed(2)} {currency}</span>
             </div>
             {item.type === 'menu' && item.supplementName && item.supplementPrice > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginLeft: '20px', fontSize: '14px', color: '#555' }}>
                 <span>+ {item.supplementName}</span>
-                <span>{(item.supplementPrice * item.quantity).toFixed(2)} DT</span>
+                <span>{(item.supplementPrice * item.quantity).toFixed(2)} {currency}</span>
               </div>
             )}
             {item.type === 'breakfast' && item.options && item.options.length > 0 && (
@@ -843,19 +863,19 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
                 {item.options.map((opt, optIdx) => (
                   <div key={optIdx} style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span>+ {opt.name}</span>
-                    <span>{(opt.price * item.quantity).toFixed(2)} DT</span>
+                    <span>{(opt.price * item.quantity).toFixed(2)} {currency}</span>
                   </div>
                 ))}
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', marginTop: '5px' }}>
               <span>Total</span>
-              <span>{(item.unitPrice * item.quantity).toFixed(2)} DT</span>
+              <span>{(item.unitPrice * item.quantity).toFixed(2)} {currency}</span>
             </div>
           </div>
         ))}
         <hr style={{ border: 'none', borderTop: '1px dashed #000', margin: '10px 0' }} />
-        <p style={{ fontWeight: 'bold', textAlign: 'right' }}>TOTAL: {safeParseFloat(orderDetails.total_price || 0).toFixed(2)} DT</p>
+        <p style={{ fontWeight: 'bold', textAlign: 'right' }}>TOTAL: {safeParseFloat(orderDetails.total_price || 0).toFixed(2)} {currency}</p>
       </div>
 
       <div className="order-waiting-url-section">
