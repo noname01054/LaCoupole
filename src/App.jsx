@@ -95,10 +95,8 @@ function App() {
 
   useEffect(() => {
     const initializeApp = async () => {
-      // UUID regex for validation
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-      // Initialize deviceId: Reuse existing or generate new only if missing or invalid
       let storedDeviceId;
       try {
         storedDeviceId = localStorage.getItem('deviceId');
@@ -116,7 +114,6 @@ function App() {
       setDeviceId(storedDeviceId);
       api.defaults.headers.common['X-Device-Id'] = storedDeviceId;
 
-      // Initialize sessionId
       let fallbackSessionId;
       try {
         fallbackSessionId = localStorage.getItem('sessionId');
@@ -526,8 +523,23 @@ function App() {
     return <div style={{ textAlign: 'center', padding: '20px', color: 'red' }}>{error}</div>;
   }
 
+  // Helper function to check if route needs padding
+  const isAdminRoute = window.location.pathname.startsWith('/admin') || 
+                       window.location.pathname.startsWith('/staff') ||
+                       window.location.pathname === '/login';
+  
+  const isFullWidthRoute = window.location.pathname.startsWith('/product/') ||
+                          window.location.pathname.startsWith('/order-waiting/');
+
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px', minHeight: '100vh' }}>
+    <div style={{ 
+      maxWidth: isAdminRoute ? '1200px' : '100%', 
+      margin: '0 auto', 
+      padding: isFullWidthRoute ? '0' : (isAdminRoute ? '20px' : '0'), 
+      minHeight: '100vh',
+      width: '100%',
+      overflowX: 'hidden'
+    }}>
       <Header
         cart={cart}
         setIsCartOpen={setIsCartOpen}
