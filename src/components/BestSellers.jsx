@@ -8,6 +8,7 @@ function BestSellers({ addToCart }) {
   const [bestSellers, setBestSellers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [centerIndex, setCenterIndex] = useState(0);
+  const [currency, setCurrency] = useState('$');
   const [theme, setTheme] = useState({
     primary_color: '#ff6b35',
     secondary_color: '#ff8c42',
@@ -35,6 +36,15 @@ function BestSellers({ addToCart }) {
         setBestSellers(bestSellersResponse.data?.slice(0, 8) || []);
         const updatedTheme = themeResponse.data || theme;
         setTheme(updatedTheme);
+        
+        // Set currency from theme
+        if (updatedTheme.currency) {
+          console.log('Setting currency to:', updatedTheme.currency);
+          setCurrency(updatedTheme.currency);
+        } else {
+          console.log('No currency found in theme data');
+        }
+        
         applyTheme(updatedTheme);
       } catch (error) {
         console.error('Erreur lors de la récupération des meilleurs vendeurs ou du thème:', error);
@@ -268,13 +278,13 @@ function BestSellers({ addToCart }) {
               <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}>
                 {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
               </span>
-              <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}> DT</span>
+              <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}> {currency}</span>
             </div>
           </div>
         </div>
       </div>
     ));
-  }, [bestSellers, centerIndex, theme, handleItemClick]);
+  }, [bestSellers, centerIndex, theme, currency, handleItemClick]);
 
   if (loading) {
     return (
@@ -471,7 +481,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '3px',
-    width: '防',
+    width: '100%',
   },
   bestSellerName: {
     fontSize: '13px',
