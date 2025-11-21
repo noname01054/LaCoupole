@@ -1,107 +1,160 @@
 import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
-function Banner({ banner }) {
+function Banner({ banners = [] }) { // Now expects an array of banners
   const navigate = useNavigate();
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const timeoutRef = useRef(null);
 
-  // Enable smooth scrolling globally once when the app loads
+  // Auto-scroll every 5 seconds
   useEffect(() => {
-    document.documentElement.style.scrollBehavior = 'smooth';
-    // Optional cleanup (not strictly needed)
-    return () => {
-      document.documentElement.style.scrollBehavior = 'auto';
-    };
-  }, []);
+    if (banners.length <= 1) return;
 
-  const handleClick = () => {
+    timeoutRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % banners.length);
+    }, 5000); // Change banner every 5 seconds
+
+    return () => clearInterval(timeoutRef.current);
+  }, [banners.length]);
+
+  // Reset timer on mouse enter/leave (optional pause on hover)
+  const resetTimer = () => {
+    clearInterval(timeoutRef.current);
+    timeoutRef.current = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % banners.length);
+    }, 5000);
+  };
+
+  const handleClick = (banner) => {
     if (!banner.link) return;
 
-    // External link → open normally
     if (banner.link.startsWith('http')) {
       window.location.href = banner.link;
-      return;
+    } else {
+      navigate(banner.link);
+      // Smooth scroll to top after navigation
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 100);
     }
-
-    // Internal link → navigate + smooth scroll to top with nice feel
-    navigate(banner.link);
-
-    // Small trick: tiny timeout so the new page renders first, then we scroll smoothly
-    setTimeout(() => {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth',
-      });
-    }, 100);
   };
+
+  // If no banners or empty array
+  if (!banners || banners.length === 0) {
+    return null;
+  }
 
   return (
     <>
-      {/* Inline global styles for smooth scrolling + banner hover effect */}
-      <style jsx global>{`
-        html {
-          scroll-behavior: smooth;
+      {/* Smooth Global Styles */}
+      <style jsx>{`
+        .banner-carousel {
+          width: 100%;
+          max-width: 1200px;
+          margin: 20px auto;
+          overflow: hidden;
+          border-radius: 12px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
         }
 
-        .banner-container {
-          transition: transform 0.4s ease, box-shadow 0.4s ease;
+        .banner-slider {
+          display: flex;
+          transition: transform 0.8s cubic-bezier(0.5, 0, 0.2, 1);
+          width: 100%;
         }
 
-        .banner-container:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+        .banner-item {
+          min-width: 100%;
+          cursor: pointer;
+          user-select: none;
         }
 
-        .banner-image {
-          transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        .banner-item img {
+          width: 100%;
+          height: auto;
+          display: block;
+          object-fit: cover;
+          border-radius: 12px;
         }
 
-        .banner-container:hover .banner-image {
+        /* Dots Indicator */
+        .dots-container {
+          display: flex;
+          justify-content: center;
+          gap: 10px;
+          margin-top: 16px;
+        }
+
+        .dot {
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: #ccc;
+          transition: all 0.3s ease;
+        }
+
+        .dot.active {
+          background: #007bff;
+          transform: scale(1.3);
+        }
+
+        /* Hover effect */
+        .banner-item:hover img {
           transform: scale(1.03);
+          transition: transform 0.8s ease;
         }
       `}</style>
 
-      <div
-        className="banner-container"
-        style={{
-          width: '100%',
-          maxWidth: '1200px',
-          margin: '20px auto',
-          cursor: banner.link ? 'pointer' : 'default',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
-        }}
-        onClick={handleClick}
+      <div className="banner-carousel"
+        onMouseEnter={() => clearInterval(timeoutRef.current)}
+        onMouseLeave={resetTimer}
       >
-        {banner.image_url ? (
-          <img
-            src={banner.image_url}
-            alt="Banner"
-            className="banner-image"
-            style={{
-              width: '100%',
-              height: 'auto',
-              display: 'block',
-              objectFit: 'cover',
-            }}
-            onError={(e) => {
-              console.error('Error loading banner image:', banner.image_url);
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              width: '100%',
-              height: '200px',
-              background: '#e0e0e0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#999',
-              fontSize: '1.2rem',
-            }}
-          >
-            No banner image
+        <div
+          className="banner-slider"
+          style={{
+            transform: `translateX(-${currentIndex * 100}%)`,
+          }}
+        >
+          {banners.map((banner, index) => (
+            <div
+              key={banner.id || index}
+              className="banner-item"
+              onClick={() => handleClick(banner)}
+            >
+              {banner.image_url ? (
+                <img
+                  src={banner.image_url}
+                  alt={banner.title || "Banner"}
+                  onError={(e) => {
+                    console.error("Banner load error:", banner.image_url);
+                    e.target.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div style={{
+                  height: '300px',
+                  background: '#f0f0f0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#999',
+                  fontSize: '1.5rem'
+                }}>
+                  No Image
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Dots Indicator */}
+        {banners.length > 1 && (
+          <div className="dots-container">
+            {banners.map((_, index) => (
+              <div
+                key={index}
+                className={`dot ${index === currentIndex ? 'active' : ''}`}
+                onClick={() => setCurrentIndex(index)}
+              />
+            ))}
           </div>
         )}
       </div>
