@@ -4,6 +4,7 @@ import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import StarIcon from '@mui/icons-material/Star';
 import StarOutlineIcon from '@mui/icons-material/StarOutline';
+import EditIcon from '@mui/icons-material/Edit';
 import { debounce } from 'lodash';
 import { toast } from 'react-toastify';
 
@@ -42,12 +43,8 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
     const fetchTheme = async () => {
       try {
         const themeResponse = await api.getTheme();
-        console.log('Theme response:', themeResponse.data);
         if (themeResponse.data && themeResponse.data.currency) {
-          console.log('Setting currency to:', themeResponse.data.currency);
           setCurrency(themeResponse.data.currency);
-        } else {
-          console.log('No currency found in theme data');
         }
       } catch (error) {
         console.error('Error fetching theme for currency:', error);
@@ -79,7 +76,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         }
         setSupplements(data);
       } catch (err) {
-        console.error(`Échec du chargement des ${item.type === 'breakfast' ? 'options' : 'suppléments'} pour l'article ${item.id}:`, err);
+        console.error(`Error loading ${item.type === 'breakfast' ? 'options' : 'supplements'} for item ${item.id}:`, err);
         setSupplements({ options: [], optionGroups: [] });
       }
     };
@@ -208,7 +205,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           .filter((opt) => selectedOptionIds.includes(opt.id))
           .map((opt) => ({
             ...opt,
-            group_title: supplements.optionGroups.find((g) => g.id === opt.group_id)?.title || 'Groupe inconnu',
+            group_title: supplements.optionGroups.find((g) => g.id === opt.group_id)?.title || 'Unknown Group',
           })),
         cartItemId: `${item.id}-${Date.now()}`,
       });
@@ -238,8 +235,6 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       e.stopPropagation();
       if (onView && item?.id) {
         onView(item.id, item?.type);
-      } else {
-        console.warn('La prop onView est manquante ou l\'ID de l\'article est invalide');
       }
     },
     [onView, item?.id, item?.type]
@@ -251,8 +246,6 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       e.stopPropagation();
       if (item?.id) {
         window.location.href = `/edit-product/${item.id}`;
-      } else {
-        console.warn('L\'ID de l\'article est invalide');
       }
     },
     [item?.id]
@@ -288,16 +281,16 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           <StarIcon
             key={i}
             sx={{
-              fontSize: isSmallMobile ? '11px' : '12px',
-              color: '#000000',
+              fontSize: isSmallMobile ? '10px' : '11px',
+              color: '#fbbf24',
             }}
           />
         ) : (
           <StarOutlineIcon
             key={i}
             sx={{
-              fontSize: isSmallMobile ? '11px' : '12px',
-              color: '#000000',
+              fontSize: isSmallMobile ? '10px' : '11px',
+              color: '#d1d5db',
             }}
           />
         )
@@ -309,23 +302,24 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
   const styles = useMemo(
     () => ({
       card: {
-        background: 'var(--background-color)',
-        borderRadius: isSmallMobile ? '12px' : '16px',
+        background: '#ffffff',
+        borderRadius: isSmallMobile ? '14px' : '16px',
         overflow: 'hidden',
-        boxShadow: isHovered ? '0 6px 16px rgba(0, 0, 0, 0.1)' : '0 2px 8px rgba(0, 0, 0, 0.06)',
-        transform: isHovered && !isMobile ? 'translateY(-2px)' : 'none',
-        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        boxShadow: isHovered ? '0 8px 20px rgba(0, 0, 0, 0.08)' : '0 2px 8px rgba(0, 0, 0, 0.04)',
+        transform: isHovered && !isMobile ? 'translateY(-4px)' : 'none',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer',
         position: 'relative',
         width: '100%',
-        maxWidth: isMobile ? '100%' : '280px',
-        border: '1px solid #F3F4F6',
+        border: '0.5px solid rgba(0, 0, 0, 0.06)',
+        backfaceVisibility: 'hidden',
+        WebkitBackfaceVisibility: 'hidden',
       },
       imageContainer: {
         position: 'relative',
         width: '100%',
-        height: isSmallMobile ? '90px' : isMobile ? '100px' : '160px',
-        background: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%)',
+        height: isSmallMobile ? '120px' : isMobile ? '140px' : '180px',
+        background: 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
         overflow: 'hidden',
       },
       image: {
@@ -334,115 +328,119 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         objectFit: 'cover',
         objectPosition: 'center',
         opacity: imageLoaded ? 1 : 0,
-        transition: 'opacity 0.3s ease',
-      },
-      imageOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: isHovered && !isMobile ? 'rgba(0,0,0,0.1)' : 'transparent',
-        transition: 'background 0.3s ease',
-        zIndex: 1,
+        transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isHovered && !isMobile ? 'scale(1.05)' : 'scale(1)',
       },
       discountBadge: {
         position: 'absolute',
-        top: '6px',
-        left: '6px',
-        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
-        color: 'var(--background-color)',
-        padding: isSmallMobile ? '2px 5px' : '3px 6px',
+        top: '8px',
+        left: '8px',
+        background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
+        color: '#ffffff',
+        padding: isSmallMobile ? '3px 8px' : '4px 10px',
         borderRadius: '8px',
-        fontSize: isSmallMobile ? '8px' : '9px',
-        fontWeight: '700',
+        fontSize: isSmallMobile ? '9px' : '10px',
+        fontWeight: '600',
         zIndex: 3,
+        letterSpacing: '-0.05px',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
       },
       actionButtons: {
         position: 'absolute',
-        bottom: '6px',
-        right: '6px',
+        bottom: '8px',
+        right: '8px',
         display: 'flex',
-        gap: '4px',
+        gap: '6px',
         zIndex: 2,
       },
       actionButton: {
-        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
+        background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
         border: 'none',
-        borderRadius: '8px',
-        width: isSmallMobile ? '30px' : '34px',
-        height: isSmallMobile ? '30px' : '34px',
+        borderRadius: '10px',
+        width: isSmallMobile ? '32px' : '36px',
+        height: isSmallMobile ? '32px' : '36px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        transition: 'transform 0.2s ease',
+        transition: 'all 0.2s ease',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+        WebkitTapHighlightColor: 'transparent',
       },
       actionButtonDisabled: {
-        background: 'rgba(156, 163, 175, 0.8)',
+        background: 'rgba(156, 163, 175, 0.7)',
         cursor: 'not-allowed',
+        boxShadow: 'none',
       },
       content: {
-        padding: isSmallMobile ? '6px' : '8px',
+        padding: isSmallMobile ? '10px' : '12px',
         display: 'flex',
         flexDirection: 'column',
-        gap: isSmallMobile ? '2px' : '3px',
+        gap: isSmallMobile ? '4px' : '6px',
       },
       category: {
-        fontSize: isSmallMobile ? '8px' : '9px',
-        color: '#000000',
+        fontSize: isSmallMobile ? '9px' : '10px',
+        color: '#6b7280',
         fontWeight: '500',
         textTransform: 'uppercase',
-        opacity: 0.7,
+        letterSpacing: '0.3px',
       },
       title: {
-        fontSize: isSmallMobile ? '12px' : '14px',
-        fontWeight: '600',
-        color: '#000000',
-        lineHeight: '1.2',
+        fontSize: isSmallMobile ? '14px' : '15px',
+        fontWeight: '500',
+        color: '#1f2937',
+        lineHeight: '1.3',
         display: '-webkit-box',
         WebkitLineClamp: 2,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
-        minHeight: '2.4em',
+        minHeight: '2.6em',
+        letterSpacing: '-0.2px',
       },
       ratingContainer: {
         display: 'flex',
         alignItems: 'center',
-        gap: '3px',
+        gap: '4px',
+        padding: '4px 8px',
+        background: 'rgba(0, 0, 0, 0.02)',
+        borderRadius: '8px',
+        width: 'fit-content',
       },
       ratingStars: {
         display: 'flex',
         gap: '1px',
       },
       ratingText: {
-        fontSize: isSmallMobile ? '8px' : '9px',
-        color: '#000000',
+        fontSize: isSmallMobile ? '9px' : '10px',
+        color: '#6b7280',
         fontWeight: '500',
-        opacity: 0.7,
+        letterSpacing: '-0.05px',
       },
       priceContainer: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginTop: 'auto',
+        paddingTop: '4px',
       },
       priceInfo: {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-start',
-        gap: '1px',
+        gap: '2px',
       },
       currentPrice: {
-        fontSize: isSmallMobile ? '13px' : '15px',
-        fontWeight: '700',
-        color: salePrice ? 'var(--primary-color)' : '#000000',
+        fontSize: isSmallMobile ? '15px' : '16px',
+        fontWeight: '600',
+        color: salePrice ? 'var(--primary-color)' : '#1f2937',
+        letterSpacing: '-0.3px',
       },
       originalPrice: {
-        fontSize: isSmallMobile ? '9px' : '10px',
-        color: salePrice ? 'var(--primary-color)' : 'var(--text-color)',
+        fontSize: isSmallMobile ? '10px' : '11px',
+        color: '#9ca3af',
         textDecoration: 'line-through',
-        opacity: 0.7,
+        fontWeight: '400',
+        letterSpacing: '-0.1px',
       },
       mobileActionButtons: {
         display: 'flex',
@@ -450,34 +448,39 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         alignItems: 'center',
       },
       mobileActionButton: {
-        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
+        background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
         border: 'none',
-        borderRadius: '6px',
-        width: isSmallMobile ? '26px' : '28px',
-        height: isSmallMobile ? '26px' : '28px',
+        borderRadius: '8px',
+        width: isSmallMobile ? '28px' : '30px',
+        height: isSmallMobile ? '28px' : '30px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        transition: 'transform 0.2s ease',
+        transition: 'all 0.2s ease',
+        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
+        WebkitTapHighlightColor: 'transparent',
       },
       mobileActionButtonDisabled: {
-        background: 'rgba(156, 163, 175, 0.8)',
+        background: 'rgba(156, 163, 175, 0.7)',
         cursor: 'not-allowed',
+        boxShadow: 'none',
       },
       unavailableBadge: {
         background: 'rgba(107, 114, 128, 0.9)',
-        color: 'var(--background-color)',
-        padding: isSmallMobile ? '2px 5px' : '2px 6px',
+        color: '#ffffff',
+        padding: isSmallMobile ? '3px 8px' : '4px 10px',
         borderRadius: '8px',
-        fontSize: isSmallMobile ? '8px' : '9px',
+        fontSize: isSmallMobile ? '9px' : '10px',
         fontWeight: '600',
-        marginBottom: '2px',
+        marginBottom: '4px',
+        width: 'fit-content',
+        letterSpacing: '-0.05px',
       },
       loadingPlaceholder: {
         width: '100%',
         height: '100%',
-        background: 'linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%)',
+        background: 'linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%)',
         backgroundSize: '200% 100%',
         animation: 'shimmer 1.5s infinite',
       },
@@ -487,7 +490,9 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
+        background: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
         zIndex: 1000,
         animation: 'fadeIn 0.2s ease-out',
       },
@@ -496,158 +501,140 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        background: 'var(--background-color)',
-        borderRadius: '12px',
-        padding: isSmallMobile ? '12px' : '16px',
-        maxWidth: isSmallMobile ? '90%' : '360px',
+        background: '#ffffff',
+        borderRadius: '16px',
+        padding: isSmallMobile ? '16px' : '20px',
+        maxWidth: isSmallMobile ? '90%' : '380px',
         width: '90%',
+        maxHeight: '80vh',
+        overflowY: 'auto',
         zIndex: 1001,
-        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
+        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.15)',
+        animation: 'slideUp 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
       },
       popupTitle: {
-        fontSize: isSmallMobile ? '14px' : '16px',
+        fontSize: isSmallMobile ? '16px' : '18px',
         fontWeight: '600',
-        color: '#000000',
+        color: '#1f2937',
         textAlign: 'center',
-        marginBottom: '10px',
+        marginBottom: '16px',
+        letterSpacing: '-0.3px',
+        lineHeight: '1.3',
       },
       popupSelect: {
         width: '100%',
-        padding: '8px',
-        fontSize: isSmallMobile ? '12px' : '14px',
-        color: '#000000',
-        border: '1px solid #E5E7EB',
-        borderRadius: '8px',
-        background: 'var(--background-color)',
-        marginBottom: '10px',
+        padding: '12px 36px 12px 14px',
+        fontSize: isSmallMobile ? '14px' : '15px',
+        color: '#1f2937',
+        border: '0.5px solid rgba(0, 0, 0, 0.1)',
+        borderRadius: '10px',
+        background: '#ffffff',
+        marginBottom: '12px',
         outline: 'none',
-        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='#000000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
+        backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e")`,
         backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 8px center',
-        backgroundSize: '12px',
-        paddingRight: '30px',
+        backgroundPosition: 'right 12px center',
+        backgroundSize: '14px',
+        fontWeight: '400',
+        letterSpacing: '-0.1px',
+        transition: 'border-color 0.2s ease',
+        appearance: 'none',
       },
       popupOptionsContainer: {
-        maxHeight: '200px',
+        maxHeight: '300px',
         overflowY: 'auto',
-        marginBottom: '10px',
+        marginBottom: '16px',
+        WebkitOverflowScrolling: 'touch',
       },
       optionGroup: {
-        backgroundColor: 'var(--background-color)',
-        borderRadius: '8px',
-        padding: '8px',
-        marginBottom: '8px',
-        border: '1px solid rgba(0, 0, 0, 0.05)',
+        backgroundColor: 'rgba(0, 0, 0, 0.02)',
+        borderRadius: '12px',
+        padding: '10px',
+        marginBottom: '10px',
+        border: '0.5px solid rgba(0, 0, 0, 0.06)',
       },
       groupTitle: {
-        fontSize: '12px',
+        fontSize: '13px',
         fontWeight: '600',
-        color: '#000000',
-        marginBottom: '4px',
-        paddingBottom: '2px',
-        borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
+        color: '#1f2937',
+        marginBottom: '8px',
+        paddingBottom: '6px',
+        borderBottom: '0.5px solid rgba(0, 0, 0, 0.06)',
+        letterSpacing: '-0.1px',
       },
       optionItem: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        padding: '4px 0',
-        fontSize: '12px',
-        color: '#000000',
+        gap: '10px',
+        padding: '6px 0',
+        fontSize: '14px',
+        color: '#1f2937',
         cursor: 'pointer',
+        transition: 'background 0.2s ease',
+        borderRadius: '6px',
+        paddingLeft: '4px',
       },
       checkboxInput: {
-        width: '16px',
-        height: '16px',
+        width: '18px',
+        height: '18px',
         margin: '0',
         appearance: 'none',
-        border: `2px solid #000000`,
-        borderRadius: '4px',
+        border: `2px solid #d1d5db`,
+        borderRadius: '5px',
         outline: 'none',
         cursor: 'pointer',
         position: 'relative',
-        backgroundColor: 'var(--background-color)',
-      },
-      'checkboxInput:checked': {
-        borderColor: 'var(--primary-color)',
-        backgroundColor: 'var(--primary-color)',
-      },
-      'checkboxInput:checked::after': {
-        content: '""',
-        width: '8px',
-        height: '8px',
-        backgroundColor: 'var(--background-color)',
-        borderRadius: '2px',
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
+        backgroundColor: '#ffffff',
+        transition: 'all 0.2s ease',
+        flexShrink: 0,
       },
       optionText: {
         flexGrow: '1',
-        fontSize: '12px',
-        color: '#000000',
+        fontSize: '13px',
+        color: '#1f2937',
+        fontWeight: '400',
+        letterSpacing: '-0.1px',
       },
       optionPrice: {
-        color: '#000000',
+        color: '#6b7280',
         marginLeft: '4px',
-        opacity: 0.7,
+        fontSize: '12px',
+        fontWeight: '500',
       },
       optionSelected: {
-        fontWeight: '600',
+        fontWeight: '500',
         color: 'var(--primary-color)',
       },
       optionGroupError: {
         border: '1px solid #ef4444',
-        borderRadius: '8px',
-        padding: '6px',
+        backgroundColor: 'rgba(239, 68, 68, 0.05)',
       },
       popupButtons: {
         display: 'flex',
-        gap: '6px',
+        gap: '8px',
         justifyContent: 'center',
+        marginTop: '16px',
       },
       popupButton: {
         flex: 1,
-        padding: isSmallMobile ? '6px 12px' : '8px 14px',
+        padding: isSmallMobile ? '10px 16px' : '12px 20px',
         border: 'none',
-        borderRadius: '8px',
-        fontSize: isSmallMobile ? '12px' : '14px',
+        borderRadius: '10px',
+        fontSize: isSmallMobile ? '14px' : '15px',
         fontWeight: '600',
         cursor: 'pointer',
-        transition: 'background 0.2s ease',
+        transition: 'all 0.2s ease',
+        letterSpacing: '-0.2px',
+        WebkitTapHighlightColor: 'transparent',
       },
       addButton: {
-        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
-        color: 'var(--background-color)',
+        background: 'linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)',
+        color: '#ffffff',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
       },
       cancelButton: {
-        background: '#F3F4F6',
-        color: '#000000',
-      },
-      editButton: {
-        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
-        border: 'none',
-        borderRadius: '8px',
-        width: isSmallMobile ? '30px' : '34px',
-        height: isSmallMobile ? '30px' : '34px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'transform 0.2s ease',
-      },
-      mobileEditButton: {
-        background: `linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%)`,
-        border: 'none',
-        borderRadius: '6px',
-        width: isSmallMobile ? '26px' : '28px',
-        height: isSmallMobile ? '26px' : '28px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'transform 0.2s ease',
+        background: '#f3f4f6',
+        color: '#1f2937',
       },
     }),
     [isHovered, isMobile, isSmallMobile, imageLoaded, selectedOptions, validationErrors, salePrice]
@@ -662,27 +649,55 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       from { opacity: 0; }
       to { opacity: 1; }
     }
-    .action-btn:hover:not(:disabled) {
-      transform: scale(1.05);
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translate(-50%, -45%);
+      }
+      to { 
+        opacity: 1;
+        transform: translate(-50%, -50%);
+      }
     }
-    .mobile-action-btn:hover:not(:disabled) {
-      transform: scale(1.05);
+    .action-btn:active:not(:disabled) {
+      transform: scale(0.9);
     }
-    .popup-btn:hover:not(:disabled) {
-      transform: scale(1.02);
+    .mobile-action-btn:active:not(:disabled) {
+      transform: scale(0.9);
+    }
+    .popup-btn:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .add-btn:active:not(:disabled) {
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
     }
     .popup-select:focus {
       border-color: var(--primary-color);
     }
-    @media (max-width: 768px) {
-      .action-btn:active:not(:disabled) {
-        transform: scale(0.95);
+    input[type="checkbox"]:checked {
+      border-color: var(--primary-color);
+      background: var(--primary-color);
+    }
+    input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      width: 4px;
+      height: 8px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      top: 2px;
+      left: 5px;
+      transform: rotate(45deg);
+    }
+    @media (hover: hover) {
+      .action-btn:hover:not(:disabled) {
+        transform: scale(1.05);
       }
-      .mobile-action-btn:active:not(:disabled) {
-        transform: scale(0.95);
+      .popup-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
       }
-      .popup-btn:active:not(:disabled) {
-        transform: scale(0.98);
+      .add-btn:hover:not(:disabled) {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       }
     }
   `;
@@ -704,45 +719,33 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           {!imageLoaded && <div style={styles.loadingPlaceholder} />}
           <img
             src={imageSrc}
-            alt={item.name || 'Article'}
+            srcSet={`${imageSrc}?w=180 1x, ${imageSrc}?w=360 2x`}
+            alt={item.name || 'Item'}
             style={styles.image}
             loading="lazy"
             decoding="async"
             onLoad={() => setImageLoaded(true)}
             onError={(e) => {
-              console.error('Error loading menu item image:', item.image_url);
               e.target.src = '/placeholder.jpg';
               setImageLoaded(true);
             }}
           />
-          <div style={styles.imageOverlay} />
 
           {discountPercentage > 0 && (
-            <div style={styles.discountBadge}>-{discountPercentage}% DE RÉDUCTION</div>
+            <div style={styles.discountBadge}>-{discountPercentage}%</div>
           )}
 
           {!isMobile && (
             <div style={styles.actionButtons}>
               {isManager ? (
                 <button
-                  style={styles.editButton}
+                  style={styles.actionButton}
                   className="action-btn"
                   onClick={handleEditProduct}
-                  title="Modifier l'article"
+                  title="Edit item"
+                  aria-label="Edit item"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="var(--background-color)"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    style={{ width: isSmallMobile ? '16px' : '18px', height: isSmallMobile ? '16px' : '18px' }}
-                  >
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                  </svg>
+                  <EditIcon sx={{ fontSize: isSmallMobile ? 16 : 18, color: '#ffffff' }} />
                 </button>
               ) : (
                 <>
@@ -750,11 +753,10 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     style={styles.actionButton}
                     className="action-btn"
                     onClick={handleViewProduct}
-                    title="Voir les détails"
+                    title="View details"
+                    aria-label="View details"
                   >
-                    <RemoveRedEyeIcon
-                      sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
-                    />
+                    <RemoveRedEyeIcon sx={{ fontSize: isSmallMobile ? 16 : 18, color: '#ffffff' }} />
                   </button>
                   <button
                     style={{
@@ -763,12 +765,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     }}
                     className="action-btn"
                     onClick={handleAddToCart}
-                    title={item.availability ? 'Ajouter au panier' : 'Article indisponible'}
+                    title={item.availability ? 'Add to cart' : 'Unavailable'}
                     disabled={!item.availability}
+                    aria-label={item.availability ? 'Add to cart' : 'Unavailable'}
                   >
-                    <ShoppingCartIcon
-                      sx={{ fontSize: isSmallMobile ? 16 : 18, color: 'var(--background-color)' }}
-                    />
+                    <ShoppingCartIcon sx={{ fontSize: isSmallMobile ? 16 : 18, color: '#ffffff' }} />
                   </button>
                 </>
               )}
@@ -778,12 +779,12 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
 
         <div style={styles.content}>
           {!item.availability && (
-            <div style={styles.unavailableBadge}>Indisponible</div>
+            <div style={styles.unavailableBadge}>Unavailable</div>
           )}
 
-          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Petit-déjeuner' : 'Non catégorisé')}</div>
+          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Breakfast' : 'Uncategorized')}</div>
 
-          <h3 style={styles.title}>{item.name || 'Article inconnu'}</h3>
+          <h3 style={styles.title}>{item.name || 'Unknown Item'}</h3>
 
           {(ratingValue > 0 || reviewCount > 0) && (
             <div style={styles.ratingContainer}>
@@ -808,24 +809,13 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
               <div style={styles.mobileActionButtons}>
                 {isManager ? (
                   <button
-                    style={styles.mobileEditButton}
+                    style={styles.mobileActionButton}
                     className="mobile-action-btn"
                     onClick={handleEditProduct}
-                    title="Modifier l'article"
+                    title="Edit item"
+                    aria-label="Edit item"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="var(--background-color)"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{ width: '14px', height: '14px' }}
-                    >
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                    </svg>
+                    <EditIcon sx={{ fontSize: 14, color: '#ffffff' }} />
                   </button>
                 ) : (
                   <>
@@ -833,9 +823,10 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       style={styles.mobileActionButton}
                       className="mobile-action-btn"
                       onClick={handleViewProduct}
-                      title="Voir les détails"
+                      title="View details"
+                      aria-label="View details"
                     >
-                      <RemoveRedEyeIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
+                      <RemoveRedEyeIcon sx={{ fontSize: 14, color: '#ffffff' }} />
                     </button>
                     <button
                       style={{
@@ -844,10 +835,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       }}
                       className="mobile-action-btn"
                       onClick={handleAddToCart}
-                      title={item.availability ? 'Ajouter au panier' : 'Article indisponible'}
+                      title={item.availability ? 'Add to cart' : 'Unavailable'}
                       disabled={!item.availability}
+                      aria-label={item.availability ? 'Add to cart' : 'Unavailable'}
                     >
-                      <ShoppingCartIcon sx={{ fontSize: 14, color: 'var(--background-color)' }} />
+                      <ShoppingCartIcon sx={{ fontSize: 14, color: '#ffffff' }} />
                     </button>
                   </>
                 )}
@@ -869,8 +861,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           />
           <div style={styles.popup}>
             <h3 style={styles.popupTitle}>
-              Choisir {item.type === 'breakfast' ? 'les options' : 'le supplément'} pour<br />
-              {item.name}
+              Choose {item.type === 'breakfast' ? 'options' : 'supplement'} for {item.name}
             </h3>
             {item.type === 'breakfast' && supplements.optionGroups?.length > 0 && (
               <div style={styles.popupOptionsContainer}>
@@ -883,9 +874,9 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                     }}
                   >
                     <div style={styles.groupTitle}>
-                      {group.title} {group.is_required ? '(Requis)' : '(Facultatif)'}
-                      {group.max_selections > 0 && `, Max : ${group.max_selections}`}
-                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> (Veuillez sélectionner)</span>}
+                      {group.title} {group.is_required ? '(Required)' : '(Optional)'}
+                      {group.max_selections > 0 && `, Max: ${group.max_selections}`}
+                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> - Please select</span>}
                     </div>
                     {supplements.options
                       .filter((opt) => opt.group_id === group.id)
@@ -897,7 +888,6 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                         >
                           <input
                             type="checkbox"
-                            name={`group-${item.id}-${group.id}`}
                             checked={selectedOptions[group.id]?.includes(opt.id)}
                             onChange={() => handleOptionChange(group.id, opt.id)}
                             disabled={!item.availability}
@@ -909,7 +899,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                               ...(selectedOptions[group.id]?.includes(opt.id) ? styles.optionSelected : {}),
                             }}
                           >
-                            {opt.option_name}{' '}
+                            {opt.option_name}
                             <span style={styles.optionPrice}>
                               +{parseFloat(opt.additional_price || 0).toFixed(2)} {currency}
                             </span>
@@ -927,7 +917,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                 style={styles.popupSelect}
                 className="popup-select"
               >
-                <option value="0">Aucun supplément</option>
+                <option value="0">No supplement</option>
                 {supplements.options.map((supplement) => (
                   <option
                     key={supplement.supplement_id}
@@ -952,7 +942,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                       .some((g) => !selectedOptions[g.id] || selectedOptions[g.id].length === 0))
                 }
               >
-                Ajouter au panier
+                Add to Cart
               </button>
               <button
                 style={{ ...styles.popupButton, ...styles.cancelButton }}
@@ -963,7 +953,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                   setValidationErrors({});
                 }}
               >
-                Annuler
+                Cancel
               </button>
             </div>
           </div>
