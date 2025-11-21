@@ -48,7 +48,7 @@ function ProductDetails({ addToCart }) {
         setLoading(true);
         const itemId = parseInt(id);
         if (isNaN(itemId) || itemId <= 0) {
-          throw new Error('ID de produit invalide');
+          throw new Error('Invalid product ID');
         }
 
         const [productResponse, relatedResponse, supplementsResponse, ratingResponse, categoriesResponse, themeResponse] = await Promise.all([
@@ -83,9 +83,9 @@ function ProductDetails({ addToCart }) {
           endTransition();
         }, 100);
       } catch (error) {
-        console.error('Erreur lors du chargement des détails du produit:', error);
-        toast.error(error.response?.data?.error || 'Échec du chargement des détails du produit');
-        setError('Échec du chargement des détails du produit');
+        console.error('Error loading product details:', error);
+        toast.error(error.response?.data?.error || 'Failed to load product details');
+        setError('Failed to load product details');
         setLoading(false);
         endTransition();
       }
@@ -97,7 +97,7 @@ function ProductDetails({ addToCart }) {
     () =>
       debounce(async (ratingValue) => {
         if (ratingValue < 1 || ratingValue > 5) {
-          toast.error('Veuillez sélectionner une note entre 1 et 5');
+          toast.error('Please select a rating between 1 and 5');
           return;
         }
         try {
@@ -106,12 +106,12 @@ function ProductDetails({ addToCart }) {
             rating: parseInt(ratingValue),
           });
           setIsRating(true);
-          toast.success('Note soumise avec succès !');
+          toast.success('Rating submitted successfully!');
           const response = await api.get(`/menu-items/${id}`);
           setProduct(response.data);
         } catch (error) {
-          console.error('Erreur lors de la soumission de la note:', error);
-          toast.error(error.response?.data?.error || 'Échec de la soumission de la note');
+          console.error('Error submitting rating:', error);
+          toast.error(error.response?.data?.error || 'Failed to submit rating');
         }
       }, 500),
     [id]
@@ -119,11 +119,11 @@ function ProductDetails({ addToCart }) {
 
   const handleAddToCart = useCallback(async () => {
     if (!product) {
-      toast.error('Produit non chargé');
+      toast.error('Product not loaded');
       return;
     }
     if (!product.availability) {
-      toast.error('Article non disponible');
+      toast.error('Item not available');
       return;
     }
     try {
@@ -132,7 +132,7 @@ function ProductDetails({ addToCart }) {
         : null;
       const itemToAdd = {
         item_id: parseInt(product.id),
-        name: product.name || 'Produit inconnu',
+        name: product.name || 'Unknown Product',
         unit_price: parseFloat(product.sale_price || product.regular_price) || 0,
         quantity: parseInt(quantity) || 1,
         image_url: product.image_url && product.image_url !== 'null' ? product.image_url : '/placeholder.jpg',
@@ -142,12 +142,12 @@ function ProductDetails({ addToCart }) {
         cartItemId: `${product.id}-${Date.now()}`,
       };
       await addToCart(itemToAdd);
-      toast.success(`${product.name} ajouté au panier !`);
+      toast.success(`${product.name} added to cart!`);
       setSelectedSupplement('0');
       setQuantity(1);
     } catch (error) {
-      console.error('Erreur lors de l'ajout au panier:', error);
-      toast.error(error.response?.data?.error || 'Échec de l'ajout au panier');
+      console.error('Error adding to cart:', error);
+      toast.error(error.response?.data?.error || 'Failed to add to cart');
     }
   }, [product, quantity, selectedSupplement, supplements, addToCart]);
 
@@ -228,7 +228,7 @@ function ProductDetails({ addToCart }) {
               break;
             }
           } catch (error) {
-            console.error(`Erreur lors de la vérification de la catégorie ${candidateCategoryId}:`, error);
+            console.error(`Error checking category ${candidateCategoryId}:`, error);
           }
         }
 
@@ -338,7 +338,7 @@ function ProductDetails({ addToCart }) {
           <div className="product-details-error-icon">🍽️</div>
           <p className="product-details-error-text">{error}</p>
           <button className="product-details-retry-button" onClick={() => window.location.reload()}>
-            Réessayer
+            Retry
           </button>
         </div>
       </motion.div>
@@ -358,7 +358,7 @@ function ProductDetails({ addToCart }) {
       >
         <div className="product-details-loading-container">
           <div className="product-details-loading-spinner"></div>
-          <p className="product-details-loading-text">Chargement...</p>
+          <p className="product-details-loading-text">Loading...</p>
         </div>
       </motion.div>
     );
@@ -378,9 +378,9 @@ function ProductDetails({ addToCart }) {
       >
         <div className="product-details-error-container">
           <div className="product-details-error-icon">🔍</div>
-          <p className="product-details-error-text">Produit non trouvé</p>
+          <p className="product-details-error-text">Product not found</p>
           <button className="product-details-retry-button" onClick={() => navigate('/')}>
-            Retour à l'accueil
+            Back to Home
           </button>
         </div>
       </motion.div>
@@ -440,7 +440,7 @@ function ProductDetails({ addToCart }) {
               layoutId={transitionData && transitionData.itemId === product.id ? `product-image-${product.id}` : undefined}
               src={imageSrc}
               srcSet={`${imageSrc}?w=400 1x, ${imageSrc}?w=800 2x`}
-              alt={product.name || 'Produit'}
+              alt={product.name || 'Product'}
               className="product-details-product-image"
               loading="eager"
               decoding="async"
@@ -461,7 +461,7 @@ function ProductDetails({ addToCart }) {
             className="product-details-product-title"
             layoutId={transitionData && transitionData.itemId === product.id ? `product-title-${product.id}` : undefined}
           >
-            {product.name || 'Produit inconnu'}
+            {product.name || 'Unknown Product'}
           </motion.h1>
 
           <motion.div 
@@ -485,7 +485,7 @@ function ProductDetails({ addToCart }) {
             className="product-details-product-description"
             variants={contentVariants}
           >
-            {product.description || 'Aucune description disponible.'}
+            {product.description || 'No description available.'}
           </motion.p>
 
           <motion.div 
@@ -522,10 +522,10 @@ function ProductDetails({ addToCart }) {
                   style={{ fontSize: '18px' }}
                   className={product.availability ? 'text-green-500' : 'text-red-500'}
                 />
-                <span className="product-details-option-label">Disponibilité</span>
+                <span className="product-details-option-label">Availability</span>
               </div>
               <span className="product-details-option-value">
-                {product.availability ? 'En stock' : 'Rupture'}
+                {product.availability ? 'In Stock' : 'Out of Stock'}
               </span>
             </div>
 
@@ -533,10 +533,10 @@ function ProductDetails({ addToCart }) {
               <div className="product-details-option-row">
                 <div className="product-details-option-left">
                   <RestaurantMenuOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
-                  <span className="product-details-option-label">Régime</span>
+                  <span className="product-details-option-label">Dietary</span>
                 </div>
                 <span className="product-details-option-value">
-                  {JSON.parse(product.dietary_tags || '[]').join(', ') || 'Aucune'}
+                  {JSON.parse(product.dietary_tags || '[]').join(', ') || 'None'}
                 </span>
               </div>
             )}
@@ -545,14 +545,14 @@ function ProductDetails({ addToCart }) {
               <div className="product-details-option-row">
                 <div className="product-details-option-left">
                   <CategoryOutlined style={{ fontSize: '18px' }} className="text-orange-500" />
-                  <span className="product-details-option-label">Supplément</span>
+                  <span className="product-details-option-label">Supplement</span>
                 </div>
                 <select
                   value={selectedSupplement}
                   onChange={(e) => setSelectedSupplement(e.target.value)}
                   className="product-details-supplement-select"
                 >
-                  <option value="0">Aucun</option>
+                  <option value="0">None</option>
                   {supplements.map((s) => (
                     <option key={s.supplement_id} value={s.supplement_id}>
                       {s.name} (+{parseFloat(s.additional_price || 0).toFixed(2)} {currency})
@@ -565,7 +565,7 @@ function ProductDetails({ addToCart }) {
             <div className="product-details-option-row">
               <div className="product-details-option-left">
                 <Star style={{ fontSize: '18px' }} className="text-yellow-400" />
-                <span className="product-details-option-label">Votre avis</span>
+                <span className="product-details-option-label">Your Rating</span>
               </div>
               <div className="product-details-user-rating-container">
                 <div className="product-details-user-rating-stars">
@@ -582,23 +582,23 @@ function ProductDetails({ addToCart }) {
                     className="product-details-rating-submit-button"
                     onClick={() => debouncedRatingSubmit(rating)}
                   >
-                    Soumettre
+                    Submit
                   </button>
                 )}
-                {isRatingSubmitted && <span className="product-details-rating-thank-you">Merci !</span>}
+                {isRatingSubmitted && <span className="product-details-rating-thank-you">Thank you!</span>}
               </div>
             </div>
 
             <div className="product-details-option-row">
               <div className="product-details-option-left">
-                <span className="product-details-option-label">Quantité</span>
+                <span className="product-details-option-label">Quantity</span>
               </div>
               <div className="product-details-quantity-container">
                 <button
                   className="product-details-quantity-button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
                   disabled={quantity <= 1 || !product.availability}
-                  aria-label="Diminuer la quantité"
+                  aria-label="Decrease quantity"
                 >
                   <RemoveOutlined style={{ fontSize: '18px' }} />
                 </button>
@@ -607,7 +607,7 @@ function ProductDetails({ addToCart }) {
                   className="product-details-quantity-button"
                   onClick={() => setQuantity(quantity + 1)}
                   disabled={!product.availability}
-                  aria-label="Augmenter la quantité"
+                  aria-label="Increase quantity"
                 >
                   <AddOutlined style={{ fontSize: '18px' }} />
                 </button>
@@ -623,7 +623,7 @@ function ProductDetails({ addToCart }) {
             whileTap={{ scale: 0.97 }}
           >
             <ShoppingCartOutlined style={{ fontSize: '20px' }} />
-            {product.availability ? `Ajouter · ${calculateTotalPrice()} ${currency}` : 'Indisponible'}
+            {product.availability ? `Add to Cart · ${calculateTotalPrice()} ${currency}` : 'Unavailable'}
           </motion.button>
         </motion.div>
 
@@ -634,7 +634,7 @@ function ProductDetails({ addToCart }) {
             initial="initial"
             animate="animate"
           >
-            <h2 className="product-details-section-title">Vous aimerez aussi</h2>
+            <h2 className="product-details-section-title">You may also like</h2>
             <div className="product-details-related-grid">
               {relatedProducts.map((item, index) => (
                 <motion.div
