@@ -109,7 +109,27 @@ function OrderCard({
   const [showCancelPopup, setShowCancelPopup] = useState(false);
   const [cancelOrderId, setCancelOrderId] = useState(null);
   const [isOrderApproved, setIsOrderApproved] = useState(false);
+  const [currency, setCurrency] = useState('$');
   const cardRef = useRef(null);
+
+  // Fetch currency from theme
+  useEffect(() => {
+    const fetchTheme = async () => {
+      try {
+        const themeResponse = await api.getTheme();
+        console.log('Theme response:', themeResponse.data);
+        if (themeResponse.data && themeResponse.data.currency) {
+          console.log('Setting currency to:', themeResponse.data.currency);
+          setCurrency(themeResponse.data.currency);
+        } else {
+          console.log('No currency found in theme data');
+        }
+      } catch (error) {
+        console.error('Error fetching theme for currency:', error);
+      }
+    };
+    fetchTheme();
+  }, []);
 
   // Memoize grouped items to prevent quantity/price doubling
   const groupedItems = useMemo(() => {
@@ -424,7 +444,7 @@ function OrderCard({
               marginLeft: 'auto',
             }}
           >
-            <span>{orderTotal.toFixed(2)} DT</span>
+            <span>{orderTotal.toFixed(2)} {currency}</span>
           </div>
         </div>
       </div>
@@ -610,7 +630,7 @@ function OrderCard({
                               lineHeight: '1.3',
                             }}
                           >
-                            {item.basePrice.toFixed(2)} DT
+                            {item.basePrice.toFixed(2)} {currency}
                           </div>
                           {/* Supplement for menu items */}
                           {item.type === 'menu' && item.supplementName && item.supplementPrice > 0 && (
@@ -621,7 +641,7 @@ function OrderCard({
                                 lineHeight: '1.3',
                               }}
                             >
-                              + {item.supplementName}: {item.supplementPrice.toFixed(2)} DT
+                              + {item.supplementName}: {item.supplementPrice.toFixed(2)} {currency}
                             </div>
                           )}
                           {/* Options for breakfast items */}
@@ -636,7 +656,7 @@ function OrderCard({
                                     lineHeight: '1.3',
                                   }}
                                 >
-                                  + {opt.name}: {opt.price.toFixed(2)} DT
+                                  + {opt.name}: {opt.price.toFixed(2)} {currency}
                                 </div>
                               ))}
                             </div>
@@ -650,7 +670,7 @@ function OrderCard({
                               marginTop: '2px',
                             }}
                           >
-                            {item.unitPrice.toFixed(2)} DT × {item.quantity} = {totalItemPrice.toFixed(2)} DT
+                            {item.unitPrice.toFixed(2)} {currency} × {item.quantity} = {totalItemPrice.toFixed(2)} {currency}
                           </div>
                         </div>
                       </div>
@@ -709,7 +729,7 @@ function OrderCard({
               >
                 <span>Total</span>
                 <span style={{ color: '#059669', fontSize: '18px' }}>
-                  {orderTotal.toFixed(2)} DT
+                  {orderTotal.toFixed(2)} {currency}
                 </span>
               </div>
             </div>
