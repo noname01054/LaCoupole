@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
-import { Coffee, Star } from 'lucide-react';
+import { Coffee, Star, Sparkles } from 'lucide-react';
 
 function BestSellers({ addToCart }) {
   const [bestSellers, setBestSellers] = useState([]);
@@ -37,12 +37,9 @@ function BestSellers({ addToCart }) {
         const updatedTheme = themeResponse.data || theme;
         setTheme(updatedTheme);
         
-        // Set currency from theme
         if (updatedTheme.currency) {
           console.log('Setting currency to:', updatedTheme.currency);
           setCurrency(updatedTheme.currency);
-        } else {
-          console.log('No currency found in theme data');
         }
         
         applyTheme(updatedTheme);
@@ -92,7 +89,7 @@ function BestSellers({ addToCart }) {
 
   const handleScroll = useCallback(() => {
     const now = performance.now();
-    if (now - lastScrollTime.current < 16) return; // Throttle to ~60fps
+    if (now - lastScrollTime.current < 16) return;
     lastScrollTime.current = now;
 
     if (!isScrollingRef.current) {
@@ -137,12 +134,12 @@ function BestSellers({ addToCart }) {
           requestAnimationFrame(() => {
             container.scrollTo({
               left: scrollLeft,
-              behavior: 'auto',
+              behavior: 'smooth',
             });
           });
         }
       }
-    }, 1000);
+    }, 3000);
   }, [centerIndex, bestSellers.length]);
 
   const stopAutoScroll = useCallback(() => {
@@ -210,87 +207,107 @@ function BestSellers({ addToCart }) {
   }, [navigate, handleUserInteraction]);
 
   const bestSellerItems = useMemo(() => {
-    return bestSellers.map((item, index) => (
-      <div
-        key={item.id}
-        ref={(el) => (itemRefs.current[index] = el)}
-        style={{
-          ...styles.bestSellerItem,
-          transform: centerIndex === index ? 'scale(1.15)' : 'scale(1)',
-          zIndex: centerIndex === index ? 10 : 1,
-        }}
-        className="best-sellers-item"
-        onClick={() => handleItemClick(item.id)}
-      >
-        <div 
+    return bestSellers.map((item, index) => {
+      const isCenter = centerIndex === index;
+      const distance = Math.abs(centerIndex - index);
+      const opacity = Math.max(0.5, 1 - distance * 0.15);
+      
+      return (
+        <div
+          key={item.id}
+          ref={(el) => (itemRefs.current[index] = el)}
           style={{
-            ...styles.bestSellerCard,
-            ...(centerIndex === index ? { ...styles.centerItemCard, borderColor: theme.primary_color || '#ff6b35' } : {}),
-            backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5',
+            ...styles.bestSellerItem,
+            transform: isCenter ? 'scale(1.1)' : 'scale(0.92)',
+            opacity: opacity,
+            zIndex: isCenter ? 10 : Math.max(1, 5 - distance),
           }}
+          className="best-sellers-item"
+          onClick={() => handleItemClick(item.id)}
         >
           <div 
             style={{
-              ...styles.bestSellerImageContainer,
-              ...(centerIndex === index ? styles.centerItemImageContainer : {}),
-              backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5',
+              ...styles.bestSellerCard,
+              ...(isCenter ? styles.centerItemCard : {}),
+              backgroundColor: theme.background_color === '#ffffff' ? '#fafafa' : 'rgba(255, 255, 255, 0.7)',
+              backdropFilter: isCenter ? 'blur(10px)' : 'blur(5px)',
             }}
           >
-            {item.image_url ? (
-              <img
-                src={item.image_url}
-                alt={item.name}
-                style={styles.bestSellerImage}
-                loading="lazy"
-                decoding="async"
-                onError={(e) => {
-                  console.error('Erreur lors du chargement de l\'image du meilleur vendeur:', item.image_url);
-                  e.target.src = '/placeholder.jpg';
+            <div 
+              style={{
+                ...styles.bestSellerImageContainer,
+                ...(isCenter ? styles.centerItemImageContainer : {}),
+              }}
+            >
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.name}
+                  style={styles.bestSellerImage}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    e.target.src = '/placeholder.jpg';
+                  }}
+                />
+              ) : (
+                <div style={styles.bestSellerPlaceholder}>
+                  <Coffee size={isCenter ? 32 : 26} color={theme.primary_color || '#ff6b35'} strokeWidth={1.5} />
+                </div>
+              )}
+              {isCenter && (
+                <div style={{ 
+                  ...styles.highlightBadge, 
+                  background: `linear-gradient(135deg, ${theme.primary_color || '#ff6b35'}, ${theme.secondary_color || '#ff8c42'})` 
+                }}>
+                  <Sparkles size={10} color="#FFFFFF" strokeWidth={2} />
+                </div>
+              )}
+            </div>
+            
+            <div style={styles.itemInfo}>
+              <h3 
+                style={{
+                  ...styles.bestSellerName,
+                  color: isCenter ? theme.primary_color || '#1f2937' : theme.text_color || '#6b7280',
+                  fontSize: isCenter ? '14px' : '13px',
                 }}
-              />
-            ) : (
-              <div style={{ ...styles.bestSellerPlaceholder, backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5' }}>
-                <Coffee size={centerIndex === index ? 36 : 32} color={theme.primary_color || '#ff6b35'} />
+              >
+                {item.name}
+              </h3>
+              <div
+                style={{
+                  ...styles.priceContainer,
+                  background: isCenter 
+                    ? `linear-gradient(135deg, ${theme.primary_color || '#ff6b35'}, ${theme.secondary_color || '#ff8c42'})`
+                    : 'rgba(0, 0, 0, 0.04)',
+                }}
+              >
+                <span style={{ 
+                  ...styles.price, 
+                  color: isCenter ? '#FFFFFF' : theme.text_color || '#1f2937' 
+                }}>
+                  {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
+                </span>
+                <span style={{ 
+                  ...styles.currency, 
+                  color: isCenter ? '#FFFFFF' : theme.text_color || '#1f2937' 
+                }}>
+                  {' '}{currency}
+                </span>
               </div>
-            )}
-            {centerIndex === index && (
-              <div style={{ ...styles.highlightBadge, borderColor: theme.secondary_color || '#ff8c42' }}>
-                <Star size={12} fill={theme.secondary_color || '#ff8c42'} color={theme.secondary_color || '#ff8c42'} />
-              </div>
-            )}
-          </div>
-          
-          <div style={styles.itemInfo}>
-            <h3 
-              style={{
-                ...styles.bestSellerName,
-                ...(centerIndex === index ? { ...styles.centerItemName, color: (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937' } : { color: (theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937' }),
-              }}
-            >
-              {item.name}
-            </h3>
-            <div
-              style={{
-                ...styles.priceContainer,
-                ...(centerIndex === index ? { ...styles.centerItemPriceContainer, backgroundColor: theme.primary_color || '#ff6b35' } : { backgroundColor: (theme.background_color === '#ffffff' ? '#f0f0f0' : theme.background_color) || '#faf8f5' }),
-              }}
-            >
-              <span style={{ ...styles.price, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}>
-                {parseFloat(item.sale_price || item.regular_price).toFixed(2)}
-              </span>
-              <span style={{ ...styles.currency, color: centerIndex === index ? '#FFFFFF' : ((theme.background_color === '#ffffff' ? theme.primary_color : theme.text_color) || '#1f2937') }}> {currency}</span>
             </div>
           </div>
         </div>
-      </div>
-    ));
+      );
+    });
   }, [bestSellers, centerIndex, theme, currency, handleItemClick]);
 
   if (loading) {
     return (
       <div style={{ ...styles.loadingContainer, backgroundColor: theme.background_color || '#faf8f5' }}>
         <div style={{ ...styles.loadingSpinner, borderTopColor: theme.primary_color || '#ff6b35' }}></div>
-        <p style={{ ...styles.loadingText, color: theme.text_color || '#1f2937' }}>Chargement des meilleurs vendeurs...</p>
+        <p style={{ ...styles.loadingText, color: theme.text_color || '#1f2937' }}>Chargement...</p>
       </div>
     );
   }
@@ -305,8 +322,13 @@ function BestSellers({ addToCart }) {
       <div style={{ ...styles.bestSellersSection, backgroundColor: theme.background_color || '#faf8f5' }}>
         <div style={styles.bestSellersHeader}>
           <div style={styles.titleContainer}>
-            <Star size={20} style={{ ...styles.starIcon, color: theme.primary_color || '#ff6b35' }} />
-            <h2 style={{ ...styles.bestSellersTitle, color: theme.primary_color || '#ff6b35' }}>Meilleurs Vendeurs</h2>
+            <div style={{ 
+              ...styles.iconWrapper,
+              background: `linear-gradient(135deg, ${theme.primary_color || '#ff6b35'}, ${theme.secondary_color || '#ff8c42'})` 
+            }}>
+              <Star size={14} color="#FFFFFF" fill="#FFFFFF" strokeWidth={1.5} />
+            </div>
+            <h2 style={{ ...styles.bestSellersTitle, color: theme.text_color || '#1f2937' }}>Meilleurs Vendeurs</h2>
           </div>
           <div style={styles.indicatorContainer}>
             {bestSellers.map((_, index) => (
@@ -314,7 +336,10 @@ function BestSellers({ addToCart }) {
                 key={index}
                 style={{
                   ...styles.indicator,
-                  ...(centerIndex === index ? { ...styles.activeIndicator, backgroundColor: theme.primary_color || '#ff6b35' } : {}),
+                  backgroundColor: centerIndex === index 
+                    ? theme.primary_color || '#ff6b35' 
+                    : 'rgba(0, 0, 0, 0.15)',
+                  transform: centerIndex === index ? 'scale(1)' : 'scale(0.75)',
                 }}
               />
             ))}
@@ -337,57 +362,61 @@ function BestSellers({ addToCart }) {
 
 const styles = {
   bestSellersSection: {
-    marginBottom: '24px',
+    marginBottom: '20px',
     width: '100%',
     boxSizing: 'border-box',
-    paddingTop: '8px',
+    paddingTop: '12px',
   },
   bestSellersHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '12px',
-    paddingLeft: '12px',
-    paddingRight: '12px',
+    marginBottom: '16px',
+    paddingLeft: '16px',
+    paddingRight: '16px',
   },
   titleContainer: {
     display: 'flex',
     alignItems: 'center',
-    gap: '6px',
+    gap: '10px',
   },
-  starIcon: {
-    filter: 'none',
+  iconWrapper: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '8px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
   },
   bestSellersTitle: {
-    fontSize: '20px',
+    fontSize: '19px',
     fontWeight: '600',
     margin: 0,
-    letterSpacing: '0',
+    letterSpacing: '-0.3px',
     lineHeight: '1.2',
-    fontFamily: "'Inter', sans-serif",
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', Roboto, sans-serif",
   },
   indicatorContainer: {
     display: 'flex',
-    gap: '4px',
+    gap: '6px',
     alignItems: 'center',
+    padding: '6px 10px',
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+    borderRadius: '12px',
   },
   indicator: {
     width: '6px',
     height: '6px',
     borderRadius: '50%',
-    backgroundColor: '#D1D5DB',
-    transition: 'background-color 0.15s ease',
-  },
-  activeIndicator: {
-    transform: 'scale(1.2)',
-    boxShadow: 'none',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   bestSellersScrollContainer: {
     overflowX: 'auto',
     overflowY: 'hidden',
     scrollSnapType: 'x mandatory',
-    paddingTop: '20px',
-    paddingBottom: '30px',
+    paddingTop: '8px',
+    paddingBottom: '24px',
     paddingLeft: '0',
     paddingRight: '0',
     width: '100%',
@@ -395,12 +424,12 @@ const styles = {
   },
   bestSellersGrid: {
     display: 'flex',
-    gap: '12px',
+    gap: '14px',
     minWidth: 'fit-content',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingBottom: '8px',
-    paddingLeft: 'calc(50% - 60px)',
-    paddingRight: 'calc(50% - 60px)',
+    paddingLeft: 'calc(50% - 55px)',
+    paddingRight: 'calc(50% - 55px)',
   },
   bestSellerItem: {
     display: 'flex',
@@ -408,52 +437,57 @@ const styles = {
     alignItems: 'center',
     cursor: 'pointer',
     minWidth: '100px',
-    maxWidth: '120px',
+    maxWidth: '110px',
     flex: '0 0 auto',
-    transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
     scrollSnapAlign: 'center',
-    willChange: 'transform',
+    willChange: 'transform, opacity',
+    backfaceVisibility: 'hidden',
   },
   bestSellerCard: {
     width: '100%',
-    borderRadius: '12px',
-    padding: '8px',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
-    transition: 'all 0.15s ease',
+    borderRadius: '16px',
+    padding: '10px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+    transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     position: 'relative',
-    opacity: 1,
+    border: '0.5px solid rgba(0, 0, 0, 0.06)',
+    WebkitBackdropFilter: 'blur(10px)',
   },
   centerItemCard: {
-    boxShadow: '0 3px 8px rgba(0, 0, 0, 0.08)',
-    transform: 'translateY(-2px)',
+    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+    border: '1px solid rgba(255, 255, 255, 0.8)',
   },
   bestSellerImageContainer: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '10px',
+    width: '52px',
+    height: '52px',
+    borderRadius: '14px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '8px',
+    marginBottom: '10px',
     overflow: 'hidden',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1)',
     flexShrink: 0,
     position: 'relative',
+    background: 'rgba(0, 0, 0, 0.02)',
+    border: '0.5px solid rgba(0, 0, 0, 0.04)',
   },
   centerItemImageContainer: {
-    width: '60px',
-    height: '60px',
-    borderRadius: '12px',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.08)',
+    width: '68px',
+    height: '68px',
+    borderRadius: '18px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.5)',
   },
   bestSellerImage: {
     width: '100%',
     height: '100%',
     objectFit: 'cover',
-    borderRadius: '10px',
+    borderRadius: '14px',
   },
   bestSellerPlaceholder: {
     width: '100%',
@@ -461,92 +495,89 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '10px',
+    borderRadius: '14px',
+    background: 'rgba(0, 0, 0, 0.02)',
   },
   highlightBadge: {
     position: 'absolute',
-    top: '-3px',
-    right: '-3px',
-    width: '16px',
-    height: '16px',
-    backgroundColor: '#FFFFFF',
+    top: '-4px',
+    right: '-4px',
+    width: '20px',
+    height: '20px',
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+    border: '2px solid #FFFFFF',
   },
   itemInfo: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: '3px',
+    gap: '6px',
     width: '100%',
   },
   bestSellerName: {
-    fontSize: '13px',
-    fontWeight: '600',
+    fontWeight: '500',
     textAlign: 'center',
     margin: 0,
-    lineHeight: '1.2',
+    lineHeight: '1.3',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
-    transition: 'color 0.15s ease',
+    transition: 'all 0.3s ease',
     width: '100%',
-    maxWidth: '90px',
-  },
-  centerItemName: {
-    fontSize: '14px',
-    fontWeight: '600',
-    maxWidth: '100px',
+    letterSpacing: '-0.2px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, sans-serif",
   },
   priceContainer: {
     display: 'flex',
     alignItems: 'baseline',
     justifyContent: 'center',
-    borderRadius: '6px',
-    padding: '3px 6px',
-    transition: 'all 0.15s ease',
-    minWidth: '40px',
-  },
-  centerItemPriceContainer: {
-    transform: 'scale(1.05)',
-    boxShadow: '0 1px 4px rgba(0, 0, 0, 0.1)',
+    borderRadius: '8px',
+    padding: '5px 10px',
+    transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+    minWidth: '50px',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.06)',
   },
   currency: {
-    fontSize: '10px',
-    fontWeight: '600',
-    transition: 'color 0.15s ease',
+    fontSize: '11px',
+    fontWeight: '500',
+    transition: 'color 0.3s ease',
+    letterSpacing: '-0.1px',
   },
   price: {
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '600',
-    transition: 'color 0.15s ease',
+    transition: 'color 0.3s ease',
+    letterSpacing: '-0.2px',
   },
   loadingContainer: {
-    padding: '24px 12px',
+    padding: '32px 16px',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: '12px',
-    margin: '0 12px',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.05)',
-    opacity: 1,
+    borderRadius: '16px',
+    margin: '0 16px',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+    border: '0.5px solid rgba(0, 0, 0, 0.06)',
   },
   loadingSpinner: {
-    width: '20px',
-    height: '20px',
-    border: '2px solid rgba(0, 0, 0, 0.2)',
+    width: '24px',
+    height: '24px',
+    border: '2px solid rgba(0, 0, 0, 0.1)',
     borderRadius: '50%',
     animation: 'spin 0.8s linear infinite',
+    marginBottom: '12px',
   },
   loadingText: {
-    fontSize: '13px',
+    fontSize: '14px',
     fontWeight: '500',
     margin: 0,
-    fontFamily: "'Inter', sans-serif",
+    letterSpacing: '-0.2px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', Roboto, sans-serif",
   },
 };
 
@@ -559,19 +590,22 @@ const cssStyles = (theme) => `
     scrollbar-width: none;
     -ms-overflow-style: none;
     -webkit-overflow-scrolling: touch;
-    scroll-behavior: auto;
+    scroll-behavior: smooth;
     overscroll-behavior-x: contain;
   }
 
   .best-sellers-item {
-    will-change: transform;
+    will-change: transform, opacity;
     transform-style: preserve-3d;
     backface-visibility: hidden;
-    opacity: 1;
+    -webkit-backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .best-sellers-item:active {
-    transform: scale(0.95) !important;
+    transform: scale(0.88) !important;
+    transition: transform 0.1s ease !important;
   }
 
   @media (max-width: 480px) {
@@ -581,8 +615,8 @@ const cssStyles = (theme) => `
     }
     
     .best-sellers-item {
-      min-width: 90px !important;
-      max-width: 110px !important;
+      min-width: 95px !important;
+      max-width: 105px !important;
     }
   }
 
@@ -593,8 +627,8 @@ const cssStyles = (theme) => `
     }
     
     .best-sellers-item {
-      min-width: 80px !important;
-      max-width: 100px !important;
+      min-width: 88px !important;
+      max-width: 98px !important;
     }
   }
 
@@ -605,15 +639,15 @@ const cssStyles = (theme) => `
     }
     
     .best-sellers-item {
-      min-width: 70px !important;
+      min-width: 80px !important;
       max-width: 90px !important;
     }
   }
 
   @media (min-width: 768px) {
     .best-sellers-item {
-      min-width: 110px !important;
-      max-width: 130px !important;
+      min-width: 115px !important;
+      max-width: 125px !important;
     }
   }
 
@@ -626,10 +660,6 @@ const cssStyles = (theme) => `
     
     .best-sellers-scroll {
       scroll-behavior: auto !important;
-    }
-    
-    .best-sellers-indicator {
-      transition: none !important;
     }
   }
 
