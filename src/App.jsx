@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import { api } from './services/api';
 import { initSocket, getSocket } from './services/socket';
 import { v4 as uuidv4 } from 'uuid';
+import { TransitionProvider } from './contexts/TransitionContext';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
@@ -34,7 +35,6 @@ import StockDashboard from './pages/Stock/StockDashboard';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import CartModal from './components/CartModal';
-import SupplementPopup from './components/SupplementPopup';
 
 function App() {
   const navigate = useNavigate();
@@ -532,73 +532,75 @@ function App() {
                           window.location.pathname.startsWith('/order-waiting/');
 
   return (
-    <div style={{ 
-      maxWidth: isAdminRoute ? '1200px' : '100%', 
-      margin: '0 auto', 
-      padding: isFullWidthRoute ? '0' : (isAdminRoute ? '20px' : '0'), 
-      minHeight: '100vh',
-      width: '100%',
-      overflowX: 'hidden'
-    }}>
-      <Header
-        cart={cart}
-        setIsCartOpen={setIsCartOpen}
-        user={user}
-        handleLogout={handleLogout}
-        theme={theme}
-      />
-      <Routes>
-        <Route path="/" element={<Home addToCart={addToCart} />} />
-        <Route path="/categories" element={<CategoryList />} />
-        <Route path="/reservations" element={<Reservations />} />
-        <Route path="/login" element={<Login onLogin={handleLogin} />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/staff" element={<StaffDashboard user={user} handleNewNotification={handleNewNotification} socket={socket} />} />
-        <Route path="/admin/add-menu-item" element={<AddMenuItem />} />
-        <Route path="/admin/categories" element={<Categories />} />
-        <Route path="/admin/manage-menu-items" element={<ManageMenuItems />} />
-        <Route path="/admin/supplements" element={<ManageSupplements />} />
-        <Route path="/admin/tables" element={<TableManagement />} />
-        <Route path="/admin/orders" element={<OrderManagement />} />
-        <Route path="/admin/users" element={<UserManagement />} />
-        <Route path="/admin/promotions" element={<PromotionManagement />} />
-        <Route path="/admin/banners" element={<BannerManagement />} />
-        <Route path="/admin/breakfasts" element={<AdminBreakfasts reusableOptionGroups={reusableOptionGroups} />} />
-        <Route path="/admin/reusable-option-groups" element={<ReusableOptionGroups />} />
-        <Route path="/admin/table-reservations" element={<AdminTableReservations />} />
-        <Route path="/admin/theme" element={<ThemeManagement />} />
-        <Route path="/admin/stock/add" element={<AdminAddStock />} />
-        <Route path="/admin/stock/assign" element={<AddStockToMenuItems />} />
-        <Route path="/admin/stock/dashboard" element={<StockDashboard />} />
-        <Route path="/staff/table-reservations" element={<StaffTableReservations />} />
-        <Route path="/category/:id" element={<CategoryMenu addToCart={addToCart} />} />
-        <Route path="/product/:id" element={<ProductDetails addToCart={addToCart} latestOrderId={latestOrderId} />} />
-        <Route
-          path="/order-waiting/:orderId"
-          element={isSocketReady ? <OrderWaiting sessionId={sessionId} socket={socket} /> : <div>Loading socket...</div>}
+    <TransitionProvider>
+      <div style={{ 
+        maxWidth: isAdminRoute ? '1200px' : '100%', 
+        margin: '0 auto', 
+        padding: isFullWidthRoute ? '0' : (isAdminRoute ? '20px' : '0'), 
+        minHeight: '100vh',
+        width: '100%',
+        overflowX: 'hidden'
+      }}>
+        <Header
+          cart={cart}
+          setIsCartOpen={setIsCartOpen}
+          user={user}
+          handleLogout={handleLogout}
+          theme={theme}
         />
-        <Route path="/breakfast" element={<BreakfastMenu addToCart={addToCart} reusableOptionGroups={reusableOptionGroups} />} />
-        <Route path="/breakfast/:id" element={<BreakfastMenu addToCart={addToCart} reusableOptionGroups={reusableOptionGroups} />} />
-        <Route path="*" element={<div style={{ textAlign: 'center', color: '#666' }}>404 Not Found</div>} />
-      </Routes>
-      <CartModal
-        isOpen={isCartOpen}
-        onClose={() => setIsCartOpen(false)}
-        cart={cart}
-        updateQuantity={updateQuantity}
-        orderType={orderType}
-        setOrderType={setOrderType}
-        deliveryAddress={deliveryAddress}
-        setDeliveryAddress={setDeliveryAddress}
-        promotionId={promotionId}
-        setPromotionId={setPromotionId}
-        promotions={promotions}
-        clearCart={clearCart}
-        sessionId={sessionId}
-        socket={socket}
-      />
-      <Footer />
-    </div>
+        <Routes>
+          <Route path="/" element={<Home addToCart={addToCart} />} />
+          <Route path="/categories" element={<CategoryList />} />
+          <Route path="/reservations" element={<Reservations />} />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/staff" element={<StaffDashboard user={user} handleNewNotification={handleNewNotification} socket={socket} />} />
+          <Route path="/admin/add-menu-item" element={<AddMenuItem />} />
+          <Route path="/admin/categories" element={<Categories />} />
+          <Route path="/admin/manage-menu-items" element={<ManageMenuItems />} />
+          <Route path="/admin/supplements" element={<ManageSupplements />} />
+          <Route path="/admin/tables" element={<TableManagement />} />
+          <Route path="/admin/orders" element={<OrderManagement />} />
+          <Route path="/admin/users" element={<UserManagement />} />
+          <Route path="/admin/promotions" element={<PromotionManagement />} />
+          <Route path="/admin/banners" element={<BannerManagement />} />
+          <Route path="/admin/breakfasts" element={<AdminBreakfasts reusableOptionGroups={reusableOptionGroups} />} />
+          <Route path="/admin/reusable-option-groups" element={<ReusableOptionGroups />} />
+          <Route path="/admin/table-reservations" element={<AdminTableReservations />} />
+          <Route path="/admin/theme" element={<ThemeManagement />} />
+          <Route path="/admin/stock/add" element={<AdminAddStock />} />
+          <Route path="/admin/stock/assign" element={<AddStockToMenuItems />} />
+          <Route path="/admin/stock/dashboard" element={<StockDashboard />} />
+          <Route path="/staff/table-reservations" element={<StaffTableReservations />} />
+          <Route path="/category/:id" element={<CategoryMenu addToCart={addToCart} />} />
+          <Route path="/product/:id" element={<ProductDetails addToCart={addToCart} latestOrderId={latestOrderId} />} />
+          <Route
+            path="/order-waiting/:orderId"
+            element={isSocketReady ? <OrderWaiting sessionId={sessionId} socket={socket} /> : <div>Loading socket...</div>}
+          />
+          <Route path="/breakfast" element={<BreakfastMenu addToCart={addToCart} reusableOptionGroups={reusableOptionGroups} />} />
+          <Route path="/breakfast/:id" element={<BreakfastMenu addToCart={addToCart} reusableOptionGroups={reusableOptionGroups} />} />
+          <Route path="*" element={<div style={{ textAlign: 'center', color: '#666' }}>404 Not Found</div>} />
+        </Routes>
+        <CartModal
+          isOpen={isCartOpen}
+          onClose={() => setIsCartOpen(false)}
+          cart={cart}
+          updateQuantity={updateQuantity}
+          orderType={orderType}
+          setOrderType={setOrderType}
+          deliveryAddress={deliveryAddress}
+          setDeliveryAddress={setDeliveryAddress}
+          promotionId={promotionId}
+          setPromotionId={setPromotionId}
+          promotions={promotions}
+          clearCart={clearCart}
+          sessionId={sessionId}
+          socket={socket}
+        />
+        <Footer />
+      </div>
+    </TransitionProvider>
   );
 }
 
