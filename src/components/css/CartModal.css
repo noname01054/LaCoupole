@@ -80,6 +80,7 @@
   justify-content: center;
   animation: cart-modal-fadeIn 0.2s ease-out;
   touch-action: none;
+  padding: 0;
 }
 
 .cart-modal-overlay.closing {
@@ -90,7 +91,8 @@
   background: var(--cart-modal-background);
   width: 100%;
   max-width: 100%;
-  max-height: 92vh;
+  max-height: 75vh;
+  min-height: 300px;
   border-radius: 16px 16px 0 0;
   display: flex;
   flex-direction: column;
@@ -102,6 +104,7 @@
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
+  margin-bottom: 0;
 }
 
 .cart-modal.closing {
@@ -122,6 +125,7 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: pan-y;
   min-height: 32px;
+  flex-shrink: 0;
 }
 
 .cart-modal-handle-wrapper:active {
@@ -155,6 +159,7 @@
   transition: transform 0.1s ease-out, opacity 0.1s ease-out;
   opacity: 0;
   will-change: transform, opacity;
+  z-index: 100;
 }
 
 .cart-modal.dragging .cart-modal-drag-indicator {
@@ -231,6 +236,7 @@
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   scrollbar-width: none;
+  min-height: 0;
 }
 
 .cart-modal-content::-webkit-scrollbar {
@@ -717,7 +723,7 @@
     border-radius: 16px;
     align-self: center;
     max-width: 420px;
-    max-height: 90vh;
+    max-height: 85vh;
   }
 
   .cart-modal-handle-wrapper {
@@ -737,8 +743,12 @@
   }
 }
 
-/* Small phones */
+/* Small phones - more restricted height */
 @media (max-width: 374px) {
+  .cart-modal {
+    max-height: 70vh;
+  }
+
   .cart-modal-item-image {
     width: 50px;
     height: 50px;
@@ -757,10 +767,55 @@
   }
 }
 
-/* Large phones and tablets */
-@media (min-width: 375px) and (max-width: 767px) {
+/* Medium phones - standard height */
+@media (min-width: 375px) and (max-width: 667px) {
   .cart-modal {
-    max-width: 100%;
+    max-height: 72vh;
+  }
+}
+
+/* Larger phones - can go a bit higher */
+@media (min-width: 668px) and (max-width: 767px) {
+  .cart-modal {
+    max-height: 78vh;
+  }
+}
+
+/* Very tall phones (like iPhone 14 Pro Max) */
+@media (min-height: 800px) and (max-width: 767px) {
+  .cart-modal {
+    max-height: 80vh;
+  }
+}
+
+/* Short phones (like iPhone SE) */
+@media (max-height: 667px) and (max-width: 767px) {
+  .cart-modal {
+    max-height: 68vh;
+  }
+
+  .cart-modal-content {
+    padding: 14px 16px 18px;
+  }
+
+  .cart-modal-empty-cart {
+    padding: 40px 20px;
+  }
+}
+
+/* Very short phones */
+@media (max-height: 568px) and (max-width: 767px) {
+  .cart-modal {
+    max-height: 65vh;
+  }
+
+  .cart-modal-total-price {
+    font-size: 20px;
+    margin-bottom: 14px;
+  }
+
+  .cart-modal-form-group {
+    margin-bottom: 10px;
   }
 }
 
