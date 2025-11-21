@@ -37,13 +37,14 @@
   background-color: var(--background-color);
   min-height: 100vh;
   position: relative;
-  padding: 0 0 90px;
+  padding: 0 0 90px 0;
   overflow-x: hidden;
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   touch-action: pan-y;
   user-select: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  margin: 0;
 }
 
 @media (min-width: 768px) {
@@ -59,7 +60,7 @@
   position: relative;
   height: 320px;
   overflow: hidden;
-  margin-bottom: 0;
+  margin: 0;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.02), transparent);
   animation: product-details__fadeIn 0.4s ease-out forwards;
 }
@@ -101,7 +102,7 @@
 }
 
 .product-details-details-section {
-  background: var(--background-color);
+  background: #ffffff;
   border-radius: 24px 24px 0 0;
   padding: 24px 16px 32px;
   margin-top: -24px;
@@ -122,7 +123,7 @@
 .product-details-product-title {
   font-size: 24px;
   font-weight: 600;
-  color: var(--text-color);
+  color: #1f2937;
   margin: 0 0 12px 0;
   line-height: 1.3;
   letter-spacing: -0.5px;
@@ -176,7 +177,7 @@
 
 .product-details-product-description {
   font-size: 15px;
-  color: #6b7280;
+  color: #4b5563;
   line-height: 1.5;
   margin-bottom: 20px;
   font-weight: 400;
@@ -226,14 +227,14 @@
 .product-details-sale-price {
   font-size: 18px;
   font-weight: 600;
-  color: var(--primary-color);
+  color: #1f2937;
   letter-spacing: -0.3px;
 }
 
 .product-details-regular-price-only {
   font-size: 18px;
   font-weight: 600;
-  color: var(--primary-color);
+  color: #1f2937;
   letter-spacing: -0.3px;
 }
 
@@ -265,7 +266,7 @@
 .product-details-total-amount {
   font-size: 22px;
   font-weight: 600;
-  color: var(--primary-color);
+  color: #1f2937;
   letter-spacing: -0.4px;
 }
 
@@ -321,7 +322,7 @@
 .product-details-option-label {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-color);
+  color: #1f2937;
   letter-spacing: -0.1px;
 }
 
@@ -338,7 +339,7 @@
   border-radius: 10px;
   border: 0.5px solid rgba(0, 0, 0, 0.1);
   font-size: 14px;
-  color: var(--text-color);
+  color: #1f2937;
   background-color: #ffffff;
   cursor: pointer;
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
@@ -473,7 +474,7 @@
 .product-details-quantity-display {
   font-size: 16px;
   font-weight: 600;
-  color: var(--text-color);
+  color: #1f2937;
   min-width: 32px;
   text-align: center;
   letter-spacing: -0.2px;
@@ -531,7 +532,7 @@
 .product-details-section-title {
   font-size: 19px;
   font-weight: 600;
-  color: var(--text-color);
+  color: #1f2937;
   margin-bottom: 16px;
   letter-spacing: -0.3px;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', Roboto, sans-serif;
@@ -555,7 +556,7 @@
 
 .product-details-error-text {
   font-size: 16px;
-  color: var(--text-color);
+  color: #1f2937;
   font-weight: 500;
   letter-spacing: -0.2px;
 }
@@ -639,7 +640,7 @@
 }
 
 .text-orange-500 {
-  color: var(--primary-color) !important;
+  color: #f97316 !important;
 }
 
 .text-yellow-400 {
