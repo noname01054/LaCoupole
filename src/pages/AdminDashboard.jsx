@@ -7,7 +7,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScal
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import moment from 'moment';
 import { FiBarChart2, FiDollarSign, FiFilter, FiTrendingUp, FiRotateCcw, FiTag, FiBox, FiShoppingCart, FiCalendar } from 'react-icons/fi';
-import './css/AdminDashboard.css';
+import './AdminDashboard.css';
 
 moment.locale('fr');
 
