@@ -6,16 +6,13 @@ import { initSocket } from '../services/socket';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, LineElement, PointElement, DoughnutController, Filler } from 'chart.js';
 import { Pie, Bar, Line } from 'react-chartjs-2';
 import moment from 'moment';
-import { FiBarChart2, FiDollarSign, FiFilter, FiTrendingUp, FiRotateCcw, FiTag, FiBox, FiShoppingCart, FiCalendar, FiClock } from 'react-icons/fi';
-import './AdminDashboard.css';
+import { FiBarChart2, FiDollarSign, FiFilter, FiTrendingUp, FiRotateCcw, FiTag, FiBox, FiShoppingCart, FiCalendar } from 'react-icons/fi';
+import './css/AdminDashboard.css';
 
-// Définir la localisation française pour moment
 moment.locale('fr');
 
-// Enregistrer les composants Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend, BarElement, CategoryScale, LinearScale, LineElement, PointElement, DoughnutController, Filler);
 
-// Couleurs codées en dur depuis AdminDashboard.css pour le thème clair
 const COLORS = {
   chartColor1: '#667EEA',
   chartColor2: '#764BA2',
@@ -38,6 +35,7 @@ function AdminDashboard() {
   const [isFilterLoading, setIsFilterLoading] = useState(false);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [currency, setCurrency] = useState('$');
   const [filters, setFilters] = useState({
     start_date: moment().subtract(7, 'days').format('YYYY-MM-DD'),
     end_date: moment().format('YYYY-MM-DD'),
@@ -53,6 +51,21 @@ function AdminDashboard() {
 
   const themeColors = COLORS;
 
+  // Fetch currency from theme
+  useEffect(() => {
+    const fetchTheme = async () => {
+      try {
+        const themeResponse = await api.getTheme();
+        if (themeResponse.data && themeResponse.data.currency) {
+          setCurrency(themeResponse.data.currency);
+        }
+      } catch (error) {
+        console.error('Error fetching theme for currency:', error);
+      }
+    };
+    fetchTheme();
+  }, []);
+
   const fetchAnalyticsData = useCallback(async () => {
     setIsFilterLoading(true);
     let retries = 3;
@@ -62,9 +75,7 @@ function AdminDashboard() {
         if (!token || typeof token !== 'string' || token === 'null' || token === 'undefined') {
           throw new Error('Aucun jeton valide trouvé');
         }
-        console.log('Récupération des analyses avec le jeton:', token.substring(0, 10) + '...');
 
-        // Valider les filtres
         const { start_date, end_date, category_id, order_type, start_hour, end_hour } = filters;
         if (!start_date || !end_date) {
           throw new Error('Les dates de début et de fin sont requises');
@@ -73,16 +84,15 @@ function AdminDashboard() {
           throw new Error('La date de fin doit être postérieure à la date de début');
         }
         if (start_hour && !start_hour.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-          throw new Error('L\'heure de début doit être au format HH:mm');
+          throw new Error("L'heure de début doit être au format HH:mm");
         }
         if (end_hour && !end_hour.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-          throw new Error('L\'heure de fin doit être au format HH:mm');
+          throw new Error("L'heure de fin doit être au format HH:mm");
         }
         if (start_hour && end_hour && start_hour >= end_hour) {
-          throw new Error('L\'heure de fin doit être postérieure à l\'heure de début');
+          throw new Error("L'heure de fin doit être postérieure à l'heure de début");
         }
 
-        // Nettoyer les filtres : inclure uniquement les valeurs non vides
         const sanitizedFilters = {
           start_date,
           end_date,
@@ -96,10 +106,10 @@ function AdminDashboard() {
           params: sanitizedFilters,
           headers: { 'Authorization': `Bearer ${token}` },
         });
-        setAnalyticsData  (res.data);
+        setAnalyticsData(res.data);
         break;
       } catch (error) {
-        console.error('Erreur lors de la récupération des données d\'analyse:', error.response?.data || error.message);
+        console.error("Erreur lors de la récupération des données d'analyse:", error.response?.data || error.message);
         retries--;
         if (retries === 0 || error.response?.status === 401) {
           if (error.response?.status === 401) {
@@ -110,7 +120,7 @@ function AdminDashboard() {
             delete api.defaults.headers.common['Authorization'];
             navigate('/login');
           } else {
-            toast.error(error.response?.data?.error || error.message || 'Échec de la récupération des données d\'analyse');
+            toast.error(error.response?.data?.error || error.message || "Échec de la récupération des données d'analyse");
             setAnalyticsData({
               totalOrders: { count: 0, change: null },
               totalRevenue: { revenue: '0.00', change: null },
@@ -138,7 +148,6 @@ function AdminDashboard() {
         if (!token || typeof token !== 'string' || token === 'null' || token === 'undefined') {
           throw new Error('Aucun jeton valide trouvé');
         }
-        console.log('Vérification de l\'authentification avec le jeton:', token.substring(0, 10) + '...');
         const res = await api.get('/check-auth', {
           headers: { 'Authorization': `Bearer ${token}` },
         });
@@ -149,7 +158,7 @@ function AdminDashboard() {
           setUser(res.data);
         }
       } catch (err) {
-        console.error('Échec de la vérification d\'authentification:', err.response?.data || err.message);
+        console.error("Échec de la vérification d'authentification:", err.response?.data || err.message);
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('sessionId');
         delete api.defaults.headers.common['X-Session-Id'];
@@ -289,7 +298,7 @@ function AdminDashboard() {
       start_hour: '',
       end_hour: '',
     }));
-    toast.success(`${period === 'today' ? 'Aujourd\'hui' : period === 'last7days' ? '7 derniers jours' : '30 derniers jours'} filtre appliqué`);
+    toast.success(`${period === 'today' ? "Aujourd'hui" : period === 'last7days' ? '7 derniers jours' : '30 derniers jours'} filtre appliqué`);
     if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
     filterTimeoutRef.current = setTimeout(() => fetchAnalyticsData(), 300);
   };
@@ -306,15 +315,15 @@ function AdminDashboard() {
       return;
     }
     if (start_hour && !start_hour.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-      toast.error('L\'heure de début doit être au format HH:mm');
+      toast.error("L'heure de début doit être au format HH:mm");
       return;
     }
     if (end_hour && !end_hour.match(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)) {
-      toast.error('L\'heure de fin doit être au format HH:mm');
+      toast.error("L'heure de fin doit être au format HH:mm");
       return;
     }
     if (start_hour && end_hour && start_hour >= end_hour) {
-      toast.error('L\'heure de fin doit être postérieure à l\'heure de début');
+      toast.error("L'heure de fin doit être postérieure à l'heure de début");
       return;
     }
     if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
@@ -462,7 +471,7 @@ function AdminDashboard() {
       labels: salesTrend.map((item) => moment(item?.time_period).format('DD MMM')),
       datasets: [
         {
-          label: 'Revenus (DT)',
+          label: `Revenus (${currency})`,
           data: salesTrend.map((item) => item?.total_revenue || 0),
           borderColor: themeColors.chartColor1,
           backgroundColor: (context) => {
@@ -597,7 +606,7 @@ function AdminDashboard() {
   };
 
   const tabs = [
-    { id: 'overview', label: 'Vue d\'ensemble', icon: <FiBarChart2 /> },
+    { id: 'overview', label: "Vue d'ensemble", icon: <FiBarChart2 /> },
   ];
 
   return (
@@ -632,12 +641,10 @@ function AdminDashboard() {
 
         {activeTab === 'overview' && (
           <>
-            <div className="filter-section glass-card">
+            <div className="filter-section">
               <div className="filter-header">
-                <h3 className="filter-title">
-                  <FiFilter className="filter-icon" />
-                  Filtres
-                </h3>
+                <FiFilter className="filter-icon" />
+                <h3 className="filter-title">Filtres</h3>
               </div>
               <div className="quick-filters">
                 <button
@@ -743,7 +750,7 @@ function AdminDashboard() {
             </div>
 
             <div className="metrics-grid">
-              <div className="metric-card glass-card">
+              <div className="metric-card">
                 <div className="metric-header">
                   <div className="metric-icon-wrapper orders">
                     <FiBox className="metric-icon" />
@@ -760,24 +767,24 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="metric-card glass-card">
+              <div className="metric-card">
                 <div className="metric-header">
                   <div className="metric-icon-wrapper revenue">
                     <FiDollarSign className="metric-icon" />
                   </div>
                   <div className="metric-info">
                     <h3 className="metric-title">Revenus totaux</h3>
-                    <div className="metric-value">{parseFloat(analyticsData.totalRevenue.revenue).toFixed(2)} DT</div>
+                    <div className="metric-value">{parseFloat(analyticsData.totalRevenue.revenue).toFixed(2)} {currency}</div>
                     {analyticsData.totalRevenue.change !== null && (
                       <div className={`metric-change ${analyticsData.totalRevenue.change >= 0 ? 'positive' : 'negative'}`}>
-                        {analyticsData.totalOrders.change >= 0 ? '↑' : '↓'} {Math.abs(analyticsData.totalRevenue.change)}%
+                        {analyticsData.totalRevenue.change >= 0 ? '↑' : '↓'} {Math.abs(analyticsData.totalRevenue.change)}%
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="metric-card glass-card">
+              <div className="metric-card">
                 <div className="metric-header">
                   <div className="metric-icon-wrapper categories">
                     <FiTag className="metric-icon" />
@@ -792,12 +799,10 @@ function AdminDashboard() {
             </div>
 
             <div className="charts-layout">
-              <div className="chart-card glass-card">
+              <div className="chart-card">
                 <div className="chart-header">
-                  <h3 className="chart-title">
-                    <FiTrendingUp className="chart-icon" />
-                    Tendance des ventes
-                  </h3>
+                  <FiTrendingUp className="chart-icon" />
+                  <h3 className="chart-title">Tendance des ventes</h3>
                 </div>
                 <div className="chart-container">
                   <Line
@@ -811,12 +816,10 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="chart-card glass-card">
+              <div className="chart-card">
                 <div className="chart-header">
-                  <h3 className="chart-title">
-                    <FiRotateCcw className="chart-icon" />
-                    Types de commandes
-                  </h3>
+                  <FiRotateCcw className="chart-icon" />
+                  <h3 className="chart-title">Types de commandes</h3>
                 </div>
                 <div className="chart-container">
                   <Pie
@@ -830,12 +833,10 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="chart-card glass-card">
+              <div className="chart-card">
                 <div className="chart-header">
-                  <h3 className="chart-title">
-                    <FiTag className="chart-icon" />
-                    Ventes par catégorie
-                  </h3>
+                  <FiTag className="chart-icon" />
+                  <h3 className="chart-title">Ventes par catégorie</h3>
                 </div>
                 <div className="chart-container">
                   <Pie
@@ -849,12 +850,10 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="chart-card glass-card">
+              <div className="chart-card">
                 <div className="chart-header">
-                  <h3 className="chart-title">
-                    <FiBox className="chart-icon" />
-                    Articles les plus vendus
-                  </h3>
+                  <FiBox className="chart-icon" />
+                  <h3 className="chart-title">Articles les plus vendus</h3>
                 </div>
                 <div className="chart-container">
                   <Bar
@@ -870,12 +869,10 @@ function AdminDashboard() {
             </div>
 
             <div className="tables-section">
-              <div className="table-card glass-card">
+              <div className="table-card">
                 <div className="table-header">
-                  <h3 className="table-title">
-                    <FiShoppingCart className="table-icon" />
-                    Commandes récentes
-                  </h3>
+                  <FiShoppingCart className="table-icon" />
+                  <h3 className="table-title">Commandes récentes</h3>
                 </div>
                 <div className="table-wrapper">
                   {analyticsData.recentOrders.length === 0 ? (
@@ -902,7 +899,7 @@ function AdminDashboard() {
                               <tr key={order.id} style={{ animationDelay: `${index * 0.1}s` }}>
                                 <td><span className="order-id">#{order.id}</span></td>
                                 <td>{order.table_number || 'N/A'}</td>
-                                <td><span className="price">{order.total_price} DT</span></td>
+                                <td><span className="price">{order.total_price} {currency}</span></td>
                                 <td><span className={`order-type ${order.order_type}`}>{order.order_type === 'local' ? 'Sur place' : 'Livraison'}</span></td>
                                 <td><span className={`status ${order.approved ? 'approved' : 'pending'}`}>{order.approved ? 'Approuvée' : 'En attente'}</span></td>
                                 <td className="date-cell">{moment(order.created_at).format('DD MMM YYYY')}</td>
@@ -916,12 +913,10 @@ function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="table-card glass-card">
+              <div className="table-card">
                 <div className="table-header">
-                  <h3 className="table-title">
-                    <FiCalendar className="table-icon" />
-                    Réservations
-                  </h3>
+                  <FiCalendar className="table-icon" />
+                  <h3 className="table-title">Réservations</h3>
                 </div>
                 <div className="table-wrapper">
                   {analyticsData.reservationStatus.reservations.length === 0 ? (
