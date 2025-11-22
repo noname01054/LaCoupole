@@ -15,6 +15,13 @@
   --admin-dashboard-error: #ef4444;
 }
 
+/* Reset body margins */
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
 /* Animations */
 @keyframes admin-dashboard-fadeIn {
   from {
@@ -65,13 +72,28 @@
   -moz-osx-font-smoothing: grayscale;
   padding: 0;
   margin: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Main Content */
+/* Main Content - Full Width */
 .main-content {
   max-width: 100%;
+  width: 100%;
   margin: 0;
-  padding: 20px;
+  padding: 20px 0;
+  box-sizing: border-box;
+}
+
+/* Inner Content Wrapper for Spacing */
+.dashboard-header,
+.tab-navigation,
+.filter-section,
+.metrics-grid,
+.charts-layout,
+.tables-section {
+  margin-left: 20px;
+  margin-right: 20px;
 }
 
 /* Dashboard Header */
@@ -187,6 +209,8 @@
   align-items: center;
   min-height: 100vh;
   background: var(--admin-dashboard-bg);
+  margin: 0;
+  padding: 0;
 }
 
 .loading-content {
@@ -224,7 +248,7 @@
   border-radius: 16px;
   box-shadow: var(--admin-dashboard-shadow-md);
   max-width: 500px;
-  margin: 40px auto;
+  margin: 40px 20px;
   border: 1px solid rgba(239, 68, 68, 0.2);
   animation: admin-dashboard-scaleIn 0.4s ease-out;
 }
@@ -603,6 +627,7 @@
   animation-delay: 0.5s;
   opacity: 0;
   animation-fill-mode: forwards;
+  margin-bottom: 24px;
 }
 
 .table-card {
@@ -761,7 +786,17 @@ tbody tr:hover {
 /* Responsive */
 @media (max-width: 374px) {
   .main-content {
-    padding: 12px;
+    padding: 12px 0;
+  }
+
+  .dashboard-header,
+  .tab-navigation,
+  .filter-section,
+  .metrics-grid,
+  .charts-layout,
+  .tables-section {
+    margin-left: 12px;
+    margin-right: 12px;
   }
 
   .dashboard-header,
@@ -803,7 +838,17 @@ tbody tr:hover {
 
 @media (min-width: 375px) and (max-width: 600px) {
   .main-content {
-    padding: 16px;
+    padding: 16px 0;
+  }
+
+  .dashboard-header,
+  .tab-navigation,
+  .filter-section,
+  .metrics-grid,
+  .charts-layout,
+  .tables-section {
+    margin-left: 16px;
+    margin-right: 16px;
   }
 
   .metrics-grid {
@@ -820,6 +865,16 @@ tbody tr:hover {
 }
 
 @media (min-width: 601px) and (max-width: 768px) {
+  .dashboard-header,
+  .tab-navigation,
+  .filter-section,
+  .metrics-grid,
+  .charts-layout,
+  .tables-section {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+
   .metrics-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -834,6 +889,16 @@ tbody tr:hover {
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
+  .dashboard-header,
+  .tab-navigation,
+  .filter-section,
+  .metrics-grid,
+  .charts-layout,
+  .tables-section {
+    margin-left: 24px;
+    margin-right: 24px;
+  }
+
   .metrics-grid {
     grid-template-columns: repeat(3, 1fr);
   }
@@ -849,7 +914,17 @@ tbody tr:hover {
 
 @media (min-width: 1025px) {
   .main-content {
-    padding: 32px;
+    padding: 32px 0;
+  }
+
+  .dashboard-header,
+  .tab-navigation,
+  .filter-section,
+  .metrics-grid,
+  .charts-layout,
+  .tables-section {
+    margin-left: 32px;
+    margin-right: 32px;
   }
 
   .dashboard-title {
