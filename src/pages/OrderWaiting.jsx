@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 import { debounce } from 'lodash';
-import { LocationOn, Note } from '@mui/icons-material';
+import { LocationOn, Note, Download, ContentCopy, Home } from '@mui/icons-material';
 import html2canvas from 'html2canvas';
 import './css/OrderWaiting.css';
 
@@ -613,28 +613,6 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
     return items;
   })();
 
-  const deliveryAlertStyle = orderDetails?.delivery_address ? {
-    backgroundColor: '#fef3c7',
-    border: '1px solid #f59e0b',
-    borderRadius: '12px',
-    padding: '12px',
-    marginBottom: '16px',
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
-  } : { display: 'none' };
-
-  const notesAlertStyle = orderDetails?.notes ? {
-    backgroundColor: '#e6f3ff',
-    border: '1px solid #3b82f6',
-    borderRadius: '12px',
-    padding: '12px',
-    marginBottom: '16px',
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: '8px',
-  } : { display: 'none' };
-
   if (isLoading) {
     return (
       <div className="order-waiting-container">
@@ -657,13 +635,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
             </div>
           </div>
           <h2 className="order-waiting-error-title">{errorMessage}</h2>
-          <button
-            onClick={handleReturnHome}
-            className="order-waiting-button"
-            onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
-            onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
-          >
+          <button onClick={handleReturnHome} className="order-waiting-button">
+            <Home sx={{ fontSize: 18, marginRight: '6px' }} />
             Retour à l'accueil
           </button>
         </div>
@@ -682,13 +655,8 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
           </div>
           <h2 className="order-waiting-error-title">Détails de la commande indisponibles</h2>
           <p className="order-waiting-error-subtext">Veuillez réessayer plus tard ou contacter le support.</p>
-          <button
-            onClick={handleReturnHome}
-            className="order-waiting-button"
-            onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
-            onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
-          >
+          <button onClick={handleReturnHome} className="order-waiting-button">
+            <Home sx={{ fontSize: 18, marginRight: '6px' }} />
             Retour à l'accueil
           </button>
         </div>
@@ -748,29 +716,21 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         </div>
 
         {orderDetails.delivery_address && (
-          <div style={deliveryAlertStyle}>
-            <LocationOn sx={{ fontSize: 18, color: '#f59e0b' }} />
+          <div className="order-waiting-alert">
+            <LocationOn sx={{ fontSize: 18, color: '#f59e0b', flexShrink: 0 }} />
             <div>
-              <div style={{ fontWeight: '600', color: '#92400e', marginBottom: '2px' }}>
-                Commande de livraison
-              </div>
-              <div style={{ fontSize: '13px', color: '#92400e' }}>
-                {orderDetails.delivery_address}
-              </div>
+              <div className="order-waiting-alert-title">Commande de livraison</div>
+              <div className="order-waiting-alert-text">{orderDetails.delivery_address}</div>
             </div>
           </div>
         )}
 
         {orderDetails.notes && (
-          <div style={notesAlertStyle}>
-            <Note sx={{ fontSize: 18, color: '#3b82f6' }} />
+          <div className="order-waiting-alert order-waiting-notes-alert">
+            <Note sx={{ fontSize: 18, color: '#3b82f6', flexShrink: 0 }} />
             <div>
-              <div style={{ fontWeight: '600', color: '#1e40af', marginBottom: '2px' }}>
-                Instructions spéciales
-              </div>
-              <div style={{ fontSize: '13px', color: '#1e40af' }}>
-                {orderDetails.notes}
-              </div>
+              <div className="order-waiting-alert-title">Instructions spéciales</div>
+              <div className="order-waiting-alert-text">{orderDetails.notes}</div>
             </div>
           </div>
         )}
@@ -884,36 +844,20 @@ function OrderWaiting({ sessionId: propSessionId, socket }) {
         <p className="order-waiting-instruction">
           Veuillez sauvegarder cette URL pour suivre l'état de votre commande ultérieurement, par exemple, lors du paiement ou pour vérifier les mises à jour. Nous vous recommandons de la copier dans un endroit sécurisé pour votre commodité.
         </p>
-        <center>
-          <button
-            onClick={handleCopyUrl}
-            className="order-waiting-button"
-            onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
-            onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
-          >
-            Copier l'URL de la commande
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <button onClick={handleCopyUrl} className="order-waiting-button">
+            <ContentCopy sx={{ fontSize: 16, marginRight: '6px' }} />
+            Copier l'URL
           </button>
-          <button
-            onClick={handleDownloadFacture}
-            className="order-waiting-button"
-            style={{ marginLeft: '10px' }}
-            onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
-            onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-            onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
-          >
+          <button onClick={handleDownloadFacture} className="order-waiting-button">
+            <Download sx={{ fontSize: 16, marginRight: '6px' }} />
             Télécharger la facture
           </button>
-        </center>
+        </div>
       </div>
 
-      <button
-        onClick={handleReturnHome}
-        className="order-waiting-button order-waiting-home-button"
-        onMouseDown={(e) => (e.target.style.transform = 'scale(0.96)')}
-        onMouseUp={(e) => (e.target.style.transform = 'scale(1)')}
-        onMouseLeave={(e) => (e.target.style.transform = 'scale(1)')}
-      >
+      <button onClick={handleReturnHome} className="order-waiting-button order-waiting-home-button">
+        <Home sx={{ fontSize: 18, marginRight: '6px' }} />
         Retour à l'accueil
       </button>
     </div>
