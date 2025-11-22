@@ -1,8 +1,5 @@
 import { api } from '../services/api';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTransition } from '../contexts/TransitionContext';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import RemoveRedEyeIcon from '@mui/icons-material/RemoveRedEye';
 import StarIcon from '@mui/icons-material/Star';
@@ -12,10 +9,6 @@ import { debounce } from 'lodash';
 import { toast } from 'react-toastify';
 
 function MenuItemCard({ item, onAddToCart, onView, isManager }) {
-  const navigate = useNavigate();
-  const { startTransition } = useTransition();
-  const cardRef = useRef(null);
-  
   const [screenSize, setScreenSize] = useState({
     width: window.innerWidth,
     height: window.innerHeight,
@@ -240,38 +233,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
     (e) => {
       e.preventDefault();
       e.stopPropagation();
-      
       if (onView && item?.id) {
-        // Capture card position and dimensions for animation
-        if (cardRef.current) {
-          const rect = cardRef.current.getBoundingClientRect();
-          const transitionData = {
-            itemId: item.id,
-            itemType: item?.type,
-            startPosition: {
-              top: rect.top,
-              left: rect.left,
-              width: rect.width,
-              height: rect.height,
-            },
-            item: {
-              name: item.name,
-              image: imageSrc,
-              price: item.sale_price || item.regular_price,
-              category: item.category_name,
-            },
-          };
-          
-          startTransition(transitionData);
-        }
-        
-        // Small delay to allow transition state to set
-        setTimeout(() => {
-          navigate(`/product/${item.id}`);
-        }, 50);
+        onView(item.id, item?.type);
       }
     },
-    [onView, item, imageSrc, startTransition, navigate]
+    [onView, item?.id, item?.type]
   );
 
   const handleEditProduct = useCallback(
@@ -613,7 +579,7 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
         height: '18px',
         margin: '0',
         appearance: 'none',
-        border: '2px solid #d1d5db',
+        border: `2px solid #d1d5db`,
         borderRadius: '5px',
         outline: 'none',
         cursor: 'pointer',
@@ -684,11 +650,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
       to { opacity: 1; }
     }
     @keyframes slideUp {
-      from {
+      from { 
         opacity: 0;
         transform: translate(-50%, -45%);
       }
-      to {
+      to { 
         opacity: 1;
         transform: translate(-50%, -50%);
       }
@@ -743,27 +709,15 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
   return (
     <>
       <style>{animations}</style>
-      <motion.div
-        ref={cardRef}
-        layoutId={`product-card-${item.id}`}
+      <div
         style={styles.card}
         onMouseEnter={() => !isMobile && setIsHovered(true)}
         onMouseLeave={() => !isMobile && setIsHovered(false)}
         onClick={isManager ? handleEditProduct : handleViewProduct}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{
-          duration: 0.4,
-          ease: [0.4, 0, 0.2, 1],
-        }}
       >
-        <motion.div 
-          layoutId={`product-image-container-${item.id}`}
-          style={styles.imageContainer}
-        >
+        <div style={styles.imageContainer}>
           {!imageLoaded && <div style={styles.loadingPlaceholder} />}
-          <motion.img
-            layoutId={`product-image-${item.id}`}
+          <img
             src={imageSrc}
             srcSet={`${imageSrc}?w=180 1x, ${imageSrc}?w=360 2x`}
             alt={item.name || 'Item'}
@@ -778,21 +732,11 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
           />
 
           {discountPercentage > 0 && (
-            <motion.div 
-              layoutId={`product-badge-${item.id}`}
-              style={styles.discountBadge}
-            >
-              -{discountPercentage}%
-            </motion.div>
+            <div style={styles.discountBadge}>-{discountPercentage}%</div>
           )}
 
           {!isMobile && (
-            <motion.div 
-              style={styles.actionButtons}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-            >
+            <div style={styles.actionButtons}>
               {isManager ? (
                 <button
                   style={styles.actionButton}
@@ -829,56 +773,37 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
                   </button>
                 </>
               )}
-            </motion.div>
+            </div>
           )}
-        </motion.div>
+        </div>
 
-        <motion.div 
-          layoutId={`product-content-${item.id}`}
-          style={styles.content}
-        >
+        <div style={styles.content}>
           {!item.availability && (
             <div style={styles.unavailableBadge}>Unavailable</div>
           )}
 
-          <motion.div 
-            layoutId={`product-category-${item.id}`}
-            style={styles.category}
-          >
-            {item.category_name || (item.type === 'breakfast' ? 'Breakfast' : 'Uncategorized')}
-          </motion.div>
+          <div style={styles.category}>{item.category_name || (item.type === 'breakfast' ? 'Breakfast' : 'Uncategorized')}</div>
 
-          <motion.h3 
-            layoutId={`product-title-${item.id}`}
-            style={styles.title}
-          >
-            {item.name || 'Unknown Item'}
-          </motion.h3>
+          <h3 style={styles.title}>{item.name || 'Unknown Item'}</h3>
 
           {(ratingValue > 0 || reviewCount > 0) && (
-            <motion.div 
-              layoutId={`product-rating-${item.id}`}
-              style={styles.ratingContainer}
-            >
+            <div style={styles.ratingContainer}>
               <div style={styles.ratingStars}>{renderStars}</div>
               <span style={styles.ratingText}>
                 {ratingValue.toFixed(1)} ({reviewCount})
               </span>
-            </motion.div>
+            </div>
           )}
 
           <div style={styles.priceContainer}>
-            <motion.div 
-              layoutId={`product-price-${item.id}`}
-              style={styles.priceInfo}
-            >
+            <div style={styles.priceInfo}>
               <span style={styles.currentPrice}>
                 {displayPrice} {currency}
               </span>
               {salePrice && (
                 <span style={styles.originalPrice}>{regularPrice.toFixed(2)} {currency}</span>
               )}
-            </motion.div>
+            </div>
 
             {isMobile && (
               <div style={styles.mobileActionButtons}>
@@ -921,131 +846,119 @@ function MenuItemCard({ item, onAddToCart, onView, isManager }) {
               </div>
             )}
           </div>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
-      <AnimatePresence>
-        {showOptionPopup && !isManager && (
-          <>
-            <motion.div
-              style={styles.overlay}
-              onClick={() => {
-                setShowOptionPopup(false);
-                setSelectedOptions({});
-                setValidationErrors({});
-              }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            />
-            <motion.div
-              style={styles.popup}
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-            >
-              <h3 style={styles.popupTitle}>
-                Choose {item.type === 'breakfast' ? 'options' : 'supplement'} for {item.name}
-              </h3>
-
-              {item.type === 'breakfast' && supplements.optionGroups?.length > 0 && (
-                <div style={styles.popupOptionsContainer}>
-                  {supplements.optionGroups.map((group) => (
-                    <div
-                      key={group.id}
-                      style={{
-                        ...styles.optionGroup,
-                        ...(validationErrors[group.id] ? styles.optionGroupError : {}),
-                      }}
-                    >
-                      <div style={styles.groupTitle}>
-                        {group.title} {group.is_required ? '(Required)' : '(Optional)'}
-                        {group.max_selections > 0 && `, Max: ${group.max_selections}`}
-                        {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> - Please select</span>}
-                      </div>
-                      {supplements.options
-                        .filter((opt) => opt.group_id === group.id)
-                        .map((opt) => (
-                          <label
-                            key={opt.id}
-                            style={styles.optionItem}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedOptions[group.id]?.includes(opt.id)}
-                              onChange={() => handleOptionChange(group.id, opt.id)}
-                              disabled={!item.availability}
-                              style={styles.checkboxInput}
-                            />
-                            <span
-                              style={{
-                                ...styles.optionText,
-                                ...(selectedOptions[group.id]?.includes(opt.id) ? styles.optionSelected : {}),
-                              }}
-                            >
-                              {opt.option_name}
-                              <span style={styles.optionPrice}>
-                                +{parseFloat(opt.additional_price || 0).toFixed(2)} {currency}
-                              </span>
-                            </span>
-                          </label>
-                        ))}
+      {showOptionPopup && !isManager && (
+        <>
+          <div
+            style={styles.overlay}
+            onClick={() => {
+              setShowOptionPopup(false);
+              setSelectedOptions({});
+              setValidationErrors({});
+            }}
+          />
+          <div style={styles.popup}>
+            <h3 style={styles.popupTitle}>
+              Choose {item.type === 'breakfast' ? 'options' : 'supplement'} for {item.name}
+            </h3>
+            {item.type === 'breakfast' && supplements.optionGroups?.length > 0 && (
+              <div style={styles.popupOptionsContainer}>
+                {supplements.optionGroups.map((group) => (
+                  <div
+                    key={group.id}
+                    style={{
+                      ...styles.optionGroup,
+                      ...(validationErrors[group.id] ? styles.optionGroupError : {}),
+                    }}
+                  >
+                    <div style={styles.groupTitle}>
+                      {group.title} {group.is_required ? '(Required)' : '(Optional)'}
+                      {group.max_selections > 0 && `, Max: ${group.max_selections}`}
+                      {validationErrors[group.id] && <span style={{ color: '#ef4444' }}> - Please select</span>}
                     </div>
-                  ))}
-                </div>
-              )}
-
-              {item.type !== 'breakfast' && supplements.options.length > 0 && (
-                <select
-                  value={Object.values(selectedOptions)[0] || '0'}
-                  onChange={(e) => handleOptionChange('supplement', e.target.value)}
-                  style={styles.popupSelect}
-                  className="popup-select"
-                >
-                  <option value="0">No supplement</option>
-                  {supplements.options.map((supplement) => (
-                    <option key={supplement.supplement_id} value={supplement.supplement_id}>
-                      {supplement.name} (+{parseFloat(supplement.additional_price || 0).toFixed(2)} {currency})
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <div style={styles.popupButtons}>
-                <button
-                  style={{ ...styles.popupButton, ...styles.addButton }}
-                  className="popup-btn add-btn"
-                  onClick={() => handleOptionSelection()}
-                  disabled={
-                    !item.availability ||
-                    (item.type === 'breakfast' &&
-                      supplements.optionGroups?.length > 0 &&
-                      supplements.optionGroups
-                        .filter((g) => g.is_required)
-                        .some((g) => !selectedOptions[g.id] || selectedOptions[g.id].length === 0))
-                  }
-                >
-                  Add to Cart
-                </button>
-                <button
-                  style={{ ...styles.popupButton, ...styles.cancelButton }}
-                  className="popup-btn cancel-btn"
-                  onClick={() => {
-                    setShowOptionPopup(false);
-                    setSelectedOptions({});
-                    setValidationErrors({});
-                  }}
-                >
-                  Cancel
-                </button>
+                    {supplements.options
+                      .filter((opt) => opt.group_id === group.id)
+                      .map((opt) => (
+                        <label
+                          key={opt.id}
+                          style={styles.optionItem}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedOptions[group.id]?.includes(opt.id)}
+                            onChange={() => handleOptionChange(group.id, opt.id)}
+                            disabled={!item.availability}
+                            style={styles.checkboxInput}
+                          />
+                          <span
+                            style={{
+                              ...styles.optionText,
+                              ...(selectedOptions[group.id]?.includes(opt.id) ? styles.optionSelected : {}),
+                            }}
+                          >
+                            {opt.option_name}
+                            <span style={styles.optionPrice}>
+                              +{parseFloat(opt.additional_price || 0).toFixed(2)} {currency}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                  </div>
+                ))}
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+            )}
+            {item.type !== 'breakfast' && supplements.options.length > 0 && (
+              <select
+                value={Object.values(selectedOptions)[0] || '0'}
+                onChange={(e) => handleOptionChange('supplement', e.target.value)}
+                style={styles.popupSelect}
+                className="popup-select"
+              >
+                <option value="0">No supplement</option>
+                {supplements.options.map((supplement) => (
+                  <option
+                    key={supplement.supplement_id}
+                    value={supplement.supplement_id}
+                  >
+                    {supplement.name} (+{parseFloat(supplement.additional_price || 0).toFixed(2)} {currency})
+                  </option>
+                ))}
+              </select>
+            )}
+            <div style={styles.popupButtons}>
+              <button
+                style={{ ...styles.popupButton, ...styles.addButton }}
+                className="popup-btn add-btn"
+                onClick={() => handleOptionSelection()}
+                disabled={
+                  !item.availability ||
+                  (item.type === 'breakfast' &&
+                    supplements.optionGroups?.length > 0 &&
+                    supplements.optionGroups
+                      .filter((g) => g.is_required)
+                      .some((g) => !selectedOptions[g.id] || selectedOptions[g.id].length === 0))
+                }
+              >
+                Add to Cart
+              </button>
+              <button
+                style={{ ...styles.popupButton, ...styles.cancelButton }}
+                className="popup-btn cancel-btn"
+                onClick={() => {
+                  setShowOptionPopup(false);
+                  setSelectedOptions({});
+                  setValidationErrors({});
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
