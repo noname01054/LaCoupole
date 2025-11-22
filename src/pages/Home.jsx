@@ -39,8 +39,8 @@ function Home({ addToCart }) {
           const response = await api.searchMenuItems(query);
           setFilteredItems(response.data || []);
         } catch (error) {
-          console.error('Erreur lors de la recherche des éléments du menu :', error);
-          toast.error(error.response?.data?.error || 'Échec de la recherche des éléments du menu');
+          console.error('Error searching menu items:', error);
+          toast.error(error.response?.data?.error || 'Failed to search menu items');
           setFilteredItems([]);
         } finally {
           setSearchLoading(false);
@@ -53,7 +53,7 @@ function Home({ addToCart }) {
     let isActive = true;
     const fetchData = async () => {
       try {
-        console.log('Récupération des données pour la page d\'accueil', { timestamp: new Date().toISOString() });
+        console.log('Fetching data for home page', { timestamp: new Date().toISOString() });
         setLoading(true);
         const [menuResponse, breakfastResponse, categoriesResponse, bannersResponse] = await Promise.all([
           api.get('/menu-items'),
@@ -71,29 +71,29 @@ function Home({ addToCart }) {
           setMenuItems(menuData);
           setBreakfastItems(breakfastData);
           setCategories([
-            { id: 'all', name: 'Tout le menu', image_url: null },
+            { id: 'all', name: 'All Menu', image_url: null },
             ...categoriesData,
           ]);
           setFilteredItems(menuData);
           setBanners(bannersData);
         }
       } catch (error) {
-        console.error('Erreur lors de la récupération des données :', error);
+        console.error('Error fetching data:', error);
         if (isActive) {
-          toast.error(error.response?.data?.error || 'Échec du chargement des données');
-          setError('Échec du chargement des données.');
+          toast.error(error.response?.data?.error || 'Failed to load data');
+          setError('Failed to load data.');
         }
       } finally {
         if (isActive) {
           setLoading(false);
-          console.log('Récupération des données terminée', { loading: false, timestamp: new Date().toISOString() });
+          console.log('Data fetch complete', { loading: false, timestamp: new Date().toISOString() });
         }
       }
     };
     fetchData();
     return () => {
       isActive = false;
-      console.log('Nettoyage de l\'effet Home', { timestamp: new Date().toISOString() });
+      console.log('Cleaning up Home effect', { timestamp: new Date().toISOString() });
       debouncedSearch.cancel();
       isMounted.current = false;
     };
@@ -197,8 +197,7 @@ function Home({ addToCart }) {
           <MenuItemCard
             item={item}
             onAddToCart={addToCart}
-            onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
-            popupClassName="home-menu-item-popup"
+            onView={handleViewProduct}
           />
         </div>
       ));
@@ -220,13 +219,13 @@ function Home({ addToCart }) {
         if (combinedItems.length === 0) return null;
         return (
           <div key={category.id} className="home-category-section">
-            <div sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <h2 className="home-category-section-title">{category.name}</h2>
               <button
                 className="home-see-all-button"
                 onClick={() => handleCategoryClick(category.id)}
               >
-                Voir tout
+                See All
               </button>
             </div>
             <div className="home-category-scroll-container">
@@ -236,8 +235,7 @@ function Home({ addToCart }) {
                     <MenuItemCard
                       item={item}
                       onAddToCart={addToCart}
-                      onView={() => handleViewProduct(item.id, item.type || 'menuItem')}
-                      popupClassName="home-menu-item-popup"
+                      onView={handleViewProduct}
                     />
                   </div>
                 ))}
@@ -253,7 +251,7 @@ function Home({ addToCart }) {
     return (
       <div className="home-error-container">
         <div className="home-error-content">
-          <p className="home-error-text">Erreur: {error}</p>
+          <p className="home-error-text">Error: {error}</p>
         </div>
       </div>
     );
@@ -263,7 +261,7 @@ function Home({ addToCart }) {
     return (
       <div className="home-loading-container">
         <div className="home-loading-spinner"></div>
-        <p className="home-loading-text">Chargement du menu...</p>
+        <p className="home-loading-text">Loading menu...</p>
       </div>
     );
   }
@@ -273,8 +271,8 @@ function Home({ addToCart }) {
       <div className="home-header">
         <div className="home-welcome-section">
           <div className="home-welcome-content">
-            <h1 className="home-welcome-title">Bon retour !</h1>
-            <p className="home-welcome-subtitle">Que souhaitez-vous manger aujourd'hui ?</p>
+            <h1 className="home-welcome-title">Welcome Back!</h1>
+            <p className="home-welcome-subtitle">What would you like to eat today?</p>
           </div>
           <div className="home-welcome-emoji">🍽️</div>
         </div>
@@ -284,7 +282,7 @@ function Home({ addToCart }) {
             <Search size={18} color="#8e8e93" className="home-search-icon" />
             <input
               type="text"
-              placeholder="Rechercher quelque chose"
+              placeholder="Search something"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="home-search-input"
@@ -295,7 +293,7 @@ function Home({ addToCart }) {
               className="home-clear-results-button"
               onClick={() => setSearchQuery('')}
             >
-              Effacer
+              Clear
             </button>
           )}
         </div>
@@ -304,19 +302,19 @@ function Home({ addToCart }) {
           <div className="home-search-results-section">
             <div className="home-search-results-header">
               <h2 className="home-search-results-title">
-                Résultats de recherche pour "{searchQuery}"
+                Search results for &quot;{searchQuery}&quot;
               </h2>
               <button
                 className="home-see-all-button"
                 onClick={() => navigate('/categories')}
               >
-                Voir tout
+                See All
               </button>
             </div>
             {searchLoading ? (
               <div className="home-search-loading">
                 <div className="home-loading-spinner"></div>
-                <p>Recherche en cours...</p>
+                <p>Searching...</p>
               </div>
             ) : filteredItems.length > 0 ? (
               <div className="home-search-results-container">
@@ -330,26 +328,25 @@ function Home({ addToCart }) {
                       <MenuItemCard
                         item={item}
                         onAddToCart={addToCart}
-                        onView={() => handleViewProduct(item.id)}
-                        popupClassName="home-menu-item-popup"
+                        onView={handleViewProduct}
                       />
                     </div>
                   ))}
                 </div>
               </div>
             ) : (
-              <p className="home-no-results-text">Aucun résultat trouvé pour "{searchQuery}".</p>
+              <p className="home-no-results-text">No results found for &quot;{searchQuery}&quot;.</p>
             )}
           </div>
         ) : (
           <div className="home-categories-section">
             <div className="home-categories-header">
-              <h2 className="home-categories-title">Catégories</h2>
+              <h2 className="home-categories-title">Categories</h2>
               <button
                 className="home-see-all-button"
                 onClick={() => navigate('/categories')}
               >
-                Voir tout
+                See All
               </button>
             </div>
             <div className="home-categories-scroll-container">
@@ -374,12 +371,12 @@ function Home({ addToCart }) {
           {saleItems.length > 0 && (
             <div className="home-sale-section">
               <div className="home-sale-header">
-                <h2 className="home-sale-title">En promotion</h2>
+                <h2 className="home-sale-title">On Sale</h2>
                 <button
                   className="home-see-all-button"
                   onClick={() => navigate('/sale')}
                 >
-                  Voir tout
+                  See All
                 </button>
               </div>
               <div className="home-sale-scroll-container">
