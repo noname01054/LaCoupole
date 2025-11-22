@@ -10,7 +10,7 @@ import {
   CircularProgress,
   Grid,
 } from '@mui/material';
-import { Receipt, CheckCircle, Cancel, Refresh, Assignment, ShoppingCart } from '@mui/icons-material';
+import { Receipt, CheckCircle, Cancel, Refresh, Assignment, ShoppingCart, AccessTime } from '@mui/icons-material';
 import { api } from '../services/api';
 import { toast } from 'react-toastify';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -35,8 +35,8 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     const diffMs = now - orderTime;
     const diffMins = Math.round(diffMs / 60000);
 
-    if (diffMs < 0) return 'à l’instant';
-    if (diffMins < 1) return 'à l’instant';
+    if (diffMs < 0) return 'à l'instant';
+    if (diffMins < 1) return 'à l'instant';
     if (diffMins === 1) return 'il y a 1 min';
     if (diffMins < 60) return `il y a ${diffMins} min`;
     const diffHours = Math.floor(diffMins / 60);
@@ -52,7 +52,6 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
       return null;
     }
 
-    // Normalize fields to handle both string and array formats
     const normalizeField = (field) =>
       Array.isArray(field) ? field : typeof field === 'string' && field ? field.split(',') : [];
 
@@ -417,35 +416,41 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
           </Typography>
         </Box>
       </Box>
-      <Box className="staff-dashboard-metrics glass-card">
+
+      <Box className="staff-dashboard-metrics">
         <Box className="staff-dashboard-info">
           <Typography className="staff-dashboard-info-item">
             <Receipt />
-            Total des commandes: <span>{orderStats.totalOrders}</span>
+            Total des commandes
+            <span>{orderStats.totalOrders}</span>
           </Typography>
           <Typography className="staff-dashboard-info-item">
             <CheckCircle />
-            Approuvées: <span>{orderStats.approvedOrders}</span>
+            Approuvées
+            <span>{orderStats.approvedOrders}</span>
+          </Typography>
+          <Typography className="staff-dashboard-info-item">
+            <AccessTime />
+            En attente
+            <span>{orderStats.notApprovedOrders}</span>
           </Typography>
           <Typography className="staff-dashboard-info-item">
             <Cancel />
-            Non approuvées: <span>{orderStats.notApprovedOrders}</span>
-          </Typography>
-          <Typography className="staff-dashboard-info-item">
-            <Cancel />
-            Annulées: <span>{orderStats.cancelledOrders}</span>
+            Annulées
+            <span>{orderStats.cancelledOrders}</span>
           </Typography>
         </Box>
       </Box>
-      <Box className="staff-dashboard-filter-section glass-card">
+
+      <Box className="staff-dashboard-filter-section">
         <Box className="staff-dashboard-filter-header">
           <Typography className="staff-dashboard-filter-title">
             <Assignment />
             Filtres
           </Typography>
         </Box>
-        <Grid container spacing={2} className="staff-dashboard-filters debug-border">
-          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
+        <Grid container spacing={2} className="staff-dashboard-filters">
+          <Grid item xs={12} sm={6} md={4} className="staff-dashboard-filter-item">
             <FormControl fullWidth className="staff-dashboard-filter-select">
               <InputLabel id="time-range-label">Plage temporelle</InputLabel>
               <Select
@@ -460,7 +465,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
+          <Grid item xs={12} sm={6} md={4} className="staff-dashboard-filter-item">
             <FormControl fullWidth className="staff-dashboard-filter-select">
               <InputLabel id="approval-status-label">Statut d'approbation</InputLabel>
               <Select
@@ -475,7 +480,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
               </Select>
             </FormControl>
           </Grid>
-          <Grid item xs={12} sm={4} className="staff-dashboard-filter-item debug-border">
+          <Grid item xs={12} sm={12} md={4} className="staff-dashboard-filter-item">
             <Button
               variant="contained"
               className="staff-dashboard-refresh-button"
@@ -483,18 +488,19 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
               fullWidth
             >
               <Refresh />
-              Rafraîchir les commandes
+              Rafraîchir
             </Button>
           </Grid>
         </Grid>
       </Box>
+
       {isLoading ? (
         <Box className="staff-dashboard-loading">
           <CircularProgress />
           <Typography className="staff-dashboard-loading-text">Chargement des commandes...</Typography>
         </Box>
       ) : error ? (
-        <Box className="staff-dashboard-error glass-card">
+        <Box className="staff-dashboard-error">
           <Typography className="staff-dashboard-error-text">
             <Cancel className="staff-dashboard-error-icon" />
             {error}
@@ -505,13 +511,13 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
             onClick={fetchOrders}
           >
             <Refresh />
-            Réessayer le chargement
+            Réessayer
           </Button>
         </Box>
       ) : memoizedOrders.length === 0 ? (
-        <Box className="staff-dashboard-empty glass-card">
+        <Box className="staff-dashboard-empty">
+          <ShoppingCart className="staff-dashboard-empty-icon" />
           <Typography className="staff-dashboard-empty-text">
-            <ShoppingCart className="staff-dashboard-empty-icon" />
             Aucune commande à afficher.
           </Typography>
         </Box>
@@ -520,15 +526,17 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
           <Typography className="staff-dashboard-order-count">
             Affichage de {memoizedOrders.length} commande{memoizedOrders.length !== 1 ? 's' : ''}
           </Typography>
-          <Grid container spacing={1.5} className="staff-dashboard-orders-grid">
+          <Grid container spacing={2} className="staff-dashboard-orders-grid">
             {memoizedOrders.map((order) => (
               <Grid
                 item
                 xs={12}
                 sm={6}
-                md={4}
+                md={6}
+                lg={4}
+                xl={3}
                 key={order.id}
-                className="staff-dashboard-order-card glass-card"
+                className="staff-dashboard-order-card"
                 ref={(el) => (orderRefs.current[order.id] = el)}
               >
                 <OrderCard
@@ -537,7 +545,6 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
                   onCancelOrder={cancelOrder}
                   timeAgo={order.timeAgo}
                   isExpanded={order.id === expandOrderId}
-                  className={`staff-dashboard-order-content ${order.status === 'annulée' ? 'annulée' : order.approved ? 'approuvée' : 'non-approuvée'} ${order.id === expandOrderId ? 'expanded' : ''}`}
                 />
               </Grid>
             ))}
