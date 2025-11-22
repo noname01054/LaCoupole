@@ -35,8 +35,8 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     const diffMs = now - orderTime;
     const diffMins = Math.round(diffMs / 60000);
 
-    if (diffMs < 0) return 'à l'instant';
-    if (diffMins < 1) return 'à l'instant';
+    if (diffMs < 0) return "à l'instant";
+    if (diffMins < 1) return "à l'instant";
     if (diffMins === 1) return 'il y a 1 min';
     if (diffMins < 60) return `il y a ${diffMins} min`;
     const diffHours = Math.floor(diffMins / 60);
@@ -91,7 +91,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
     setError(null);
     try {
       if (!user || !['admin', 'server'].includes(user.role)) {
-        throw new Error('Vous n\'avez pas la permission de voir les commandes');
+        throw new Error("Vous n'avez pas la permission de voir les commandes");
       }
 
       const params = {};
@@ -191,7 +191,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
             console.error('Échec du traitement de la commande:', normalizedOrder);
             return prev;
           }
-          console.log('Ajout de la nouvelle commande à l\'état:', enrichedOrder);
+          console.log("Ajout de la nouvelle commande à l'état:", enrichedOrder);
           handleNewNotification({
             id: `order_${normalizedOrder.id}`,
             type: 'order',
@@ -275,7 +275,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
           }),
         });
       } else {
-        console.warn('Socket non connecté, impossible d\'émettre l\'événement orderApproved');
+        console.warn("Socket non connecté, impossible d'émettre l'événement orderApproved");
         toast.warn('Les mises à jour en temps réel peuvent être retardées en raison de problèmes de connexion');
       }
     },
@@ -322,7 +322,7 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
           }),
         });
       } else {
-        console.warn('Socket non connecté, impossible d\'émettre l\'événement orderCancelled');
+        console.warn("Socket non connecté, impossible d'émettre l'événement orderCancelled");
         toast.warn('Les mises à jour en temps réel peuvent être retardées en raison de problèmes de connexion');
       }
     },
@@ -364,8 +364,8 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
         const orderDetails = response.data.order || { approved: 1, status: 'en préparation' };
         handleOrderApproved({ orderId, status: 'en préparation', orderDetails });
       } catch (error) {
-        console.error('Erreur lors de l\'approbation de la commande:', error);
-        toast.error(error.response?.data?.error || 'Échec de l\'approbation de la commande');
+        console.error("Erreur lors de l'approbation de la commande:", error);
+        toast.error(error.response?.data?.error || "Échec de l'approbation de la commande");
       }
     },
     [handleOrderApproved]
@@ -383,8 +383,8 @@ function StaffDashboard({ user, handleNewNotification, socket }) {
         const orderDetails = response.data.order || { approved: 0, status: 'annulée' };
         handleOrderCancelled({ orderId, status: 'annulée', orderDetails });
       } catch (error) {
-        console.error('Erreur lors de l\'annulation de la commande:', error);
-        toast.error(error.response?.data?.error || 'Échec de l\'annulation de la commande');
+        console.error("Erreur lors de l'annulation de la commande:", error);
+        toast.error(error.response?.data?.error || "Échec de l'annulation de la commande");
       }
     },
     [handleOrderCancelled]
